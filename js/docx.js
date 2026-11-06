@@ -31,7 +31,7 @@ export async function unzip(buffer) {
   for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) {
     if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
   }
-  if (eocd < 0) throw new Error('Súbor nie je platný .docx (ZIP).');
+  if (eocd < 0) throw new Error('Soubor není platný .docx/.xlsx (ZIP).');
   const count = dv.getUint16(eocd + 10, true);
   let p = dv.getUint32(eocd + 16, true);
   const files = new Map();
@@ -102,7 +102,7 @@ function paragraphsText(xml) {
 export async function readDocx(buffer) {
   const files = await unzip(buffer);
   const doc = files.get('word/document.xml');
-  if (!doc) throw new Error('V súbore chýba word/document.xml.');
+  if (!doc) throw new Error('V souboru chybí word/document.xml.');
   const xml = new TextDecoder().decode(doc);
   const tables = [];
   // Tabuľky (bez vnorených tabuliek)

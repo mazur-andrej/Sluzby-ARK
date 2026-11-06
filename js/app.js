@@ -106,8 +106,8 @@ function renderRequests() {
   const md = monthData();
   const ds = days();
   const tbl = $('#reqTable');
-  const head = el('tr', {}, el('th', { class: 'name' }, 'Lekár'),
-    ds.map((d) => el('th', { class: d.weekend || d.holiday ? 'we' : '', title: d.holiday ? 'sviatok' : '' }, `${d.day}`, el('br'), d.label.split(' ')[0])),
+  const head = el('tr', {}, el('th', { class: 'name' }, 'Lékař'),
+    ds.map((d) => el('th', { class: d.weekend || d.holiday ? 'we' : '', title: d.holiday ? 'svátek' : '' }, `${d.day}`, el('br'), d.label.split(' ')[0])),
     el('th', {}, '✗'), el('th', {}, '✓'));
   const body = activeDoctors().map((doc) => {
     const req = md.requests[doc.id] || { off: [], want: [] };
@@ -121,7 +121,7 @@ function renderRequests() {
         const b = banMap.get(d.day);
         const cls = offSet.has(d.day) ? 'off' : w ? 'want' : b ? 'ban' : '';
         const txt = offSet.has(d.day) ? '✗' : w ? (w.pos ? [].concat(w.pos).map(posShort).join('/') : '✓') : b ? '¬' + banLabel(b) : '';
-        const tip = [notes[d.day] ? `„${notes[d.day]}"` : '', b ? `nie na: ${b.map(posShort).join(', ')}` : ''].filter(Boolean).join(' – ');
+        const tip = [notes[d.day] ? `„${notes[d.day]}"` : '', b ? `ne na: ${b.map(posShort).join(', ')}` : ''].filter(Boolean).join(' – ');
         return el('td', {
           class: `c ${cls} ${d.weekend || d.holiday ? 'we' : ''} ${notes[d.day] ? 'note' : ''}`,
           title: tip || null,
@@ -134,8 +134,8 @@ function renderRequests() {
   tbl.replaceChildren(el('thead', {}, head), el('tbody', {}, body));
   const prev = prevServices();
   $('#prevInfo').textContent = prev.length
-    ? `Koniec minulého mesiaca (kvôli odpočinku po službe): ${prev.filter((p) => p.day === 0).map((p) => docById(p.doctorId)?.name || p.doctorId).join(', ')}`
-    : 'Rozpis minulého mesiaca nie je načítaný – pravidlo odpočinku po službe sa na 1. deň mesiaca neuplatní.';
+    ? `Konec minulého měsíce (kvůli odpočinku po službě): ${prev.filter((p) => p.day === 0).map((p) => docById(p.doctorId)?.name || p.doctorId).join(', ')}`
+    : 'Rozpis minulého měsíce není načtený – pravidlo odpočinku po službě se na 1. den měsíce neuplatní.';
 }
 const posShort = (id) => id;
 function banLabel(ids) {
@@ -169,10 +169,10 @@ function posMenu(e, doc, day) {
     menu.classList.add('hidden'); save(); renderRequests();
   };
   menu.replaceChildren(
-    el('div', { class: 'muted', style: 'padding:4px 10px' }, `${doc.name}, ${day}. – chce slúžiť:`),
-    el('button', { onclick: () => setWant(null) }, 'kdekoľvek'),
+    el('div', { class: 'muted', style: 'padding:4px 10px' }, `${doc.name}, ${day}. – chce sloužit:`),
+    el('button', { onclick: () => setWant(null) }, 'kdekoli'),
     ...state.positions.filter((p) => doc.positions.includes(p.id)).map((p) => el('button', { onclick: () => setWant(p.id) }, p.label)),
-    el('button', { onclick: () => setWant(undefined) }, '— zrušiť —'),
+    el('button', { onclick: () => setWant(undefined) }, '— zrušit —'),
   );
   menu.style.left = `${Math.min(e.clientX, innerWidth - 200)}px`;
   menu.style.top = `${Math.min(e.clientY, innerHeight - 300)}px`;
@@ -185,14 +185,14 @@ function applyParsed(parsed, source) {
   md.requests = mergeRequests(md.requests, parsed.requests);
   save(); renderRequests();
   const names = Object.keys(parsed.requests).map((id) => docById(id)?.name).filter(Boolean);
-  let html = `<b>${esc(source)}:</b> načítané požiadavky ${names.length} lekárov (${esc(names.join(', '))}).`;
-  if (parsed.sheet) html += `<br>Hárok: <b>${esc(parsed.sheet)}</b>.`;
-  if (parsed.shift) html += ' Dáta v tabuľke sú posunuté o stĺpec oproti hlavičke s dátumami – zarovnal som ich podľa obsahu, skontrolujte prosím niekoľko lekárov.';
-  if (parsed.inactive?.length) html += `<br>Preskočení neaktívni lekári: ${esc(parsed.inactive.join(', '))}.`;
-  if (parsed.unknown.length) html += `<br>Tieto riadky som nepriradil k žiadnemu lekárovi – skontrolujte ich alebo lekára pridajte na karte Lekári:${list(parsed.unknown.slice(0, 30))}`;
-  if (parsed.unclear?.length) html += `<br>Bunky, ktorým nerozumiem (neboli započítané, doplňte ručne):${list(parsed.unclear)}`;
+  let html = `<b>${esc(source)}:</b> načteny požadavky ${names.length} lékařů (${esc(names.join(', '))}).`;
+  if (parsed.sheet) html += `<br>List: <b>${esc(parsed.sheet)}</b>.`;
+  if (parsed.shift) html += ' Data v tabulce jsou posunutá o sloupec oproti záhlaví s daty – zarovnal jsem je podle obsahu, zkontrolujte prosím několik lékařů.';
+  if (parsed.inactive?.length) html += `<br>Přeskočení neaktivní lékaři: ${esc(parsed.inactive.join(', '))}.`;
+  if (parsed.unknown.length) html += `<br>Tyto řádky jsem nepřiřadil žádnému lékaři – zkontrolujte je nebo lékaře přidejte na kartě Lékaři:${list(parsed.unknown.slice(0, 30))}`;
+  if (parsed.unclear?.length) html += `<br>Buňky, kterým nerozumím (nebyly započítány, doplňte ručně):${list(parsed.unclear)}`;
   const missing = activeDoctors().filter((d) => !parsed.requests[d.id]).map((d) => d.name);
-  if (parsed.sheet && missing.length) html += `<br>Aktívni lekári, ktorí v tabuľke chýbajú: ${esc(missing.join(', '))}.`;
+  if (parsed.sheet && missing.length) html += `<br>Aktivní lékaři, kteří v tabulce chybí: ${esc(missing.join(', '))}.`;
   message('#reqMessages', parsed.unknown.length || parsed.unclear?.length ? 'warn' : 'ok', html);
 }
 
@@ -210,9 +210,9 @@ $('#reqFile').onchange = async (e) => {
       if (/\.xlsx$/i.test(f.name)) {
         const sheets = await readXlsx(await f.arrayBuffer());
         const sh = pickSheet(sheets, state.current.month);
-        if (!sh) throw new Error(`V súbore nie je hárok s dňami mesiaca ${MONTHS[state.current.month - 1]} (hárky: ${sheets.map((x) => x.name).join(', ')}). Zvoľte hore správny mesiac.`);
+        if (!sh) throw new Error(`V souboru není list s dny měsíce ${MONTHS[state.current.month - 1]} (listy: ${sheets.map((x) => x.name).join(', ')}). Nahoře zvolte správný měsíc.`);
         parsed = parseRequestsSheet(sh.rows, state.doctors, state.positions, state.current.month, GROUP_ALIASES);
-        if (!parsed) throw new Error('V hárku som nenašiel riadok s dátumami.');
+        if (!parsed) throw new Error('V listu jsem nenašel řádek s daty.');
         parsed.sheet = sh.name;
         // tabuľka obsahuje všetkých lekárov -> nahradí predchádzajúce požiadavky
         monthData().requests = {};
@@ -228,12 +228,12 @@ $('#reqFile').onchange = async (e) => {
         if (!parsed || !Object.keys(parsed.requests).length) parsed = parseRequestsText(text, activeDoctors(), state.positions, n);
       }
       applyParsed(parsed, f.name);
-    } catch (err) { message('#reqMessages', 'err', `Súbor ${esc(f.name)} sa nepodarilo načítať: ${esc(err.message)}`); }
+    } catch (err) { message('#reqMessages', 'err', `Soubor ${esc(f.name)} se nepodařilo načíst: ${esc(err.message)}`); }
   }
   e.target.value = '';
 };
 $('#reqClear').onclick = () => {
-  if (!confirm('Naozaj vymazať všetky požiadavky pre tento mesiac?')) return;
+  if (!confirm('Opravdu smazat všechny požadavky pro tento měsíc?')) return;
   monthData().requests = {}; save(); renderRequests();
 };
 $('#prevFile').onchange = async (e) => {
@@ -241,10 +241,10 @@ $('#prevFile').onchange = async (e) => {
   try {
     const doc = await readDocx(await f.arrayBuffer());
     const sch = parseScheduleTable(doc.tables);
-    if (!sch) throw new Error('V dokumente som nenašiel tabuľku rozpisu.');
+    if (!sch) throw new Error('V dokumentu jsem nenašel tabulku rozpisu.');
     const pm = prevMonthOf(state.current.year, state.current.month);
     const rows = sch.rows.filter((r) => r.month === pm.month);
-    if (!rows.length) throw new Error(`V dokumente nie sú dni z mesiaca ${pm.month}.`);
+    if (!rows.length) throw new Error(`V dokumentu nejsou dny z měsíce ${pm.month}.`);
     const last = new Date(pm.year, pm.month, 0).getDate();
     const colPos = sch.header.slice(1).map((h) => state.positions.find((p) => norm(p.label) === norm(h))?.id);
     const prev = [], unknown = new Set();
@@ -256,7 +256,7 @@ $('#prevFile').onchange = async (e) => {
       });
     }
     monthData().prev = prev; save(); renderRequests();
-    message('#reqMessages', 'ok', `Načítaný koniec minulého mesiaca (${last - 1}. a ${last}. ${pm.month}.).${unknown.size ? ' Neznámi lekári: ' + esc([...unknown].join(', ')) : ''}`);
+    message('#reqMessages', 'ok', `Načten konec minulého měsíce (${last - 1}. a ${last}. ${pm.month}.).${unknown.size ? ' Neznámí lékaři: ' + esc([...unknown].join(', ')) : ''}`);
   } catch (err) { message('#reqMessages', 'err', esc(err.message)); }
 };
 
@@ -274,7 +274,7 @@ function solverInput() {
 function generate(newSeed) {
   const md = monthData();
   if (newSeed) md.seed = (md.seed || 1) + 1;
-  $('#genStatus').textContent = 'Počítam…';
+  $('#genStatus').textContent = 'Počítám…';
   setTimeout(() => {
     const t0 = performance.now();
     const res = solve(solverInput());
@@ -305,7 +305,7 @@ function renderSchedule() {
   if (!md.grid || md.grid.length !== ds.length) {
     tbl.replaceChildren(el('thead', {}, head), el('tbody', {}, rows));
     $('#statsTable').replaceChildren();
-    message('#schedMessages', 'warn', 'Rozpis ešte nie je vygenerovaný. Skontrolujte požiadavky a kliknite na <b>Vygenerovať rozpis</b>.');
+    message('#schedMessages', 'warn', 'Rozpis ještě není vygenerovaný. Zkontrolujte požadavky a klikněte na <b>Vygenerovat rozpis</b>.');
     return;
   }
   const input = solverInput();
@@ -345,14 +345,14 @@ function renderSchedule() {
     if (!row) continue;
     const pi = row.indexOf(id);
     const wp = w.pos == null ? null : [].concat(w.pos);
-    if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chcel(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
+    if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chtěl(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
   }
   let html = '';
-  if (!empty.length && !issues.length && !unmet.length) html = '<div class="msg ok">✔ Všetky služby sú obsadené, pravidlá aj priania lekárov sú dodržané.</div>';
-  if (empty.length) html += `<div class="msg err"><b>Neobsadené služby (${empty.length})</b> – nikto voľný nespĺňa pravidlá, doplňte ručne:${list(empty)}</div>`;
-  if (issues.length) html += `<div class="msg err"><b>Porušenia pravidiel (${issues.length})</b> – po ručnej úprave:${list(issues.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
-  if (unmet.length) html += `<div class="msg warn"><b>Nesplnené priania (${unmet.length})</b>:${list(unmet)}</div>`;
-  html += '<p class="muted">Bunku zmeníte výberom lekára – zmena sa zamkne (modrá) a pri ďalšom generovaní ostane. Zelená = prianie lekára. ✗ pri mene = lekár si deň vyškrtol.</p>';
+  if (!empty.length && !issues.length && !unmet.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
+  if (empty.length) html += `<div class="msg err"><b>Neobsazené služby (${empty.length})</b> – nikdo volný nesplňuje pravidla, doplňte ručně:${list(empty)}</div>`;
+  if (issues.length) html += `<div class="msg err"><b>Porušení pravidel (${issues.length})</b> – po ruční úpravě:${list(issues.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
+  if (unmet.length) html += `<div class="msg warn"><b>Nesplněná přání (${unmet.length})</b>:${list(unmet)}</div>`;
+  html += '<p class="muted">Buňku změníte výběrem lékaře – změna se zamkne (modrá) a při dalším generování zůstane. Zelená = přání lékaře. ✗ u jména = lékař si den vyškrtl nebo tu pozici nechce.</p>';
   $('#schedMessages').innerHTML = html;
 
   renderStats(md, ds);
@@ -379,10 +379,10 @@ function renderStats(md, ds) {
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lekár', 'Služby', 'Cieľ', 'Víkend/sv.', 'Nočné', 'Vyškrtol'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Noční', 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
-      title: 'Kliknutím zvýrazníte služby lekára v rozpise',
+      title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
       onclick: () => { highlightDoc = highlightDoc === r.doc.id ? null : r.doc.id; renderSchedule(); },
     },
     el('td', {}, r.doc.name),
@@ -396,7 +396,7 @@ function renderStats(md, ds) {
 
 $('#exportDocx').onclick = () => {
   const md = monthData();
-  if (!md.grid) { alert('Najprv vygenerujte rozpis.'); return; }
+  if (!md.grid) { alert('Nejprve vygenerujte rozpis.'); return; }
   const ds = days();
   const P = state.positions;
   const name = (id) => docById(id)?.name || '';
@@ -420,14 +420,14 @@ function renderDoctors() {
   const P = state.positions;
   const tbl = $('#docTable');
   const sorted = [...state.doctors].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
-  const head = el('tr', {}, el('th', {}, 'Meno'), el('th', {}, 'Aktívny'), P.map((p) => el('th', {}, p.label)),
-    el('th', {}, 'Cieľ'), el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
+  const head = el('tr', {}, el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
+    el('th', {}, 'Cíl'), el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
   const sumTarget = activeDoctors().reduce((s, d) => s + (+d.target || 0), 0);
   const slotsCount = days().reduce((s, d) => s + P.filter((p) => !(p.workdaysOnly && !d.workday)).length, 0);
-  const foot = el('tr', {}, el('td', {}, el('b', {}, 'Spolu aktívnych')), el('td', {}, String(activeDoctors().length)),
+  const foot = el('tr', {}, el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
-    el('td', { title: `Služieb v mesiaci: ${slotsCount}` }, el('b', { style: sumTarget < slotsCount ? 'color:#dc2626' : '' }, `${sumTarget}/${slotsCount}`)), el('td'), el('td'), el('td'));
+    el('td', { title: `Služeb v měsíci: ${slotsCount}` }, el('b', { style: sumTarget < slotsCount ? 'color:#dc2626' : '' }, `${sumTarget}/${slotsCount}`)), el('td'), el('td'), el('td'));
   const upd = (doc, fn) => (e) => { fn(e); save(); };
   const body = sorted.map((doc) => el('tr', { class: doc.active ? '' : 'inactive' },
     el('td', { class: 'name' }, el('input', { value: doc.name, onchange: upd(doc, (e) => { doc.name = e.target.value.trim(); }) })),
@@ -439,8 +439,8 @@ function renderDoctors() {
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.target ?? '', onchange: upd(doc, (e) => { doc.target = e.target.value === '' ? 0 : +e.target.value; renderDoctors(); }) })),
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
     el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
-    el('td', {}, el('button', { class: 'danger', title: 'Odstrániť lekára', onclick: () => {
-      if (!confirm(`Odstrániť lekára ${doc.name}? (Ak má len prestávku, radšej odškrtnite „Aktívny".)`)) return;
+    el('td', {}, el('button', { class: 'danger', title: 'Odstranit lékaře', onclick: () => {
+      if (!confirm(`Odstranit lékaře ${doc.name}? (Pokud má jen přestávku, raději odškrtněte „Aktivní".)`)) return;
       state.doctors = state.doctors.filter((d) => d !== doc); save(); renderDoctors();
     } }, '🗑'))));
   tbl.replaceChildren(el('thead', {}, head), el('tbody', {}, body), el('tfoot', {}, foot));
@@ -449,26 +449,26 @@ function renderDoctors() {
 $('#addDoc').onclick = () => {
   const name = $('#newDocName').value.trim();
   if (!name) return;
-  if (state.doctors.some((d) => norm(d.name) === norm(name))) { alert('Lekár s týmto menom už existuje.'); return; }
+  if (state.doctors.some((d) => norm(d.name) === norm(name))) { alert('Lékař s tímto jménem už existuje.'); return; }
   let id = norm(name).replace(/[^a-z0-9]+/g, '-');
   while (state.doctors.some((d) => d.id === id)) id += '-2';
   state.doctors.push({ id, name, active: true, positions: [], target: 4, max: null, note: '' });
   $('#newDocName').value = '';
   save(); renderDoctors();
-  alert(`Lekár ${name} pridaný. Nezabudnite zaškrtnúť pozície, na ktorých môže slúžiť.`);
+  alert(`Lékař ${name} přidán. Nezapomeňte zaškrtnout pozice, na kterých může sloužit.`);
 };
 $('#newDocName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#addDoc').click(); });
 
 $('#exportData').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
-  const a = el('a', { href: URL.createObjectURL(blob), download: `rozpis-sluzieb-zaloha-${new Date().toISOString().slice(0, 10)}.json` });
+  const a = el('a', { href: URL.createObjectURL(blob), download: `rozpis-sluzeb-zaloha-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.append(a); a.click(); a.remove();
 };
 $('#importData').onchange = async (e) => {
   try {
     const data = JSON.parse(await e.target.files[0].text());
-    if (!Array.isArray(data.doctors) || !Array.isArray(data.positions)) throw new Error('Neplatný súbor zálohy.');
-    if (!confirm('Prepísať aktuálne dáta zálohou?')) return;
+    if (!Array.isArray(data.doctors) || !Array.isArray(data.positions)) throw new Error('Neplatný soubor zálohy.');
+    if (!confirm('Přepsat aktuální data zálohou?')) return;
     state = data; save(); renderMonth();
   } catch (err) { alert(err.message); }
   e.target.value = '';
@@ -478,7 +478,7 @@ $('#importData').onchange = async (e) => {
 function renderSettings() {
   const tbl = $('#posTable');
   tbl.replaceChildren(
-    el('tr', {}, ['Názov stĺpca', 'Skratka (id)', 'Ako to lekári píšu v požiadavkách', 'Nočná', 'Len pracovné dni', ''].map((h) => el('th', {}, h))),
+    el('tr', {}, ['Název sloupce', 'Zkratka (id)', 'Jak to lékaři píšou v požadavcích', 'Noční', 'Jen pracovní dny', ''].map((h) => el('th', {}, h))),
     ...state.positions.map((p, i) => el('tr', {},
       el('td', {}, el('input', { value: p.label, onchange: (e) => { p.label = e.target.value; save(); } })),
       el('td', {}, p.id),
@@ -486,20 +486,20 @@ function renderSettings() {
       el('td', {}, el('input', { type: 'checkbox', checked: p.night, onchange: (e) => { p.night = e.target.checked; save(); } })),
       el('td', {}, el('input', { type: 'checkbox', checked: p.workdaysOnly, onchange: (e) => { p.workdaysOnly = e.target.checked; save(); } })),
       el('td', {}, el('button', { class: 'danger', onclick: () => {
-        if (!confirm(`Odstrániť pozíciu ${p.label}? Rozpisy uložené pre jednotlivé mesiace sa vymažú.`)) return;
+        if (!confirm(`Odstranit pozici ${p.label}? Rozpisy uložené pro jednotlivé měsíce se smažou.`)) return;
         state.positions.splice(i, 1);
         for (const m of Object.values(state.months)) { m.grid = null; m.locked = {}; }
         save(); renderAll();
       } }, '🗑')))),
   );
-  const labels = { unfilled: 'Neobsadená služba', target: 'Odchýlka od cieľového počtu', overTarget: 'Služba nad cieľ (navyše)', weekend: 'Nerovnomerné víkendy/sviatky',
-    gap1: 'Dve služby po sebe (po dennej)', gap2: 'Služby ob deň', gap3: 'Rozostup 3 dni', sameWeekend: 'Sobota aj nedeľa' };
+  const labels = { unfilled: 'Neobsazená služba', target: 'Odchylka od cílového počtu', overTarget: 'Služba nad cíl (navíc)', weekend: 'Nerovnoměrné víkendy/svátky',
+    gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle' };
   $('#weightsTable').replaceChildren(...Object.entries(DEFAULT_WEIGHTS).map(([k, v]) => el('tr', {},
     el('td', {}, labels[k] || k),
     el('td', {}, el('input', { type: 'number', min: 0, step: 'any', value: state.weights[k] ?? v, onchange: (e) => { state.weights[k] = +e.target.value; save(); } })))));
 }
 $('#addPos').onclick = () => {
-  const label = prompt('Názov novej pozície (stĺpca):');
+  const label = prompt('Název nové pozice (sloupce):');
   if (!label) return;
   let id = norm(label).replace(/[^a-z0-9]+/g, '') || 'pos';
   while (state.positions.some((p) => p.id === id)) id += '2';

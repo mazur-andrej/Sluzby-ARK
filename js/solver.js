@@ -160,7 +160,7 @@ export function solve(input) {
       wantResults.push({ ...w, ok: true, pos: [P[cands[0]].id] });
     } else {
       const notEligible = w.pos && w.pos.every((id) => !eligible[w.doc].has(posIndex.get(id)));
-      wantResults.push({ ...w, ok: false, reason: notEligible ? 'túto pozíciu nemá v zozname povolených' : 'v ten deň to nejde (obsadené / odpočinok po službe)' });
+      wantResults.push({ ...w, ok: false, reason: notEligible ? 'tuto pozici nemá v seznamu povolených' : 'ten den to nejde (obsazeno / odpočinek po službě)' });
     }
   }
   function countCands(day, p) { let c = 0; for (let i = 0; i < N; i++) if (canAssign(i, day, p)) c++; return c; }
@@ -269,8 +269,8 @@ export function solve(input) {
   // Výsledok
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
-  for (const u of unfilled) warnings.push(`Neobsadené: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikto voľný nespĺňa pravidlá)`);
-  for (const w of wantResults) if (!w.ok) warnings.push(`Nesplnené prianie: ${docs[w.doc].name} chcel(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
+  for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
+  for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
   const stats = docs.map((doc, i) => {
     let we = 0;
@@ -295,11 +295,11 @@ export function validate(input, grid) {
     if (!id) return;
     const day = t + 1, doc = byId.get(id), pos = P[p];
     const name = doc ? doc.name : id;
-    if (doc && !(doc.positions || []).includes(pos.id)) issues.push({ day, pos: pos.id, msg: `${name} nemá povolenú pozíciu ${pos.label}` });
-    if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} sa v tento deň neslúži` });
+    if (doc && !(doc.positions || []).includes(pos.id)) issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
+    if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
-    if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtol(a)` });
-    if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. slúžiť na ${pos.label}` });
+    if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });
+    if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. sloužit na ${pos.label}` });
     if (!perDoc.has(id)) perDoc.set(id, []);
     perDoc.get(id).push({ day, p });
   }));
@@ -313,12 +313,12 @@ export function validate(input, grid) {
     list.sort((a, b) => a.day - b.day);
     for (let k = 1; k < list.length; k++) {
       const a = list[k - 1], b = list[k];
-      if (a.day === b.day && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má 2 služby v ten istý deň` });
-      if (b.day - a.day === 1 && (a.p < 0 || P[a.p].night) && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} slúži deň po nočnej službe` });
+      if (a.day === b.day && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má 2 služby ve stejný den` });
+      if (b.day - a.day === 1 && (a.p < 0 || P[a.p].night) && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} slouží den po noční službě` });
     }
     const doc = byId.get(id);
     const n = list.filter((x) => !x.prev).length;
-    if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služieb (max ${doc.max})` });
+    if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služeb (max ${doc.max})` });
   }
   return issues;
 }
