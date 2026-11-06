@@ -129,6 +129,131 @@ export function parseRequestsTable(rows, doctors, positions, maxDay = 31) {
 /** Spojí požiadavky (novšie prepíšu staršie pre toho istého lekára). */
 export function mergeRequests(base, add) {
   const out = { ...base };
-  for (const [id, r] of Object.entries(add)) out[id] = { off: [...r.off], want: [...r.want], note: r.note || '' };
+  for (const [id, r] of Object.entries(add)) out[id] = { off: [...r.off], want: [...r.want], ban: [...(r.ban || [])], notes: { ...(r.notes || {}) }, note: r.note || '' };
   return out;
+}
+
+// ---------------- Excel tabuľka požiadaviek ----------------
+
+const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Nájde pozície spomenuté v texte (podľa id, názvu a aliasov). */
+export function mentionedPositions(text, positions, groupAliases = {}) {
+  const t = ` ${norm(text)} `;
+  const found = new Set();
+  const matches = (alias) => {
+    const a = norm(alias).split(/\s+/).map(reEsc).join('\\s*');
+    return a && new RegExp(`(^|[^a-z0-9])${a}($|[^a-z0-9])`).test(t);
+  };
+  for (const p of positions) {
+    if ([p.id, p.label, ...(p.aliases || [])].some(matches)) found.add(p.id);
+  }
+  // skupina (napr. "OUP") len ak nebola spomenutá konkrétna pozícia zo skupiny
+  for (const [alias, ids] of Object.entries(groupAliases)) {
+    if (ids.some((id) => found.has(id))) continue;
+    if (matches(alias)) ids.forEach((id) => found.add(id));
+  }
+  return [...found];
+}
+
+const EXTERNAL = /(kurz|konferen|dov|dovol|svatb|cktch|nvs|cplb|nah|rehabil|skoleni|školen|po sluzbe|nemoc|ocr)/;
+const WANT = /(chci|chce|chcem|^chi\b|ano|prosim|prosím|slouzit|sloužit|sluzb|služb|pls|^\+$|^ok$)/;
+
+/**
+ * Rozpozná význam bunky z tabuľky požiadaviek.
+ * Vráti {type:'off'} | {type:'want', pos:[]|null} | {type:'ban', pos:[]} | {type:'only', pos:[]} | {type:'unknown'} | null
+ */
+export function classifyCell(raw, positions, groupAliases = {}) {
+  const t = norm(raw).replace(/\s+/g, ' ');
+  if (!t) return null;
+  const pos = mentionedPositions(t, positions, groupAliases);
+  const startsX = /^x+\b|^x[,.\-\s]|^x$/.test(t);
+  const neg = /(^|\s)(ne|nie|nechci|nechce|bez)\s/.test(` ${t} `) || /^ne\b/.test(t);
+  if (/ne odd/.test(t)) return { type: 'off' };
+  if (startsX) {
+    if (pos.length && /(nebo|alebo|prosim|ale)/.test(t)) return { type: 'only', pos };
+    if (pos.length) return { type: 'ban', pos };
+    return { type: 'off' };
+  }
+  if (neg && pos.length) return { type: 'ban', pos };
+  if (neg) return { type: 'off' };
+  if (EXTERNAL.test(t)) return { type: 'off' };
+  if (WANT.test(t) || pos.length) return { type: 'want', pos: pos.length ? pos : null };
+  return { type: 'unknown' };
+}
+
+const DATE_RE = /(\d{1,2})\.\s*(\d{1,2})\./;
+
+/** Vyberie z hárkov ten, ktorý obsahuje dni daného mesiaca. */
+export function pickSheet(sheets, month) {
+  let best = null, bestCount = 0;
+  for (const s of sheets) {
+    for (const row of s.rows.slice(0, 10)) {
+      const c = row.filter((x) => { const m = String(x).match(DATE_RE); return m && +m[2] === month; }).length;
+      if (c > bestCount) { best = s; bestCount = c; }
+    }
+  }
+  return bestCount >= 10 ? best : null;
+}
+
+/**
+ * Hárok požiadaviek: hlavička s dátumami ("ne 1.11."), v riadkoch mená lekárov.
+ * Stĺpce iného mesiaca sa ignorujú.
+ */
+export function parseRequestsSheet(rows, doctors, positions, month, groupAliases = {}) {
+  const hi = rows.findIndex((r) => r.filter((c) => DATE_RE.test(String(c))).length >= 10);
+  if (hi < 0) return null;
+  const header = rows[hi];
+  const nameCol = (r) => r.findIndex((c) => /[a-zá-ž]{3}/i.test(String(c)) && !DATE_RE.test(String(c)));
+  // Detekcia posunu: v niektorých tabuľkách sú dáta o stĺpec vedľa hlavičky.
+  // Zvolí sa posun, pri ktorom najmenej vyplnených buniek padne mimo stĺpcov s dátumom.
+  const dateAt = (i) => DATE_RE.test(String(header[i] ?? ''));
+  let shift = 0, bestMiss = Infinity;
+  for (const s of [0, 1, -1]) {
+    // + stĺpec s dátumom, pod ktorým by nebolo nič vyplnené (pri 50 lekároch nepravdepodobné)
+    let miss = 0;
+    const filled = new Set();
+    for (const r of rows.slice(hi + 1)) {
+      if (!r) continue;
+      const nc = nameCol(r);
+      if (nc < 0) continue;
+      r.forEach((c, i) => {
+        if (i <= nc || !String(c).trim()) return;
+        if (dateAt(i - s)) filled.add(i - s); else miss++;
+      });
+    }
+    header.forEach((h, i) => {
+      const m = String(h ?? '').match(DATE_RE);
+      if (m && +m[2] === month && !filled.has(i)) miss += 3;
+    });
+    if (miss < bestMiss) { bestMiss = miss; shift = s; }
+  }
+  const dayCols = header.map((_, i) => { const m = String(header[i - shift] ?? '').match(DATE_RE); return m && +m[2] === month ? +m[1] : null; });
+  for (let i = header.length; i < header.length + 2; i++) { const m = String(header[i - shift] ?? '').match(DATE_RE); dayCols[i] = m && +m[2] === month ? +m[1] : null; }
+  const requests = {}, unknown = [], unclear = [], inactive = [];
+  for (const r of rows.slice(hi + 1)) {
+    if (!r || !r.some((c) => String(c).trim())) continue;
+    const nc = nameCol(r);
+    const nameCell = nc >= 0 && dayCols[nc] == null ? String(r[nc]) : '';
+    if (!nameCell) continue; // riadok bez mena (napr. pomocné značky)
+    const doc = findDoctor(nameCell, doctors);
+    if (!doc) { unknown.push(nameCell); continue; }
+    if (!doc.active) { inactive.push(doc.name); continue; }
+    const req = { off: [], want: [], ban: [], notes: {}, note: '' };
+    r.forEach((c, i) => {
+      const day = dayCols[i];
+      if (day == null || !String(c).trim()) return;
+      const raw = String(c).trim();
+      const k = classifyCell(raw, positions, groupAliases);
+      if (!/^x+$/i.test(raw)) req.notes[day] = raw;
+      if (!k) return;
+      if (k.type === 'off') req.off.push(day);
+      else if (k.type === 'want') req.want.push({ day, pos: k.pos });
+      else if (k.type === 'ban') req.ban.push({ day, pos: k.pos });
+      else if (k.type === 'only') req.ban.push({ day, pos: positions.map((p) => p.id).filter((id) => !k.pos.includes(id)) });
+      else unclear.push(`${doc.name} ${day}.: „${raw}"`);
+    });
+    requests[doc.id] = req;
+  }
+  return { requests, unknown, unclear, inactive, shift };
 }

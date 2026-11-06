@@ -1,8 +1,9 @@
 import { buildMonth, prevMonthOf, MONTHS } from './calendar.js';
 import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
-import { parseRequestsText, parseRequestsTable, mergeRequests, findDoctor, norm } from './requests.js';
-import { DEFAULT_POSITIONS } from './config.js';
+import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
+import { readXlsx } from './xlsx.js';
+import { DEFAULT_POSITIONS, GROUP_ALIASES } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -35,6 +36,8 @@ function defaultState() {
 }
 let state;
 try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); } catch { state = defaultState(); }
+// doplnenie nových vlastností do starších uložených dát
+for (const p of state.positions) if (!p.aliases) p.aliases = [...(DEFAULT_POSITIONS.find((d) => d.id === p.id)?.aliases || [])];
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -110,13 +113,18 @@ function renderRequests() {
     const req = md.requests[doc.id] || { off: [], want: [] };
     const offSet = new Set(req.off.map(Number));
     const wantMap = new Map(req.want.map((w) => [+w.day, w]));
+    const banMap = new Map((req.ban || []).map((b) => [+b.day, [].concat(b.pos)]));
+    const notes = req.notes || {};
     return el('tr', {}, el('td', { class: 'name', title: req.note || '' }, doc.name + (req.note ? ' 📝' : '')),
       ds.map((d) => {
         const w = wantMap.get(d.day);
-        const cls = offSet.has(d.day) ? 'off' : w ? 'want' : '';
-        const txt = offSet.has(d.day) ? '✗' : w ? (w.pos ? posShort(w.pos) : '✓') : '';
+        const b = banMap.get(d.day);
+        const cls = offSet.has(d.day) ? 'off' : w ? 'want' : b ? 'ban' : '';
+        const txt = offSet.has(d.day) ? '✗' : w ? (w.pos ? [].concat(w.pos).map(posShort).join('/') : '✓') : b ? '¬' + banLabel(b) : '';
+        const tip = [notes[d.day] ? `„${notes[d.day]}"` : '', b ? `nie na: ${b.map(posShort).join(', ')}` : ''].filter(Boolean).join(' – ');
         return el('td', {
-          class: `c ${cls} ${d.weekend || d.holiday ? 'we' : ''}`,
+          class: `c ${cls} ${d.weekend || d.holiday ? 'we' : ''} ${notes[d.day] ? 'note' : ''}`,
+          title: tip || null,
           onclick: () => cycleReq(doc.id, d.day),
           oncontextmenu: (e) => { e.preventDefault(); posMenu(e, doc, d.day); },
         }, txt);
@@ -130,6 +138,11 @@ function renderRequests() {
     : 'Rozpis minulého mesiaca nie je načítaný – pravidlo odpočinku po službe sa na 1. deň mesiaca neuplatní.';
 }
 const posShort = (id) => id;
+function banLabel(ids) {
+  for (const [g, members] of Object.entries(GROUP_ALIASES)) if (members.length === ids.length && members.every((m) => ids.includes(m))) return g;
+  if (ids.length > state.positions.length / 2) return '';
+  return ids.map(posShort).join('/');
+}
 
 function cycleReq(docId, day) {
   const md = monthData();
@@ -138,6 +151,7 @@ function cycleReq(docId, day) {
   const isWant = req.want.some((w) => +w.day === day);
   req.off = req.off.filter((d) => +d !== day);
   req.want = req.want.filter((w) => +w.day !== day);
+  req.ban = (req.ban || []).filter((b) => +b.day !== day);
   if (!isOff && !isWant) req.off.push(day);
   else if (isOff) req.want.push({ day, pos: null });
   save(); renderRequests();
@@ -150,7 +164,8 @@ function posMenu(e, doc, day) {
     const req = md.requests[doc.id] || (md.requests[doc.id] = { off: [], want: [], note: '' });
     req.off = req.off.filter((d) => +d !== day);
     req.want = req.want.filter((w) => +w.day !== day);
-    if (pos !== undefined) req.want.push({ day, pos });
+    req.ban = (req.ban || []).filter((b) => +b.day !== day);
+    if (pos !== undefined) req.want.push({ day, pos: pos ? [pos] : null });
     menu.classList.add('hidden'); save(); renderRequests();
   };
   menu.replaceChildren(
@@ -171,8 +186,14 @@ function applyParsed(parsed, source) {
   save(); renderRequests();
   const names = Object.keys(parsed.requests).map((id) => docById(id)?.name).filter(Boolean);
   let html = `<b>${esc(source)}:</b> načítané požiadavky ${names.length} lekárov (${esc(names.join(', '))}).`;
+  if (parsed.sheet) html += `<br>Hárok: <b>${esc(parsed.sheet)}</b>.`;
+  if (parsed.shift) html += ' Dáta v tabuľke sú posunuté o stĺpec oproti hlavičke s dátumami – zarovnal som ich podľa obsahu, skontrolujte prosím niekoľko lekárov.';
+  if (parsed.inactive?.length) html += `<br>Preskočení neaktívni lekári: ${esc(parsed.inactive.join(', '))}.`;
   if (parsed.unknown.length) html += `<br>Tieto riadky som nepriradil k žiadnemu lekárovi – skontrolujte ich alebo lekára pridajte na karte Lekári:${list(parsed.unknown.slice(0, 30))}`;
-  message('#reqMessages', parsed.unknown.length ? 'warn' : 'ok', html);
+  if (parsed.unclear?.length) html += `<br>Bunky, ktorým nerozumiem (neboli započítané, doplňte ručne):${list(parsed.unclear)}`;
+  const missing = activeDoctors().filter((d) => !parsed.requests[d.id]).map((d) => d.name);
+  if (parsed.sheet && missing.length) html += `<br>Aktívni lekári, ktorí v tabuľke chýbajú: ${esc(missing.join(', '))}.`;
+  message('#reqMessages', parsed.unknown.length || parsed.unclear?.length ? 'warn' : 'ok', html);
 }
 
 $('#reqPasteBtn').onclick = () => $('#pasteBox').classList.toggle('hidden');
@@ -186,7 +207,16 @@ $('#reqFile').onchange = async (e) => {
     try {
       const n = days().length;
       let parsed;
-      if (/\.docx$/i.test(f.name)) {
+      if (/\.xlsx$/i.test(f.name)) {
+        const sheets = await readXlsx(await f.arrayBuffer());
+        const sh = pickSheet(sheets, state.current.month);
+        if (!sh) throw new Error(`V súbore nie je hárok s dňami mesiaca ${MONTHS[state.current.month - 1]} (hárky: ${sheets.map((x) => x.name).join(', ')}). Zvoľte hore správny mesiac.`);
+        parsed = parseRequestsSheet(sh.rows, state.doctors, state.positions, state.current.month, GROUP_ALIASES);
+        if (!parsed) throw new Error('V hárku som nenašiel riadok s dátumami.');
+        parsed.sheet = sh.name;
+        // tabuľka obsahuje všetkých lekárov -> nahradí predchádzajúce požiadavky
+        monthData().requests = {};
+      } else if (/\.docx$/i.test(f.name)) {
         const doc = await readDocx(await f.arrayBuffer());
         parsed = null;
         for (const t of doc.tables) { const p = parseRequestsTable(t, activeDoctors(), state.positions, n); if (p && Object.keys(p.requests).length) { parsed = p; break; } }
@@ -293,7 +323,8 @@ function renderSchedule() {
         if (!active) return el('td', { class: `na ${d.weekend || d.holiday ? 'we' : ''}` });
         const cur = md.grid[t][pi];
         const key = `${d.day}|${p.id}`;
-        const offIds = new Set(Object.entries(md.requests).filter(([, r]) => (r.off || []).map(Number).includes(d.day)).map(([id]) => id));
+        const offIds = new Set(Object.entries(md.requests).filter(([, r]) => (r.off || []).map(Number).includes(d.day)
+          || (r.ban || []).some((b) => +b.day === d.day && [].concat(b.pos).includes(p.id))).map(([id]) => id));
         const sel = el('select', { onchange: (e) => setCell(t, pi, e.target.value), title: badCells.get(key) || '' },
           el('option', { value: '' }, ''),
           docs.filter((x) => x.positions.includes(p.id) || x.id === cur)
@@ -313,7 +344,8 @@ function renderSchedule() {
     const row = md.grid[w.day - 1];
     if (!row) continue;
     const pi = row.indexOf(id);
-    if (pi < 0 || (w.pos && P[pi].id !== w.pos)) unmet.push(`${docById(id)?.name || id} chcel(a) ${w.day}.${w.pos ? ' (' + posShort(w.pos) + ')' : ''}`);
+    const wp = w.pos == null ? null : [].concat(w.pos);
+    if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chcel(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
   }
   let html = '';
   if (!empty.length && !issues.length && !unmet.length) html = '<div class="msg ok">✔ Všetky služby sú obsadené, pravidlá aj priania lekárov sú dodržané.</div>';
@@ -446,10 +478,11 @@ $('#importData').onchange = async (e) => {
 function renderSettings() {
   const tbl = $('#posTable');
   tbl.replaceChildren(
-    el('tr', {}, ['Názov stĺpca', 'Skratka (id)', 'Nočná', 'Len pracovné dni', ''].map((h) => el('th', {}, h))),
+    el('tr', {}, ['Názov stĺpca', 'Skratka (id)', 'Ako to lekári píšu v požiadavkách', 'Nočná', 'Len pracovné dni', ''].map((h) => el('th', {}, h))),
     ...state.positions.map((p, i) => el('tr', {},
       el('td', {}, el('input', { value: p.label, onchange: (e) => { p.label = e.target.value; save(); } })),
       el('td', {}, p.id),
+      el('td', {}, el('input', { value: (p.aliases || []).join(', '), style: 'width:220px', onchange: (e) => { p.aliases = e.target.value.split(',').map((x) => x.trim()).filter(Boolean); save(); } })),
       el('td', {}, el('input', { type: 'checkbox', checked: p.night, onchange: (e) => { p.night = e.target.checked; save(); } })),
       el('td', {}, el('input', { type: 'checkbox', checked: p.workdaysOnly, onchange: (e) => { p.workdaysOnly = e.target.checked; save(); } })),
       el('td', {}, el('button', { class: 'danger', onclick: () => {
@@ -470,7 +503,7 @@ $('#addPos').onclick = () => {
   if (!label) return;
   let id = norm(label).replace(/[^a-z0-9]+/g, '') || 'pos';
   while (state.positions.some((p) => p.id === id)) id += '2';
-  state.positions.push({ id, label, night: true, workdaysOnly: false });
+  state.positions.push({ id, label, night: true, workdaysOnly: false, aliases: [] });
   for (const m of Object.values(state.months)) { m.grid = null; m.locked = {}; }
   save(); renderAll();
 };

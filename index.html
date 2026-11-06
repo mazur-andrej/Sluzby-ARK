@@ -28,7 +28,7 @@
     <section id="tab-requests" class="tab active">
       <div class="toolbar">
         <label class="btn">📄 Vložiť dokument s požiadavkami
-          <input type="file" id="reqFile" accept=".docx,.txt,.csv" hidden multiple>
+          <input type="file" id="reqFile" accept=".xlsx,.docx,.txt,.csv" hidden multiple>
         </label>
         <button id="reqPasteBtn">📋 Vložiť text</button>
         <label class="btn">⏮ Rozpis minulého mesiaca (.docx)
@@ -46,7 +46,7 @@ Zvoníčková – nemůže 24.12., 25.12.</pre>
       </div>
       <div id="reqMessages"></div>
       <div id="prevInfo" class="muted"></div>
-      <p class="muted">Klik na deň: <span class="tag off">✗ nechce</span> → <span class="tag want">✓ chce</span> → prázdne. Pri „chce" sa dá pravým klikom zvoliť aj pozícia.</p>
+      <p class="muted">Klik na deň: <span class="tag off">✗ nechce</span> → <span class="tag want">✓ chce</span> → prázdne. Pravý klik = „chce" na konkrétnej pozícii. <span class="tag ban">¬OUP</span> = v ten deň môže, ale nie na danej pozícii. Bunka s rožkom má poznámku lekára (ukážte na ňu myšou).</p>
       <div class="table-wrap"><table id="reqTable" class="grid"></table></div>
     </section>
 

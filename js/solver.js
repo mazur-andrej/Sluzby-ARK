@@ -3,6 +3,7 @@
 // Tvrdé pravidlá (nikdy sa neporušia):
 //  - lekár slúži len na pozíciách, ktoré má povolené
 //  - lekár neslúži v dni, ktoré si vyškrtol
+//  - v daný deň neslúži na pozícii, ktorú vylúčil (napr. "ne OUP")
 //  - max. 1 služba za deň
 //  - po nočnej službe (pozícia označená "nočná") je nasledujúci deň voľno
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
@@ -39,7 +40,7 @@ function mulberry32(seed) {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, night, workdaysOnly}],
  *   doctors: [{id, name, positions:[posId], target, max}],
- *   requests: { [doctorId]: { off:[day], want:[{day, pos?}] } },
+ *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
  *   locked: { "den|posId": doctorId } // ručne zadané bunky, ktoré sa nemenia
  *   weights, seed, iterations, restarts
@@ -63,12 +64,14 @@ export function solve(input) {
 
   const eligible = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
   const off = docs.map(() => new Set());
+  const ban = docs.map(() => new Set()); // "den|posIdx"
   const wants = [];
   for (const [id, req] of Object.entries(input.requests || {})) {
     const i = docIndex.get(id);
     if (i === undefined) continue;
     (req.off || []).forEach((d) => off[i].add(+d));
-    (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos ?? null }));
+    (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos == null ? null : [].concat(w.pos) }));
+    (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
   const maxOf = docs.map((d) => (d.max != null && d.max !== '' ? +d.max : Infinity));
   const targetOf = docs.map((d) => (d.target != null && d.target !== '' ? +d.target : 0));
@@ -104,6 +107,7 @@ export function solve(input) {
     if (!eligible[i].has(p)) return false;
     if (!slotActive[day - 1][p]) return false;
     if (!ignoreOff && off[i].has(day)) return false;
+    if (ban[i].has(`${day}|${p}`)) return false;
     if (docDay[i].has(day)) return false;
     if (nightAt(i, day - 1)) return false;
     if (P[p].night && busyAt(i, day + 1)) return false;
@@ -147,15 +151,16 @@ export function solve(input) {
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
     if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); continue; }
-    let cands = w.pos ? [posIndex.get(w.pos)].filter((x) => x !== undefined) : [...eligible[w.doc]];
+    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...eligible[w.doc]];
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
     // uprednostni pozíciu s najmenej kandidátmi
     cands.sort((a, b) => countCands(w.day, a) - countCands(w.day, b));
     if (cands.length) {
       place(w.doc, w.day, cands[0]); locked[w.day - 1][cands[0]] = true;
-      wantResults.push({ ...w, ok: true, pos: P[cands[0]].id });
+      wantResults.push({ ...w, ok: true, pos: [P[cands[0]].id] });
     } else {
-      wantResults.push({ ...w, ok: false });
+      const notEligible = w.pos && w.pos.every((id) => !eligible[w.doc].has(posIndex.get(id)));
+      wantResults.push({ ...w, ok: false, reason: notEligible ? 'túto pozíciu nemá v zozname povolených' : 'v ten deň to nejde (obsadené / odpočinok po službe)' });
     }
   }
   function countCands(day, p) { let c = 0; for (let i = 0; i < N; i++) if (canAssign(i, day, p)) c++; return c; }
@@ -265,7 +270,7 @@ export function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsadené: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikto voľný nespĺňa pravidlá)`);
-  for (const w of wantResults) if (!w.ok) warnings.push(`Nesplnené prianie: ${docs[w.doc].name} chcel(a) ${w.day}.${w.pos ? ' (' + w.pos + ')' : ''}`);
+  for (const w of wantResults) if (!w.ok) warnings.push(`Nesplnené prianie: ${docs[w.doc].name} chcel(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
   const stats = docs.map((doc, i) => {
     let we = 0;
@@ -294,6 +299,7 @@ export function validate(input, grid) {
     if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} sa v tento deň neslúži` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtol(a)` });
+    if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. slúžiť na ${pos.label}` });
     if (!perDoc.has(id)) perDoc.set(id, []);
     perDoc.get(id).push({ day, p });
   }));
