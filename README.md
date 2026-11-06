@@ -5,7 +5,39 @@ Běží celá v prohlížeči – nic se neinstaluje a data neopouštějí poč�
 
 **Aplikace:** https://mazur-andrej.github.io/Sluzby-ARK/
 
-## Spuštění
+## Online režim – lékaři zadávají požadavky sami
+
+Každý lékař má **osobní odkaz** (`lekar.html?t=…`), přes který zadává požadavky na příští měsíc a vidí hotový rozpis.
+Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
+
+- Požadavky na příští měsíc se zadávají **do 12. dne** v měsíci (včetně, nastavitelné v listu *Nastavení*).
+- V noci po uzávěrce (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis** (list *Rozpis RRRR-MM*). Správci přijde e-mail.
+- Rozpis lze v tabulce ručně upravit – lékaři vidí vždy aktuální stav.
+- 1. dne dalšího měsíce se otevřou požadavky na následující měsíc.
+
+### Jednorázové nastavení (správce, cca 10 minut)
+
+1. Založte novou Google tabulku (https://sheets.new), pojmenujte ji např. *Rozpis služeb*.
+2. **Rozšíření → Apps Script**. Smažte obsah souboru `Kód.gs` a vložte celý obsah souboru
+   [`apps-script/Kod.gs`](apps-script/Kod.gs) (tlačítko *Copy raw file*). Uložte (Ctrl+S).
+3. Vraťte se do tabulky a obnovte stránku (F5). Objeví se menu **Rozpis služeb** → **Počáteční nastavení**.
+   Google si vyžádá povolení (*Zkontrolovat oprávnění → účet → Rozšířené → Přejít na projekt*), pak akci spusťte znovu.
+   Vytvoří se listy *Lékaři, Pozice, Požadavky, Stav, Nastavení*, osobní odkazy a noční automatika.
+4. V Apps Script: **Nasadit → Nové nasazení → ozubené kolečko → Webová aplikace**.
+   *Spustit jako:* **Já**, *Kdo má přístup:* **Kdokoli**. Nasadit a zkopírujte **URL webové aplikace** (končí `/exec`).
+5. URL vložte do souboru [`js/online-config.js`](js/online-config.js) (nebo ji pošlete správci repozitáře).
+6. V listu *Lékaři* zkontrolujte pozice a cíle a rozešlete lékařům odkazy ze sloupce *Osobní odkaz pro lékaře*.
+
+### Běžná správa v tabulce
+
+- **Nový lékař:** nový řádek – Jméno, zaškrtnout *Aktivní*, Pozice (zkratky: `l1, l2, 1A, 2A, plast, t1, t2, OUPd, OUPn`), Cíl → menu *Doplnit odkazy nově přidaným lékařům*.
+- **Odchod / dlouhodobá nepřítomnost:** odškrtnout *Aktivní*.
+- **Ukradený/přeposlaný odkaz:** smazat buňku *Token* a dát *Doplnit odkazy* – vznikne nový odkaz, starý přestane fungovat.
+- *Přehled požadavků na příští měsíc* – tabulka lékaři × dny (jako dosavadní Excel), včetně toho, kdo ještě nezadal.
+- *Vygenerovat rozpis příštího měsíce teď* / *Znovu otevřít požadavky* – ruční zásah mimo automatiku.
+- Po změně `Kod.gs` je třeba v Apps Script dát *Nasadit → Spravovat nasazení → upravit → Nová verze*.
+
+## Spuštění offline nástroje (správce)
 
 - **Online:** GitHub Pages (Settings → Pages → Branch `main`, složka `/`).
 - **Lokálně:** ve složce spusťte `python3 -m http.server` a otevřete `http://localhost:8000`.
@@ -72,7 +104,7 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css
@@ -84,4 +116,8 @@ js/xlsx.js            čtení .xlsx
 js/calendar.js        dny, svátky
 js/config.js          pozice
 js/default-doctors.js výchozí seznam lékařů
+lekar.html, js/lekar.js, css/lekar.css   stránka pro lékaře
+js/online-config.js   adresa Google webové aplikace
+apps-script/server.js serverová část (Google Apps Script)
+apps-script/Kod.gs    hotový soubor pro vložení do Google (node tools/build-gas.mjs)
 ```

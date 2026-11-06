@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Moje služby</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+  <link rel="stylesheet" href="css/lekar.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="who">Moje služby</h1>
+      <div id="sub" class="muted"></div>
+    </div>
+    <nav>
+      <button data-tab="req" class="active">Požadavky</button>
+      <button data-tab="sched">Rozpis</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="loading" class="msg">Načítám…</div>
+    <div id="fatal" class="msg err hidden"></div>
+
+    <section id="tab-req" class="tab active hidden">
+      <div id="reqInfo" class="msg"></div>
+      <p class="muted help">Klepněte na den a vyberte, co chcete. Nakonec stiskněte <b>Uložit</b>. Do uzávěrky můžete požadavky libovolně měnit.</p>
+      <div class="legend">
+        <span class="tag off">✗ nemůžu</span>
+        <span class="tag want">✓ chci sloužit</span>
+        <span class="tag ban">¬ ne na pozici</span>
+        <span class="tag note">✎ poznámka</span>
+      </div>
+      <div id="cal" class="cal"></div>
+      <label class="muted" for="genNote">Poznámka pro správce rozpisu (nepovinné):</label>
+      <textarea id="genNote" rows="2" maxlength="500"></textarea>
+      <div class="savebar">
+        <span id="saveState" class="muted"></span>
+        <button id="saveBtn" class="primary">Uložit požadavky</button>
+      </div>
+    </section>
+
+    <section id="tab-sched" class="tab hidden">
+      <div class="toolbar">
+        <select id="schedMonth"></select>
+        <label class="muted"><input type="checkbox" id="onlyMine"> jen moje služby</label>
+      </div>
+      <div id="mine" class="msg"></div>
+      <div class="table-wrap"><table id="schedTable" class="schedule"></table></div>
+    </section>
+  </main>
+
+  <div id="sheetBg" class="sheet-bg hidden"></div>
+  <div id="sheet" class="sheet hidden"></div>
+  <script type="module" src="js/lekar.js"></script>
+</body>
+</html>
