@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rozpis služieb lekárov</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Rozpis služieb</h1>
+    <div class="month-picker">
+      <button id="prevMonth" title="Predchádzajúci mesiac">‹</button>
+      <span id="monthLabel"></span>
+      <button id="nextMonth" title="Nasledujúci mesiac">›</button>
+    </div>
+    <nav>
+      <button data-tab="requests" class="active">1. Požiadavky</button>
+      <button data-tab="schedule">2. Rozpis</button>
+      <button data-tab="doctors">Lekári</button>
+      <button data-tab="settings">Nastavenia</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- POŽIADAVKY -->
+    <section id="tab-requests" class="tab active">
+      <div class="toolbar">
+        <label class="btn">📄 Vložiť dokument s požiadavkami
+          <input type="file" id="reqFile" accept=".docx,.txt,.csv" hidden multiple>
+        </label>
+        <button id="reqPasteBtn">📋 Vložiť text</button>
+        <label class="btn">⏮ Rozpis minulého mesiaca (.docx)
+          <input type="file" id="prevFile" accept=".docx" hidden>
+        </label>
+        <button id="reqClear" class="danger">Vymazať požiadavky</button>
+      </div>
+      <div id="pasteBox" class="card hidden">
+        <p>Jeden lekár na riadok. Bez kľúčového slova sa dni berú ako <b>nechce</b>. Príklady:</p>
+        <pre>Mazúr: nechce 3, 4, 10-14; chce 20, 22 OUP noc
+Suk 1-5
+Zvoníčková – nemůže 24.12., 25.12.</pre>
+        <textarea id="pasteText" rows="8" placeholder="Sem vložte požiadavky…"></textarea>
+        <button id="pasteApply" class="primary">Načítať</button>
+      </div>
+      <div id="reqMessages"></div>
+      <div id="prevInfo" class="muted"></div>
+      <p class="muted">Klik na deň: <span class="tag off">✗ nechce</span> → <span class="tag want">✓ chce</span> → prázdne. Pri „chce" sa dá pravým klikom zvoliť aj pozícia.</p>
+      <div class="table-wrap"><table id="reqTable" class="grid"></table></div>
+    </section>
+
+    <!-- ROZPIS -->
+    <section id="tab-schedule" class="tab">
+      <div class="toolbar">
+        <button id="genBtn" class="primary">⚙ Vygenerovať rozpis</button>
+        <button id="genNewBtn">🔀 Iná varianta</button>
+        <button id="unlockBtn">🔓 Odomknúť ručné zmeny</button>
+        <button id="exportDocx">⬇ Stiahnuť .docx</button>
+        <button id="printBtn">🖨 Tlačiť</button>
+        <span id="genStatus" class="muted"></span>
+      </div>
+      <div id="schedMessages"></div>
+      <div class="split">
+        <div class="table-wrap"><table id="schedTable" class="schedule"></table></div>
+        <div class="side">
+          <h3>Prehľad lekárov</h3>
+          <table id="statsTable" class="stats"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEKÁRI -->
+    <section id="tab-doctors" class="tab">
+      <div class="toolbar">
+        <input id="newDocName" placeholder="Priezvisko nového lekára">
+        <button id="addDoc" class="primary">+ Pridať lekára</button>
+        <span class="spacer"></span>
+        <button id="exportData">💾 Záloha (JSON)</button>
+        <label class="btn">📂 Obnoviť zo zálohy<input type="file" id="importData" accept=".json" hidden></label>
+      </div>
+      <p class="muted">Zaškrtnite, na ktorých pozíciách môže lekár slúžiť. <b>Cieľ</b> = koľko služieb mesačne má mať (program sa k tomu snaží priblížiť), <b>Max</b> = tvrdý strop (prázdne = bez stropu). Neaktívny lekár sa do rozpisu nedáva (napr. materská, odchod).</p>
+      <div class="table-wrap"><table id="docTable" class="doctors"></table></div>
+    </section>
+
+    <!-- NASTAVENIA -->
+    <section id="tab-settings" class="tab">
+      <div class="card">
+        <h3>Pozície (stĺpce rozpisu)</h3>
+        <p class="muted"><b>Nočná</b> = po službe má lekár nasledujúci deň voľno. <b>Len pracovné dni</b> = cez víkend a sviatok sa neslúži.</p>
+        <table id="posTable" class="simple"></table>
+        <button id="addPos">+ Pridať pozíciu</button>
+      </div>
+      <div class="card">
+        <h3>Sviatky navyše v tomto mesiaci</h3>
+        <p class="muted">České štátne sviatky sa počítajú automaticky. Sem dopíšte ďalšie dni, ktoré sa majú brať ako sviatok (napr. 31 alebo 24, 31).</p>
+        <input id="extraHol" placeholder="napr. 31">
+      </div>
+      <div class="card">
+        <h3>Váhy pravidiel</h3>
+        <p class="muted">Vyššie číslo = program sa viac snaží pravidlo dodržať.</p>
+        <table id="weightsTable" class="simple"></table>
+      </div>
+    </section>
+  </main>
+
+  <div id="posMenu" class="popup hidden"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
