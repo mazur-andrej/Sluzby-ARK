@@ -21,8 +21,9 @@ Soubory se jmény, požadavky ani vygenerované rozpisy do repozitáře nepatř�
 Každý lékař má **osobní odkaz** (`lekar.html?t=…`), přes který zadává požadavky na příští měsíc a vidí hotový rozpis.
 Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 
-- Požadavky na příští měsíc se zadávají **do 11. dne** v měsíci (včetně, nastavitelné v listu *Nastavení*).
-- V noci na 12. (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis ke schválení** (list *Rozpis RRRR-MM*). Správci přijde e-mail, lékaři zatím nic nevidí.
+- **Den kontroly je 12.** (nastavitelné v listu *Nastavení*). Připadne-li na víkend nebo svátek, posune se na nejbližší pracovní den.
+- Požadavky na příští měsíc se zadávají **do dne před dnem kontroly** (včetně) – obvykle do 11., při posunu déle (např. 12. 12. 2026 je sobota → uzávěrka v neděli 13. 12., kontrola v pondělí 14. 12.).
+- V noci na den kontroly (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis ke schválení** (list *Rozpis RRRR-MM*). Správci přijde e-mail, lékaři zatím nic nevidí.
 - Správce rozpis během dne zkontroluje, případně ručně upraví v tabulce, a dá v menu **Schválit a rozeslat rozpis lékařům**.
   Teprve tehdy ho lékaři uvidí na své stránce a dostanou e-mailem. Dokud není schváleno, připomíná to správci každou noc e-mail.
 - 1. dne dalšího měsíce se otevřou požadavky na následující měsíc.

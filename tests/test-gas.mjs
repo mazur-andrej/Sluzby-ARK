@@ -133,8 +133,14 @@ check(call('pendingApprovals').length === 0, 'po opravě překlepu není nic ke 
 clock.now = new Date('2026-12-02T10:00:00Z');
 me = api({ t: tok(DOC_B) });
 check(me.month === '2027-01' && me.open, 'v prosinci se otevřely požadavky na leden');
-clock.now = new Date('2026-12-13T00:30:00Z');
+// 12. 12. 2026 je sobota → kontrola v pondělí 14. 12., uzávěrka v neděli 13. 12.
+check(me.deadline === '13. 12. 2026', `víkend: uzávěrka posunuta na ${me.deadline}`);
+clock.now = new Date('2026-12-12T00:30:00Z'); call('denniKontrola');
+clock.now = new Date('2026-12-13T00:30:00Z'); call('denniKontrola');
+check(!book.getSheetByName('Rozpis 2027-01') && api({ t: tok(DOC_B) }).open, 'v sobotu a neděli ještě otevřeno, nic negenerováno');
+clock.now = new Date('2026-12-14T00:30:00Z');
 call('denniKontrola');
+check(!!book.getSheetByName('Rozpis 2027-01'), 'v noci na pondělí 14. 12. vygenerováno ke schválení');
 const jan = book.getSheetByName('Rozpis 2027-01').getDataRange().getValues();
 check(/31\. 12\./.test(jan[1][0]), 'leden začíná řádkem 31. 12. z minulého měsíce');
 // po noční 31.12. nesmí sloužit 1.1.

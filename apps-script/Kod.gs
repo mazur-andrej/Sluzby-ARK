@@ -1284,7 +1284,7 @@ const SH = {
 };
 const TZ = 'Europe/Prague';
 const SETTINGS_DEFAULT = [
-  ['Uzávěrka požadavků – poslední den, kdy lze zadávat (v noci po něm se rozpis vygeneruje ke schválení)', 11],
+  ['Den kontroly rozpisu (v noci před ním se uzamknou požadavky a vygeneruje rozpis; víkend/svátek → nejbližší pracovní den)', 12],
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
   ['Minimální odpočinek mezi službami (hodiny)', 11],
@@ -1341,15 +1341,25 @@ function getSetting(i) {
   const v = s.getRange(i + 1, 2).getValue();
   return v === '' || v == null ? SETTINGS_DEFAULT[i][1] : v;
 }
-const deadlineDay = () => Number(getSetting(0)) || 11;
+const checkDay = () => Number(getSetting(0)) || 12;
 function adminEmail() { return getSetting(1) || Session.getEffectiveUser().getEmail(); }
 
-/** Uzávěrka pro daný cílový měsíc = den N v předchozím měsíci. */
-function deadlineOf(key) {
+/**
+ * Den kontroly pro cílový měsíc = den N (výchozí 12.) v předchozím měsíci;
+ * připadne-li na víkend nebo svátek, posune se na nejbližší pracovní den.
+ * Uzávěrka požadavků = den před dnem kontroly (do konce dne).
+ */
+function checkDayOf(key) {
   const { year, month } = parseKey(key);
   const p = prevMonthOf(year, month);
-  const last = new Date(p.year, p.month, 0).getDate();
-  return { year: p.year, month: p.month, day: Math.min(deadlineDay(), last) };
+  const days = buildMonth(p.year, p.month);
+  let d = Math.min(Math.max(2, checkDay()), days.length);
+  while (d < days.length && !days[d - 1].workday) d++;
+  return { year: p.year, month: p.month, day: d };
+}
+function deadlineOf(key) {
+  const c = checkDayOf(key);
+  return { year: c.year, month: c.month, day: c.day - 1 };
 }
 function deadlinePassed(key) {
   const d = deadlineOf(key), t = todayParts();
