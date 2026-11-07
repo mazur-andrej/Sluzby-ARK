@@ -93,18 +93,30 @@ Na kartě **Lékaři** se pro každého lékaře nastavuje:
 Výchozí seznam je odvozen z rozpisů květen–listopad 2026 (pozice povolená, pokud tam lékař sloužil alespoň 2×) – **je třeba ho zkontrolovat**.
 Data se ukládají v prohlížeči; *Záloha (JSON)* je uloží do souboru (doporučeno pravidelně, i pro přenos na jiný počítač).
 
+## Typy služeb
+
+| Pozice | Čas | Délka |
+|---|---|---|
+| lékař1–4 (JIP, anestezie), lékař5 = plast (KPECH) | 7:00 – 7:00 další den | 24 h |
+| OUP den / OUP noc | 7:00 – 19:00 / 19:00 – 7:00 | 12 h |
+| tečka1 | 7:00 – 17:30 | 10,5 h |
+| tečka2 | 9:30 – 17:30 | 8 h |
+
+Časy jdou změnit v Nastavení (offline nástroj) nebo v listu *Pozice* (Google tabulka). Z nich se počítá odpočinek mezi službami a odpracované hodiny v přehledu.
+
 ## Pravidla
 
 Vždy dodržena:
 - lékař slouží jen na povolených pozicích a ne ve dny, které si vyškrtl, ani na pozicích, které ten den nechce,
-- nejvýše 1 služba denně, po noční službě následující den volno,
+- nejvýše 1 služba denně a mezi koncem jedné a začátkem další služby aspoň 11 h odpočinku (nastavitelné);
+  podle časů služeb to znamená: po 24h službě (JIP, anestezie, KPECH) nebo OUP noci je další den volno, po OUP den nebo tečce lze další den sloužit,
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
 Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víkendy/svátky, rozestup mezi službami, přání „chci".
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css

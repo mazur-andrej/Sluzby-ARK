@@ -87,9 +87,12 @@ Zvoníčková – nemůže 24.12., 25.12.</pre>
     <section id="tab-settings" class="tab">
       <div class="card">
         <h3>Pozice (sloupce rozpisu)</h3>
-        <p class="muted"><b>Noční</b> = po službě má lékař následující den volno. <b>Jen pracovní dny</b> = o víkendu a svátku se neslouží.</p>
+        <p class="muted"><b>Začátek a délka</b> – z nich program počítá odpočinek mezi službami a odpracované hodiny. <b>Jen pracovní dny</b> = o víkendu a svátku se neslouží.</p>
         <table id="posTable" class="simple"></table>
         <button id="addPos">+ Přidat pozici</button>
+        <p style="margin-top:14px"><label>Minimální odpočinek mezi koncem jedné a začátkem další služby:
+          <input id="minRest" type="number" min="0" max="24" step="1" style="width:64px"> h</label></p>
+        <p class="muted">Při 11 h: po 24h službě nebo OUP noci má lékař další den volno; po OUP den nebo tečce může další den sloužit.</p>
       </div>
       <div class="card">
         <h3>Svátky navíc v tomto měsíci</h3>

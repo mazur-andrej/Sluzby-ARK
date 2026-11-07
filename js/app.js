@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { DEFAULT_POSITIONS, GROUP_ALIASES } from './config.js';
+import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -37,7 +37,13 @@ function defaultState() {
 let state;
 try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); } catch { state = defaultState(); }
 // doplnenie nových vlastností do starších uložených dát
-for (const p of state.positions) if (!p.aliases) p.aliases = [...(DEFAULT_POSITIONS.find((d) => d.id === p.id)?.aliases || [])];
+for (const p of state.positions) {
+  const def = DEFAULT_POSITIONS.find((d) => d.id === p.id);
+  if (!p.aliases) p.aliases = [...(def?.aliases || [])];
+  if (!p.start || !p.hours) { const t = shiftTimes(p); p.start = def?.start || `${String(Math.floor(t.start / 60)).padStart(2, '0')}:${String(t.start % 60).padStart(2, '0')}`; p.hours = t.hours; }
+  delete p.night;
+}
+if (state.minRestHours == null) state.minRestHours = DEFAULT_MIN_REST_HOURS;
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -74,6 +80,7 @@ const list = (items) => `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}<
 function renderMonth() {
   $('#monthLabel').textContent = `${MONTHS[state.current.month - 1]} ${state.current.year}`;
   $('#extraHol').value = (monthData().extraHolidays || []).join(', ');
+  $('#minRest').value = state.minRestHours;
   renderAll();
 }
 function shiftMonth(delta) {
@@ -267,7 +274,7 @@ function solverInput() {
   return {
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
-    weights: state.weights, seed: md.seed,
+    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours,
   };
 }
 
@@ -369,17 +376,17 @@ function setCell(t, pi, id) {
 function renderStats(md, ds) {
   const P = state.positions;
   const rows = activeDoctors().map((doc) => {
-    let n = 0, we = 0, night = 0;
+    let n = 0, we = 0, hours = 0;
     md.grid.forEach((row, t) => row.forEach((id, pi) => {
       if (id !== doc.id) return;
-      n++; if (ds[t].weekend || ds[t].holiday) we++; if (P[pi].night) night++;
+      n++; if (ds[t].weekend || ds[t].holiday) we++; hours += shiftTimes(P[pi]).hours;
     }));
     const req = md.requests[doc.id] || { off: [], want: [] };
-    return { doc, n, we, night, off: req.off.length, diff: n - (+doc.target || 0) };
+    return { doc, n, we, hours, off: req.off.length, diff: n - (+doc.target || 0) };
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Noční', 'Vyškrtl'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
       title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
@@ -389,7 +396,7 @@ function renderStats(md, ds) {
     el('td', { class: `num ${r.diff > 0 ? 'diff-pos' : r.diff < 0 ? 'diff-neg' : ''}` }, String(r.n)),
     el('td', { class: 'num' }, String(r.doc.target ?? '')),
     el('td', { class: 'num' }, String(r.we)),
-    el('td', { class: 'num' }, String(r.night)),
+    el('td', { class: 'num' }, String(Math.round(r.hours * 10) / 10)),
     el('td', { class: 'num' }, String(r.off))))),
   );
 }
@@ -475,15 +482,22 @@ $('#importData').onchange = async (e) => {
 };
 
 // ---------------- Nastavenia ----------------
+function endLabel(p) {
+  const t = shiftTimes(p);
+  const e = t.end % 1440;
+  return `${String(Math.floor(e / 60)).padStart(2, '0')}:${String(e % 60).padStart(2, '0')}${t.end > 1440 ? ' (další den)' : ''}`;
+}
 function renderSettings() {
   const tbl = $('#posTable');
   tbl.replaceChildren(
-    el('tr', {}, ['Název sloupce', 'Zkratka (id)', 'Jak to lékaři píšou v požadavcích', 'Noční', 'Jen pracovní dny', ''].map((h) => el('th', {}, h))),
+    el('tr', {}, ['Název sloupce', 'Zkratka (id)', 'Jak to lékaři píšou v požadavcích', 'Začátek', 'Délka (h)', 'Konec', 'Jen pracovní dny', ''].map((h) => el('th', {}, h))),
     ...state.positions.map((p, i) => el('tr', {},
       el('td', {}, el('input', { value: p.label, onchange: (e) => { p.label = e.target.value; save(); } })),
       el('td', {}, p.id),
       el('td', {}, el('input', { value: (p.aliases || []).join(', '), style: 'width:220px', onchange: (e) => { p.aliases = e.target.value.split(',').map((x) => x.trim()).filter(Boolean); save(); } })),
-      el('td', {}, el('input', { type: 'checkbox', checked: p.night, onchange: (e) => { p.night = e.target.checked; save(); } })),
+      el('td', {}, el('input', { type: 'time', value: p.start, onchange: (e) => { p.start = e.target.value; save(); renderSettings(); } })),
+      el('td', {}, el('input', { type: 'number', min: 1, max: 36, step: 0.5, value: p.hours, style: 'width:64px', onchange: (e) => { p.hours = +e.target.value; save(); renderSettings(); } })),
+      el('td', { class: 'muted' }, endLabel(p)),
       el('td', {}, el('input', { type: 'checkbox', checked: p.workdaysOnly, onchange: (e) => { p.workdaysOnly = e.target.checked; save(); } })),
       el('td', {}, el('button', { class: 'danger', onclick: () => {
         if (!confirm(`Odstranit pozici ${p.label}? Rozpisy uložené pro jednotlivé měsíce se smažou.`)) return;
@@ -503,10 +517,11 @@ $('#addPos').onclick = () => {
   if (!label) return;
   let id = norm(label).replace(/[^a-z0-9]+/g, '') || 'pos';
   while (state.positions.some((p) => p.id === id)) id += '2';
-  state.positions.push({ id, label, night: true, workdaysOnly: false, aliases: [] });
+  state.positions.push({ id, label, start: '07:00', hours: 24, workdaysOnly: false, aliases: [] });
   for (const m of Object.values(state.months)) { m.grid = null; m.locked = {}; }
   save(); renderAll();
 };
+$('#minRest').onchange = (e) => { state.minRestHours = Math.max(0, +e.target.value || 0); save(); };
 $('#extraHol').onchange = (e) => {
   monthData().extraHolidays = (e.target.value.match(/\d+/g) || []).map(Number);
   save(); renderAll();

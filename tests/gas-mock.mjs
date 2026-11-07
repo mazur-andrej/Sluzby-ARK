@@ -13,7 +13,7 @@ export function createGas() {
     constructor(sh, r, c, nr, nc) { Object.assign(this, { sh, r, c, nr, nc }); }
     _cell(i, j) { const row = (this.sh.data[this.r - 1 + i] ||= []); return row[this.c - 1 + j]; }
     getValues() { return Array.from({ length: this.nr }, (_, i) => Array.from({ length: this.nc }, (_, j) => this._cell(i, j) ?? '')); }
-    getDisplayValues() { return this.getValues().map((r) => r.map((x) => String(x))); }
+    getDisplayValues() { return this.getValues().map((r) => r.map((x) => (x === true ? 'TRUE' : x === false ? 'FALSE' : String(x)))); }
     getValue() { return this.getValues()[0][0]; }
     setValues(v) {
       if (v.length !== this.nr || v.some((r) => r.length !== this.nc)) throw new Error(`setValues rozměr ${v.length}x${v[0]?.length} != ${this.nr}x${this.nc}`);

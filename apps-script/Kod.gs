@@ -61,23 +61,43 @@ function prevMonthOf(year, month) {
 
 // ----- js/config.js -----
 // Predvolené pozície (stĺpce rozpisu).
-// night = služba cez noc (nasledujúci deň musí mať lekár voľno)
+// start  = začiatok služby (HH:MM), hours = dĺžka v hodinách
+//          (z toho program počíta odpočinok medzi službami a odpracované hodiny)
 // workdaysOnly = slúži sa len v pracovné dni (nie víkend/sviatok)
 // aliases = ako lekári pozíciu píšu v požiadavkách (napr. "chci KPECH" = plast)
 const DEFAULT_POSITIONS = [
-  { id: 'l1', label: 'lékař1', night: true, workdaysOnly: false, aliases: ['lekar1', 'lékař 1'] },
-  { id: 'l2', label: 'lékař2', night: true, workdaysOnly: false, aliases: ['lekar2', 'lékař 2'] },
-  { id: '1A', label: 'lékař3=1A', night: true, workdaysOnly: false, aliases: ['A1', '1A'] },
-  { id: '2A', label: 'lékař4=2A', night: true, workdaysOnly: false, aliases: ['A2', '2A'] },
-  { id: 'plast', label: 'lékař5=plast', night: true, workdaysOnly: false, aliases: ['KPECH', 'plast', 'plastika'] },
-  { id: 't1', label: 'tečka1', night: false, workdaysOnly: true , aliases: ['tečka 1', 'tecka1', 't1'] },
-  { id: 't2', label: 'tečka2', night: false, workdaysOnly: true , aliases: ['tečka 2', 'tecka2', 't2'] },
-  { id: 'OUPd', label: 'OUP den', night: false, workdaysOnly: false, aliases: ['OUP den', 'OUPden'] },
-  { id: 'OUPn', label: 'OUP noc', night: true, workdaysOnly: false, aliases: ['OUP noc', 'OUPnoc'] },
+  { id: 'l1', label: 'lékař1', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['lekar1', 'lékař 1'] },
+  { id: 'l2', label: 'lékař2', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['lekar2', 'lékař 2'] },
+  { id: '1A', label: 'lékař3=1A', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['A1', '1A'] },
+  { id: '2A', label: 'lékař4=2A', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['A2', '2A'] },
+  { id: 'plast', label: 'lékař5=plast', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['KPECH', 'plast', 'plastika'] },
+  { id: 't1', label: 'tečka1', start: '07:00', hours: 10.5, workdaysOnly: true, aliases: ['tečka 1', 'tecka1', 't1'] },
+  { id: 't2', label: 'tečka2', start: '09:30', hours: 8, workdaysOnly: true, aliases: ['tečka 2', 'tecka2', 't2'] },
+  { id: 'OUPd', label: 'OUP den', start: '07:00', hours: 12, workdaysOnly: false, aliases: ['OUP den', 'OUPden'] },
+  { id: 'OUPn', label: 'OUP noc', start: '19:00', hours: 12, workdaysOnly: false, aliases: ['OUP noc', 'OUPnoc'] },
 ];
+
+// Minimálny odpočinok medzi koncom jednej a začiatkom ďalšej služby (hodiny).
+const DEFAULT_MIN_REST_HOURS = 11;
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
+
+/**
+ * Časy služby v minútach od polnoci dňa, kedy služba začína: { start, end, hours, night }.
+ * Pre staršie uložené dáta bez času sa použije predvolená pozícia s rovnakým id,
+ * inak príznak night (24 h) / deň (12 h).
+ */
+function shiftTimes(p) {
+  const def = DEFAULT_POSITIONS.find((d) => d.id === p.id) || {};
+  const startStr = p.start || def.start || '07:00';
+  const m = String(startStr).match(/(\d{1,2})[:.](\d{2})/);
+  const start = m ? (+m[1]) * 60 + (+m[2]) : 420;
+  let hours = Number(p.hours);
+  if (!(hours > 0)) hours = def.hours || (p.night ? 24 : 12);
+  const end = start + Math.round(hours * 60);
+  return { start, end, hours, night: end > 1440 };
+}
 
 // ----- js/default-doctors.js -----
 // Predvolený zoznam lekárov (odvodený z rozpisov máj–november 2026).
@@ -848,13 +868,16 @@ const DEFAULT_DOCTORS = [
 //  - lekár neslúži v dni, ktoré si vyškrtol
 //  - v daný deň neslúži na pozícii, ktorú vylúčil (napr. "ne OUP")
 //  - max. 1 služba za deň
-//  - po nočnej službe (pozícia označená "nočná") je nasledujúci deň voľno
+//  - medzi koncom jednej a začiatkom ďalšej služby je aspoň minRestHours hodín odpočinku
+//    (z časov služieb: po 24 h službe alebo OUP noci je nasledujúci deň voľno)
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
 // Mäkké pravidlá (optimalizujú sa):
 //  - počet služieb čo najbližšie k cieľu lekára
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
+
+
 
 const DEFAULT_WEIGHTS = {
   unfilled: 1000,
@@ -881,7 +904,8 @@ function mulberry32(seed) {
 /**
  * input = {
  *   days: [{day, weekend, holiday, workday}],
- *   positions: [{id, label, night, workdaysOnly}],
+ *   positions: [{id, label, start, hours, workdaysOnly}],
+ *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   doctors: [{id, name, positions:[posId], target, max}],
  *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
@@ -931,7 +955,7 @@ function solve(input) {
   for (const pr of input.prev || []) {
     const i = docIndex.get(pr.doctorId);
     const p = posIndex.get(pr.posId);
-    if (i !== undefined) prevByDoc[i].push({ day: +pr.day, night: p !== undefined ? !!P[p].night : true });
+    if (i !== undefined) prevByDoc[i].push({ day: +pr.day, p: p !== undefined ? p : -1 });
   }
 
   // Stav
@@ -939,12 +963,24 @@ function solve(input) {
   const locked = Array.from({ length: D }, () => new Array(P.length).fill(false));
   const docDay = docs.map(() => new Map()); // den -> posIdx
 
-  const nightAt = (i, day) => {
-    if (day >= 1 && day <= D) { const p = docDay[i].get(day); return p !== undefined && P[p].night; }
-    if (day <= 0) return prevByDoc[i].some((x) => x.day === day && x.night);
-    return false;
+  // Časy služieb v minútach; -1 = neznáma pozícia z minulého mesiaca (berie sa ako 24 h od 7:00)
+  const times = P.map(shiftTimes);
+  const timeOf = (p) => (p >= 0 ? times[p] : { start: 420, end: 420 + 1440 });
+  const minRest = (input.minRestHours ?? DEFAULT_MIN_REST_HOURS) * 60;
+  /** pozícia služby lekára v daný deň (aj z minulého mesiaca) alebo undefined */
+  const serviceAt = (i, day) => {
+    if (day >= 1 && day <= D) return docDay[i].get(day);
+    if (day <= 0) { const x = prevByDoc[i].find((y) => y.day === day); return x ? x.p : undefined; }
+    return undefined;
   };
-  const busyAt = (i, day) => (day >= 1 && day <= D ? docDay[i].has(day) : day <= 0 && prevByDoc[i].some((x) => x.day === day));
+  /** dodrží sa odpočinok voči službe deň pred a deň po? */
+  function restOk(i, day, p) {
+    const before = serviceAt(i, day - 1);
+    if (before !== undefined && 1440 + times[p].start - timeOf(before).end < minRest) return false;
+    const after = serviceAt(i, day + 1);
+    if (after !== undefined && 1440 + timeOf(after).start - times[p].end < minRest) return false;
+    return true;
+  }
 
   function canAssign(i, day, p, ignoreOff = false) {
     if (!eligible[i].has(p)) return false;
@@ -952,8 +988,7 @@ function solve(input) {
     if (!ignoreOff && off[i].has(day)) return false;
     if (ban[i].has(`${day}|${p}`)) return false;
     if (docDay[i].has(day)) return false;
-    if (nightAt(i, day - 1)) return false;
-    if (P[p].night && busyAt(i, day + 1)) return false;
+    if (!restOk(i, day, p)) return false;
     if (docDay[i].size >= maxOf[i]) return false;
     return true;
   }
@@ -1117,8 +1152,9 @@ function solve(input) {
 
   const stats = docs.map((doc, i) => {
     let we = 0;
-    for (const d of docDay[i].keys()) if (isWe[d - 1]) we++;
-    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we };
+    let hours = 0;
+    for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
+    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours };
   });
 
   return {
@@ -1157,7 +1193,11 @@ function validate(input, grid) {
     for (let k = 1; k < list.length; k++) {
       const a = list[k - 1], b = list[k];
       if (a.day === b.day && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má 2 služby ve stejný den` });
-      if (b.day - a.day === 1 && (a.p < 0 || P[a.p].night) && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} slouží den po noční službě` });
+      if (b.day - a.day === 1 && !b.prev) {
+        const ta = a.p >= 0 ? shiftTimes(P[a.p]) : { end: 420 + 1440 };
+        const rest = (1440 + shiftTimes(P[b.p]).start - ta.end) / 60;
+        if (rest < (input.minRestHours ?? DEFAULT_MIN_REST_HOURS)) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má jen ${Math.max(0, rest)} h odpočinku po předchozí službě` });
+      }
     }
     const doc = byId.get(id);
     const n = list.filter((x) => !x.prev).length;
@@ -1180,6 +1220,7 @@ const SETTINGS_DEFAULT = [
   ['Uzávěrka požadavků (poslední den v měsíci, kdy lze zadávat)', 12],
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
+  ['Minimální odpočinek mezi službami (hodiny)', 11],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -1246,13 +1287,17 @@ function deadlinePassed(key) {
 }
 
 // ---------------------------------------------------------------- data
+// List Pozice: Zkratka | Název sloupce | Začátek | Délka (h) | Jen pracovní dny | Jak to lékaři píšou
 function readPositions() {
-  const v = sheet(SH.POS).getDataRange().getValues().slice(1).filter((r) => r[0] !== '');
+  const v = sheet(SH.POS).getDataRange().getDisplayValues().slice(1).filter((r) => String(r[0]).trim() !== '');
   return v.map((r) => ({
-    id: String(r[0]).trim(), label: String(r[1]).trim(), night: r[2] === true, workdaysOnly: r[3] === true,
-    aliases: String(r[4] || '').split(',').map((x) => x.trim()).filter(Boolean),
+    id: String(r[0]).trim(), label: String(r[1]).trim(),
+    start: String(r[2]).trim(), hours: Number(String(r[3]).replace(',', '.')),
+    workdaysOnly: String(r[4]).toUpperCase() === 'TRUE',
+    aliases: String(r[5] || '').split(',').map((x) => x.trim()).filter(Boolean),
   }));
 }
+const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
 
 /** Načte lékaře; chybějící ID/token doplní a zapíše zpět. */
 function readDoctors() {
@@ -1341,12 +1386,13 @@ function nastavit() {
     docS.getRange(2, 3, Math.max(rows.length, 200), 1).insertCheckboxes();
     docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420);
   }
-  const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Noční', 'Jen pracovní dny', 'Jak to lékaři píšou']);
+  const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Začátek (HH:MM)', 'Délka (h)', 'Jen pracovní dny', 'Jak to lékaři píšou']);
   if (posS.getLastRow() < 2) {
-    const rows = DEFAULT_POSITIONS.map((p) => [p.id, p.label, p.night, p.workdaysOnly, (p.aliases || []).join(', ')]);
-    posS.getRange(2, 1, rows.length, 5).setValues(rows);
-    posS.getRange(2, 3, rows.length, 2).insertCheckboxes();
-    posS.getRange(2, 3, rows.length, 2).setValues(rows.map((r) => [r[2], r[3]]));
+    const rows = DEFAULT_POSITIONS.map((p) => [p.id, p.label, p.start, p.hours, p.workdaysOnly, (p.aliases || []).join(', ')]);
+    posS.getRange(2, 3, rows.length, 1).setNumberFormat('@'); // čas jako text, ať ho Tabulky nepřevádějí
+    posS.getRange(2, 1, rows.length, 6).setValues(rows);
+    posS.getRange(2, 5, rows.length, 1).insertCheckboxes();
+    posS.getRange(2, 5, rows.length, 1).setValues(rows.map((r) => [r[4]]));
   }
   ensureSheet(SH.REQ, ['Měsíc', 'ID lékaře', 'Jméno', 'Požadavky (data)', 'Uloženo']);
   ensureSheet(SH.STATE, ['Měsíc', 'Stav', 'Změněno', 'Poznámka']);
@@ -1410,7 +1456,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3 });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
@@ -1477,9 +1523,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends]));
-  s.getRange(1, sc, stats.length, 4).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 4).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours]));
+  s.getRange(1, sc, stats.length, 5).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 5).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }
@@ -1545,7 +1591,7 @@ function handle(p, body) {
     const dl = deadlineOf(key);
     return {
       doctor: { name: doc.name, positions: doc.positions, active: doc.active },
-      positions: positions.map((x) => ({ id: x.id, label: x.label, workdaysOnly: x.workdaysOnly })),
+      positions: positions.map((x) => ({ id: x.id, label: x.label, workdaysOnly: x.workdaysOnly, start: x.start, hours: x.hours })),
       month: key, open: isOpen(key) && doc.active,
       deadline: `${dl.day}. ${dl.month}. ${dl.year}`,
       request: readRequests(key)[doc.id] || null,

@@ -11,6 +11,7 @@ const SETTINGS_DEFAULT = [
   ['Uzávěrka požadavků (poslední den v měsíci, kdy lze zadávat)', 12],
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
+  ['Minimální odpočinek mezi službami (hodiny)', 11],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -77,13 +78,17 @@ function deadlinePassed(key) {
 }
 
 // ---------------------------------------------------------------- data
+// List Pozice: Zkratka | Název sloupce | Začátek | Délka (h) | Jen pracovní dny | Jak to lékaři píšou
 function readPositions() {
-  const v = sheet(SH.POS).getDataRange().getValues().slice(1).filter((r) => r[0] !== '');
+  const v = sheet(SH.POS).getDataRange().getDisplayValues().slice(1).filter((r) => String(r[0]).trim() !== '');
   return v.map((r) => ({
-    id: String(r[0]).trim(), label: String(r[1]).trim(), night: r[2] === true, workdaysOnly: r[3] === true,
-    aliases: String(r[4] || '').split(',').map((x) => x.trim()).filter(Boolean),
+    id: String(r[0]).trim(), label: String(r[1]).trim(),
+    start: String(r[2]).trim(), hours: Number(String(r[3]).replace(',', '.')),
+    workdaysOnly: String(r[4]).toUpperCase() === 'TRUE',
+    aliases: String(r[5] || '').split(',').map((x) => x.trim()).filter(Boolean),
   }));
 }
+const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
 
 /** Načte lékaře; chybějící ID/token doplní a zapíše zpět. */
 function readDoctors() {
@@ -172,12 +177,13 @@ function nastavit() {
     docS.getRange(2, 3, Math.max(rows.length, 200), 1).insertCheckboxes();
     docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420);
   }
-  const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Noční', 'Jen pracovní dny', 'Jak to lékaři píšou']);
+  const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Začátek (HH:MM)', 'Délka (h)', 'Jen pracovní dny', 'Jak to lékaři píšou']);
   if (posS.getLastRow() < 2) {
-    const rows = DEFAULT_POSITIONS.map((p) => [p.id, p.label, p.night, p.workdaysOnly, (p.aliases || []).join(', ')]);
-    posS.getRange(2, 1, rows.length, 5).setValues(rows);
-    posS.getRange(2, 3, rows.length, 2).insertCheckboxes();
-    posS.getRange(2, 3, rows.length, 2).setValues(rows.map((r) => [r[2], r[3]]));
+    const rows = DEFAULT_POSITIONS.map((p) => [p.id, p.label, p.start, p.hours, p.workdaysOnly, (p.aliases || []).join(', ')]);
+    posS.getRange(2, 3, rows.length, 1).setNumberFormat('@'); // čas jako text, ať ho Tabulky nepřevádějí
+    posS.getRange(2, 1, rows.length, 6).setValues(rows);
+    posS.getRange(2, 5, rows.length, 1).insertCheckboxes();
+    posS.getRange(2, 5, rows.length, 1).setValues(rows.map((r) => [r[4]]));
   }
   ensureSheet(SH.REQ, ['Měsíc', 'ID lékaře', 'Jméno', 'Požadavky (data)', 'Uloženo']);
   ensureSheet(SH.STATE, ['Měsíc', 'Stav', 'Změněno', 'Poznámka']);
@@ -241,7 +247,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3 });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
@@ -308,9 +314,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends]));
-  s.getRange(1, sc, stats.length, 4).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 4).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours]));
+  s.getRange(1, sc, stats.length, 5).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 5).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }
@@ -376,7 +382,7 @@ function handle(p, body) {
     const dl = deadlineOf(key);
     return {
       doctor: { name: doc.name, positions: doc.positions, active: doc.active },
-      positions: positions.map((x) => ({ id: x.id, label: x.label, workdaysOnly: x.workdaysOnly })),
+      positions: positions.map((x) => ({ id: x.id, label: x.label, workdaysOnly: x.workdaysOnly, start: x.start, hours: x.hours })),
       month: key, open: isOpen(key) && doc.active,
       deadline: `${dl.day}. ${dl.month}. ${dl.year}`,
       request: readRequests(key)[doc.id] || null,
