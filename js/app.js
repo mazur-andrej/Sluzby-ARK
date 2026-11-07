@@ -499,6 +499,58 @@ $('#addDoc').onclick = () => {
 };
 $('#newDocName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#addDoc').click(); });
 
+// Seznam lékařů ze souboru (sloupce podle záhlaví: ID, Jméno, Aktivní, Pozice, Cíl, Max)
+$('#importDocs').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  try {
+    let rows;
+    if (/\.xlsx$/i.test(f.name)) {
+      const sheets = await readXlsx(await f.arrayBuffer());
+      const sh = sheets.find((x) => /l[eé]ka|doctor/i.test(x.name)) || sheets[0];
+      rows = sh.rows;
+    } else {
+      const text = (await f.text()).replace(/^\uFEFF/, '');
+      const sep = (text.split('\n')[0].match(/;/g) || []).length >= 2 ? ';' : (text.includes('\t') ? '\t' : ',');
+      rows = text.split(/\r?\n/).map((l) => l.split(sep).map((c) => c.replace(/^"|"$/g, '').trim()));
+    }
+    const hi = rows.findIndex((r) => r && r.some((c) => /^(jm[eé]no|meno|name)$/i.test(norm(c))));
+    if (hi < 0) throw new Error('V souboru chybí sloupec „Jméno".');
+    const h = rows[hi].map((c) => norm(c));
+    const col = (re) => h.findIndex((c) => re.test(c));
+    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), cTgt = col(/^cil/), cMax = col(/^max/);
+    const yes = (v) => /^(true|ano|áno|1|x|yes|pravda)$/i.test(String(v).trim());
+    let updated = 0, added = 0;
+    for (const r of rows.slice(hi + 1)) {
+      if (!r) continue;
+      const name = String(r[cName] || '').trim();
+      if (!name) continue;
+      const id = cId >= 0 ? String(r[cId] || '').trim() : '';
+      let doc = (id && state.doctors.find((d) => d.id === id)) || state.doctors.find((d) => norm(d.name) === norm(name));
+      if (!doc) {
+        let nid = id || norm(name).replace(/[^a-z0-9]+/g, '-');
+        while (state.doctors.some((d) => d.id === nid)) nid += '-2';
+        doc = { id: nid, name, active: true, positions: [], target: 4, max: null, note: '' };
+        state.doctors.push(doc); added++;
+      } else updated++;
+      doc.name = name;
+      if (cAct >= 0 && String(r[cAct]).trim() !== '') doc.active = yes(r[cAct]);
+      if (cPos >= 0 && String(r[cPos]).trim() !== '') doc.positions = String(r[cPos]).split(/[,\s]+/).map((x) => x.trim()).filter((x) => state.positions.some((p) => p.id === x));
+      if (cTgt >= 0 && String(r[cTgt]).trim() !== '') doc.target = +String(r[cTgt]).replace(',', '.') || 0;
+      if (cMax >= 0) doc.max = String(r[cMax] ?? '').trim() === '' ? null : +r[cMax];
+    }
+    save(); renderAll();
+    message('#docMessages', 'ok', `Seznam načten: ${updated} lékařů aktualizováno, ${added} přidáno.`);
+  } catch (err) { message('#docMessages', 'err', esc(err.message)); }
+};
+$('#exportDocs').onclick = () => {
+  const q = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Cíl', 'Max'].join(';')]
+    .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.target ?? '', d.max ?? ''].map(q).join(';')));
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: 'lekari-SOUKROME.csv' });
+  document.body.append(a); a.click(); a.remove();
+};
+
 $('#exportData').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
   const a = el('a', { href: URL.createObjectURL(blob), download: `rozpis-sluzeb-zaloha-${new Date().toISOString().slice(0, 10)}.json` });

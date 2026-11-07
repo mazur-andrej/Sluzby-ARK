@@ -5,6 +5,17 @@ Běží celá v prohlížeči – nic se neinstaluje a data neopouštějí poč�
 
 **Aplikace:** https://mazur-andrej.github.io/Sluzby-ARK/
 
+## Ochrana osobních údajů
+
+Tento repozitář je veřejný, proto v něm **nejsou jména lékařů** – výchozí seznam obsahuje jen anonymní „Dr. 01 …" se strukturou pozic a cílů.
+Skutečná jména má správce v soukromém souboru (`lekari-SOUKROME.xlsx`, ID `lekar-01 …` odpovídá „Dr. 01 …") a načítá je:
+
+- do **offline nástroje**: karta *Lékaři* → *Načíst seznam lékařů (Excel/CSV)* – uloží se jen v prohlížeči správce,
+- do **Google tabulky**: *Soubor → Importovat → Vložit nové listy* (list *Lékaři*) ještě před *Počátečním nastavením*.
+
+Lékaři vidí jména jen přes svůj osobní odkaz (data jdou z Google tabulky správce) a v e-mailu s rozpisem.
+Soubory se jmény, požadavky ani vygenerované rozpisy do repozitáře nepatří.
+
 ## Online režim – lékaři zadávají požadavky sami
 
 Každý lékař má **osobní odkaz** (`lekar.html?t=…`), přes který zadává požadavky na příští měsíc a vidí hotový rozpis.
@@ -14,10 +25,13 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 - V noci po uzávěrce (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis** (list *Rozpis RRRR-MM*). Správci přijde e-mail.
 - Rozpis lze v tabulce ručně upravit – lékaři vidí vždy aktuální stav.
 - 1. dne dalšího měsíce se otevřou požadavky na následující měsíc.
+- Po vygenerování dostane každý lékař, který má v listu *Lékaři* vyplněný **e-mail**, zprávu se svými službami, celým rozpisem (se jmény) a odkazem na svou stránku.
+  Po ručních úpravách lze rozeslat znovu: menu *Rozeslat rozpis příštího měsíce lékařům e-mailem*. Vypnout jde v listu *Nastavení*.
 
 ### Jednorázové nastavení (správce, cca 10 minut)
 
 1. Založte novou Google tabulku (https://sheets.new), pojmenujte ji např. *Rozpis služeb*.
+   Importujte do ní soukromý seznam lékařů: *Soubor → Importovat → Nahrát → lekari-SOUKROME.xlsx → Vložit nové listy*. Doplňte e-maily.
 2. **Rozšíření → Apps Script**. Smažte obsah souboru `Kód.gs` a vložte celý obsah souboru
    [`apps-script/Kod.gs`](apps-script/Kod.gs) (tlačítko *Copy raw file*). Uložte (Ctrl+S).
 3. Vraťte se do tabulky a obnovte stránku (F5). Objeví se menu **Rozpis služeb** → **Počáteční nastavení**.
@@ -78,9 +92,9 @@ Ověřeno na listech srpen–listopad 2026 proti skutečným rozpisům: přání
 Jeden lékař na řádek, bez klíčového slova se dny berou jako „nechce":
 
 ```
-Mazúr: nechce 3, 4, 10-14; chce 20, 22 OUP noc
-Suk 1-5
-Zvoníčková – nemůže 24.12., 25.12.
+Novák: nechce 3, 4, 10-14; chce 20, 22 OUP noc
+Černý 1-5
+Dvořáková – nemůže 24.12., 25.12.
 ```
 
 ## Lékaři

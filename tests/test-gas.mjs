@@ -4,17 +4,37 @@ const { clock, sheets, book, triggers, mails, call, api, post } = createGas();
 let fails = 0;
 const check = (cond, msg) => { console.log(cond ? '✔' : '✘', msg); if (!cond) fails++; };
 
+// 0) správce nejdřív importuje soukromý seznam se jmény (list Lékaři) – setup ho nesmí přepsat
+const imp = book.insertSheet('Lékaři');
+imp.getRange(1, 1, 3, 6).setValues([['ID', 'Jméno', 'Aktivní', 'Pozice', 'Cíl', 'Max'], ['x-1', 'Testová Jana', true, 'l2, OUPd, OUPn', 4, ''], ['x-2', 'Zkušební Petr', true, 'l1, l2', 4, '']]);
+call('nastavit');
+const kept = book.getSheetByName('Lékaři').getDataRange().getValues();
+check(kept.length === 3 && kept[1][1] === 'Testová Jana' && kept[1][6] && String(kept[1][7]).includes('?t=' + kept[1][6]), 'importovaný seznam zachován, doplněn token a odkaz');
+check(kept[0][8] === 'E-mail (pro rozeslání rozpisu)', 'přidán sloupec E-mail');
+// pro zbytek testu: čistý výchozí (anonymní) seznam
+book.deleteSheet(book.getSheetByName('Lékaři'));
+
 // 1) nastavení
 call('nastavit');
-check(sheets.map((s) => s.name).join() === 'Lékaři,Pozice,Požadavky,Stav,Nastavení', 'listy vytvořeny: ' + sheets.map((s) => s.name).join(', '));
+check(['Lékaři', 'Pozice', 'Požadavky', 'Stav', 'Nastavení'].every((n) => sheets.some((x) => x.name === n)), 'listy vytvořeny: ' + sheets.map((s) => s.name).join(', '));
+check(docRowsAll().every((r) => /^Dr\. \d\d$/.test(r[1])), 'výchozí seznam je anonymní (Dr. 01…)');
 check(triggers.length === 1, 'denní spouštěč vytvořen');
-const docRows = book.getSheetByName('Lékaři').getDataRange().getValues().slice(1);
+// e-maily dvěma lékařům (sloupec I)
+function docRowsAll() { return book.getSheetByName('Lékaři').getDataRange().getValues().slice(1); }
+const docRows = docRowsAll();
 check(docRows.every((r) => r[6] && String(r[7]).includes('lekar.html?t=' + r[6])), 'každý lékař má token a odkaz');
 const tok = (name) => docRows.find((r) => r[1] === name)[6];
+// dva aktivní lékaři: A s OUP a 24h službami, B senior (lékař1)
+const actRows = docRows.filter((r) => r[2] === true);
+const DOC_A = actRows.find((r) => String(r[3]).includes('OUPn') && String(r[3]).includes('1A'))[1];
+const DOC_B = actRows.find((r) => String(r[3]).startsWith('l1'))[1];
+
+book.getSheetByName('Lékaři').getRange(docRows.indexOf(docRows.find((r) => r[1] === DOC_A)) + 2, 9).setValue('a@nemocnice.cz');
+book.getSheetByName('Lékaři').getRange(docRows.indexOf(docRows.find((r) => r[1] === DOC_B)) + 2, 9).setValue('b@nemocnice.cz');
 
 // 2) lékař otevře odkaz
-let me = api({ t: tok('Mazúr') });
-check(me.doctor?.name === 'Mazúr' && me.month === '2026-12' && me.open === true, `Mazúr vidí prosinec, otevřeno, uzávěrka ${me.deadline}`);
+let me = api({ t: tok(DOC_A) });
+check(me.doctor?.name === DOC_A && me.month === '2026-12' && me.open === true, `${DOC_A} vidí prosinec, otevřeno, uzávěrka ${me.deadline}`);
 check(api({ t: 'spatny' }).error, 'neplatný token odmítnut');
 
 // 3) všichni aktivní zadají požadavky
@@ -27,26 +47,33 @@ for (const r of active) {
   if (!res.ok) { check(false, 'uložení ' + r[1] + ' ' + res.error); break; }
 }
 check(Object.keys(call('readRequests', '2026-12')).length === active.length, `uloženo ${active.length} požadavků`);
-check(post({ t: tok('Mazúr'), action: 'save', month: '2027-01', request: {} }).error, 'nelze ukládat na jiný měsíc');
-me = api({ t: tok('Mazúr') });
-check(me.request && me.request.off.length === 8, 'Mazúr vidí své uložené požadavky');
+check(post({ t: tok(DOC_A), action: 'save', month: '2027-01', request: {} }).error, 'nelze ukládat na jiný měsíc');
+me = api({ t: tok(DOC_A) });
+check(me.request && me.request.off.length === 8, `${DOC_A} vidí své uložené požadavky`);
 
 // 4) uzávěrka
 clock.now = new Date('2026-11-12T22:30:00Z'); // 12. 11. 23:30 v Praze
 call('denniKontrola');
-check(!book.getSheetByName('Rozpis 2026-12') && api({ t: tok('Mazúr') }).open, '12. 11. ještě otevřeno, nic negenerováno');
+check(!book.getSheetByName('Rozpis 2026-12') && api({ t: tok(DOC_A) }).open, '12. 11. ještě otevřeno, nic negenerováno');
 clock.now = new Date('2026-11-13T00:30:00Z'); // 13. 11. 1:30
 const t0 = Date.now();
 call('denniKontrola');
 check(!!book.getSheetByName('Rozpis 2026-12'), `13. 11. rozpis vygenerován (${Date.now() - t0} ms)`);
-check(api({ t: tok('Mazúr') }).open === false, 'požadavky uzamčeny');
-check(post({ t: tok('Mazúr'), action: 'save', month: '2026-12', request: { off: [1] } }).error, 'uložení po uzávěrce odmítnuto');
-check(mails.length === 1, 'e-mail správci: ' + mails[0]?.subj);
+check(api({ t: tok(DOC_A) }).open === false, 'požadavky uzamčeny');
+check(post({ t: tok(DOC_A), action: 'save', month: '2026-12', request: { off: [1] } }).error, 'uložení po uzávěrce odmítnuto');
+const docMails = mails.filter((m) => typeof m.to === 'object');
+const adminMail = mails.find((m) => typeof m.to === 'string');
+check(!!adminMail && /vygenerován/.test(adminMail.subj), 'e-mail správci: ' + adminMail?.subj);
+check(docMails.length === 2 && docMails.map((m) => m.to.to).sort().join() === 'a@nemocnice.cz,b@nemocnice.cz', 'rozpis rozeslán 2 lékařům s e-mailem');
+const mA = docMails.find((m) => m.to.to === 'a@nemocnice.cz').to;
+const svcA = (mA.body.match(/Vaše služby \((\d+)\)/) || [])[1];
+check(+svcA > 0 && mA.htmlBody.includes(DOC_A) && mA.htmlBody.includes('?t='), `e-mail lékaře A: ${svcA} služeb, celý rozpis se jmény, osobní odkaz`);
+check(/bez e-mailu: /.test(adminMail.body), 'správce ví, kdo nemá e-mail');
 console.log('  stav:', call('readState', '2026-12').note.slice(0, 120));
   console.log('  ', book.getSheetByName('Rozpis 2026-12').getDataRange().getValues().slice(34).map((r) => r[0]).filter(Boolean).slice(0, 4).join(' | '));
 
 // 5) rozpis pro lékaře
-const sch = api({ t: tok('Suk'), action: 'schedule', month: '2026-12' });
+const sch = api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' });
 check(sch.rows?.length === 31 && sch.header.length === 10, `rozpis: ${sch.rows?.length} dní × ${sch.header?.length - 1} pozic`);
 const empty = sch.rows.reduce((n, r) => n + r.slice(1).filter((x, i) => !x && !(['tečka1', 'tečka2'].includes(sch.header[i + 1]))).length, 0);
 check(empty === 0, 'všechny noční/denní služby obsazeny');
@@ -54,11 +81,11 @@ check(empty === 0, 'všechny noční/denní služby obsazeny');
 const reqs = call('readRequests', '2026-12'); const byName = new Map(docRows.map((r) => [r[1], r[0]]));
 let viol = 0; sch.rows.forEach((r, t) => r.slice(1).forEach((n) => { const id = byName.get(n); if (id && reqs[id]?.off.includes(t + 1)) viol++; }));
 check(viol === 0, 'žádná služba ve vyškrtnutý den');
-check(api({ t: tok('Suk') }).schedules[0] === '2026-12', 'seznam rozpisů obsahuje 2026-12');
+check(api({ t: tok(DOC_B) }).schedules[0] === '2026-12', 'seznam rozpisů obsahuje 2026-12');
 
 // 6) další měsíc navazuje na konec prosince
 clock.now = new Date('2026-12-02T10:00:00Z');
-me = api({ t: tok('Suk') });
+me = api({ t: tok(DOC_B) });
 check(me.month === '2027-01' && me.open, 'v prosinci se otevřely požadavky na leden');
 clock.now = new Date('2026-12-13T00:30:00Z');
 call('denniKontrola');
@@ -73,7 +100,7 @@ check(!day1.some((n) => prevNight.has(n)), 'odpočinek po noční přes přelom 
 // 7) ruční odemknutí
 clock.now = new Date('2027-01-14T10:00:00Z');
 call('odemknout');
-check(api({ t: tok('Suk') }).open === true, 'po ručním odemknutí lze znovu zadávat');
+check(api({ t: tok(DOC_B) }).open === true, 'po ručním odemknutí lze znovu zadávat');
 call('denniKontrola');
 check(!book.getSheetByName('Rozpis 2027-02'), 'odemknutý měsíc se automaticky negeneruje');
 call('prehledPozadavku');

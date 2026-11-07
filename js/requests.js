@@ -45,8 +45,8 @@ const WANT_WORDS = /(chce|chcem|chci|preferuje|ano|ano\b|\+)/;
 
 /**
  * Text požiadaviek, jeden lekár na riadok, napr.:
- *   Mazúr: nechce 3, 4, 10-14; chce 20, 22 OUPn
- *   Novák 1-5
+ *   Novák: nechce 3, 4, 10-14; chce 20, 22 OUPn
+ *   Černý 1-5
  * Bez kľúčového slova sa dni berú ako "nechce".
  * Vráti { requests: {id:{off,want,note}}, unknown:[riadky] }
  */

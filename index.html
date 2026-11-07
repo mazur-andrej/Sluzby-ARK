@@ -38,9 +38,9 @@
       </div>
       <div id="pasteBox" class="card hidden">
         <p>Jeden lékař na řádek. Bez klíčového slova se dny berou jako <b>nechce</b>. Příklady:</p>
-        <pre>Mazúr: nechce 3, 4, 10-14; chce 20, 22 OUP noc
-Suk 1-5
-Zvoníčková – nemůže 24.12., 25.12.</pre>
+        <pre>Novák: nechce 3, 4, 10-14; chce 20, 22 OUP noc
+Černý 1-5
+Dvořáková – nemůže 24.12., 25.12.</pre>
         <textarea id="pasteText" rows="8" placeholder="Sem vložte požadavky…"></textarea>
         <button id="pasteApply" class="primary">Načíst</button>
       </div>
@@ -77,9 +77,13 @@ Zvoníčková – nemůže 24.12., 25.12.</pre>
         <input id="newDocName" placeholder="Příjmení nového lékaře">
         <button id="addDoc" class="primary">+ Přidat lékaře</button>
         <span class="spacer"></span>
+        <label class="btn">📥 Načíst seznam lékařů (Excel/CSV)<input type="file" id="importDocs" accept=".xlsx,.csv,.txt" hidden></label>
+        <button id="exportDocs">📤 Uložit seznam (CSV)</button>
         <button id="exportData">💾 Záloha (JSON)</button>
         <label class="btn">📂 Obnovit ze zálohy<input type="file" id="importData" accept=".json" hidden></label>
       </div>
+      <div id="docMessages"></div>
+      <p class="muted">🔒 Jména lékařů se ukládají jen v tomto prohlížeči (a v záloze, kterou si stáhnete) – na GitHub ani nikam jinam se neodesílají. Ve veřejném kódu jsou lékaři jen pod čísly (Dr. 01…); skutečná jména načtete tlačítkem <b>Načíst seznam lékařů</b> ze svého soukromého souboru.</p>
       <p class="muted">Zaškrtněte, na kterých pozicích může lékař sloužit. <b>Cíl</b> = kolik služeb měsíčně má mít (program se tomu snaží přiblížit), <b>Max</b> = pevný strop (prázdné = bez stropu). Neaktivní lékař se do rozpisu nedává (např. mateřská, odchod).</p>
       <div class="table-wrap"><table id="docTable" class="doctors"></table></div>
     </section>

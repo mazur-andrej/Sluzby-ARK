@@ -1,48 +1,47 @@
-// Predvolený zoznam lekárov (odvodený z rozpisov máj–november 2026).
-// Upravuje sa v aplikácii na karte Lekári; tento súbor slúži len ako východiskový stav.
+// Výchozí seznam lékařů – ANONYMIZOVANÝ (struktura pozic a cílů z rozpisů 2026, bez jmen).
+// Skutečná jména jsou jen v Google tabulce správce a v prohlížeči správce (karta Lékaři → Načíst seznam).
 export const DEFAULT_DOCTORS = [
  {
-  "id": "bartos",
-  "name": "Bartoš",
-  "active": true,
-  "positions": [
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "bartosik",
-  "name": "Bartošík",
+  "id": "lekar-01",
+  "name": "Dr. 01",
   "active": true,
   "positions": [
    "l1",
-   "l2"
+   "l2",
+   "OUPd"
   ],
-  "target": 3,
+  "target": 5,
   "max": null,
   "note": ""
  },
  {
-  "id": "bencat",
-  "name": "Benčat",
+  "id": "lekar-02",
+  "name": "Dr. 02",
   "active": true,
   "positions": [
-   "2A",
-   "t2",
-   "OUPn"
+   "l1",
+   "OUPd"
   ],
-  "target": 6,
+  "target": 5,
   "max": null,
   "note": ""
  },
  {
-  "id": "chobola",
-  "name": "Chobola",
+  "id": "lekar-03",
+  "name": "Dr. 03",
+  "active": true,
+  "positions": [
+   "l1",
+   "l2",
+   "OUPd"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-04",
+  "name": "Dr. 04",
   "active": true,
   "positions": [
    "l1",
@@ -54,8 +53,8 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "cundrle",
-  "name": "Čundrle",
+  "id": "lekar-05",
+  "name": "Dr. 05",
   "active": true,
   "positions": [
    "l1",
@@ -66,33 +65,61 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "dadak",
-  "name": "Dadák",
+  "id": "lekar-06",
+  "name": "Dr. 06",
   "active": true,
   "positions": [
+   "l1",
+   "l2",
    "plast"
   ],
-  "target": 3,
+  "target": 4,
   "max": null,
   "note": ""
  },
  {
-  "id": "fabian",
-  "name": "Fabián",
+  "id": "lekar-07",
+  "name": "Dr. 07",
   "active": true,
   "positions": [
+   "l1",
+   "l2",
    "1A",
-   "plast",
+   "plast"
+  ],
+  "target": 4,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-08",
+  "name": "Dr. 08",
+  "active": true,
+  "positions": [
+   "l1",
+   "l2",
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": 4,
   "max": null,
   "note": ""
  },
  {
-  "id": "fencl",
-  "name": "Fencl",
+  "id": "lekar-09",
+  "name": "Dr. 09",
+  "active": true,
+  "positions": [
+   "l1",
+   "l2"
+  ],
+  "target": 4,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-10",
+  "name": "Dr. 10",
   "active": true,
   "positions": [
    "l1",
@@ -103,37 +130,21 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "fischer",
-  "name": "Fischer",
+  "id": "lekar-11",
+  "name": "Dr. 11",
   "active": true,
   "positions": [
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
+   "l1",
+   "l2"
   ],
-  "target": 6,
+  "target": 3,
   "max": null,
   "note": ""
  },
  {
-  "id": "grac",
-  "name": "Grác",
+  "id": "lekar-12",
+  "name": "Dr. 12",
   "active": true,
-  "positions": [
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "halmova",
-  "name": "Halmová",
-  "active": false,
   "positions": [
    "l2",
    "plast",
@@ -145,8 +156,107 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "hasara",
-  "name": "Hasara",
+  "id": "lekar-13",
+  "name": "Dr. 13",
+  "active": true,
+  "positions": [
+   "l2",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-14",
+  "name": "Dr. 14",
+  "active": true,
+  "positions": [
+   "l2",
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-15",
+  "name": "Dr. 15",
+  "active": true,
+  "positions": [
+   "l2",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-16",
+  "name": "Dr. 16",
+  "active": true,
+  "positions": [
+   "l2",
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-17",
+  "name": "Dr. 17",
+  "active": true,
+  "positions": [
+   "l2",
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-18",
+  "name": "Dr. 18",
+  "active": true,
+  "positions": [
+   "l2",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-19",
+  "name": "Dr. 19",
+  "active": true,
+  "positions": [
+   "l2",
+   "1A"
+  ],
+  "target": 4,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-20",
+  "name": "Dr. 20",
   "active": true,
   "positions": [
    "l2",
@@ -158,8 +268,8 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "helan",
-  "name": "Helán",
+  "id": "lekar-21",
+  "name": "Dr. 21",
   "active": true,
   "positions": [
    "l2",
@@ -170,10 +280,81 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "hereta",
-  "name": "Hereta",
-  "active": false,
+  "id": "lekar-22",
+  "name": "Dr. 22",
+  "active": true,
   "positions": [
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-23",
+  "name": "Dr. 23",
+  "active": true,
+  "positions": [
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-24",
+  "name": "Dr. 24",
+  "active": true,
+  "positions": [
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-25",
+  "name": "Dr. 25",
+  "active": true,
+  "positions": [
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-26",
+  "name": "Dr. 26",
+  "active": true,
+  "positions": [
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-27",
+  "name": "Dr. 27",
+  "active": true,
+  "positions": [
+   "1A",
    "plast",
    "OUPd",
    "OUPn"
@@ -183,38 +364,38 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "hric",
-  "name": "Hric",
+  "id": "lekar-28",
+  "name": "Dr. 28",
   "active": true,
   "positions": [
-   "2A",
-   "t1",
-   "t2"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "hruda",
-  "name": "Hruda",
-  "active": true,
-  "positions": [
-   "l1",
-   "l2",
-   "OUPd"
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
   ],
   "target": 5,
   "max": null,
   "note": ""
  },
  {
-  "id": "jelinek",
-  "name": "Jelínek",
+  "id": "lekar-29",
+  "name": "Dr. 29",
   "active": true,
   "positions": [
-   "l1",
-   "l2",
+   "1A",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-30",
+  "name": "Dr. 30",
+  "active": true,
+  "positions": [
    "plast"
   ],
   "target": 4,
@@ -222,25 +403,10 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "kissova",
-  "name": "Kiššová",
+  "id": "lekar-31",
+  "name": "Dr. 31",
   "active": true,
   "positions": [
-   "2A",
-   "t1",
-   "t2"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "kolodejova",
-  "name": "Kolodějová",
-  "active": false,
-  "positions": [
-   "l2",
-   "1A",
    "plast"
   ],
   "target": 3,
@@ -248,159 +414,19 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "kremeckova",
-  "name": "Křemečková",
+  "id": "lekar-32",
+  "name": "Dr. 32",
   "active": true,
   "positions": [
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "kriz",
-  "name": "Kříž",
-  "active": true,
-  "positions": [
-   "l2",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "marecek",
-  "name": "Mareček",
-  "active": true,
-  "positions": [
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "mazur",
-  "name": "Mazúr",
-  "active": true,
-  "positions": [
-   "l2",
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "michnacova",
-  "name": "Michnáčová",
-  "active": true,
-  "positions": [
-   "1A",
-   "2A",
-   "t1",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "molcanova",
-  "name": "Molčanová",
-  "active": true,
-  "positions": [
-   "2A",
-   "t1",
-   "t2"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "mrazek",
-  "name": "Mrázek",
-  "active": true,
-  "positions": [
-   "2A",
-   "t2"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "niedobova",
-  "name": "Niedobová",
-  "active": true,
-  "positions": [
-   "l1",
-   "l2",
-   "1A",
    "plast"
-  ],
-  "target": 4,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "paulovicova",
-  "name": "Paulovičová",
-  "active": true,
-  "positions": [
-   "1A",
-   "2A",
-   "t1",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "pavlikova",
-  "name": "Pavlíková",
-  "active": true,
-  "positions": [
-   "1A"
   ],
   "target": 3,
   "max": null,
   "note": ""
  },
  {
-  "id": "pavlunova",
-  "name": "Pavlunová",
-  "active": true,
-  "positions": [
-   "l2",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "pitrova",
-  "name": "Pitrová",
+  "id": "lekar-33",
+  "name": "Dr. 33",
   "active": true,
   "positions": [
    "1A",
@@ -414,104 +440,11 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "pokorny",
-  "name": "Pokorný",
-  "active": true,
-  "positions": [
-   "l2",
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 6,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "pokrivcak",
-  "name": "Pokrivčák",
-  "active": false,
-  "positions": [
-   "1A",
-   "t1",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 9,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "predac",
-  "name": "Predáč",
-  "active": true,
-  "positions": [
-   "l2",
-   "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "prochazkova",
-  "name": "Procházková",
-  "active": false,
-  "positions": [
-   "1A"
-  ],
-  "target": 2,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "ruzek",
-  "name": "Růžek",
-  "active": true,
-  "positions": [
-   "l1",
-   "l2",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 4,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "reznickova",
-  "name": "Řezníčková",
+  "id": "lekar-34",
+  "name": "Dr. 34",
   "active": true,
   "positions": [
    "1A",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "schroderova",
-  "name": "Schröderová",
-  "active": true,
-  "positions": [
-   "plast"
-  ],
-  "target": 4,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "skotalek",
-  "name": "Skotálek",
-  "active": true,
-  "positions": [
    "2A",
    "t1",
    "OUPd",
@@ -522,34 +455,23 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "suk",
-  "name": "Suk",
+  "id": "lekar-35",
+  "name": "Dr. 35",
   "active": true,
   "positions": [
-   "l1",
-   "l2"
-  ],
-  "target": 4,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "svoboda",
-  "name": "Svoboda",
-  "active": true,
-  "positions": [
-   "l2",
-   "plast",
+   "1A",
+   "2A",
+   "t1",
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": 5,
   "max": null,
   "note": ""
  },
  {
-  "id": "simova",
-  "name": "Šimová",
+  "id": "lekar-36",
+  "name": "Dr. 36",
   "active": true,
   "positions": [
    "1A",
@@ -561,33 +483,32 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "skuligova",
-  "name": "Škuligová",
+  "id": "lekar-37",
+  "name": "Dr. 37",
   "active": true,
   "positions": [
-   "2A",
-   "t1",
-   "t2"
+   "1A",
+   "OUPd",
+   "OUPn"
   ],
-  "target": 6,
+  "target": 4,
   "max": null,
   "note": ""
  },
  {
-  "id": "stetka",
-  "name": "Štětka",
+  "id": "lekar-38",
+  "name": "Dr. 38",
   "active": true,
   "positions": [
-   "l1",
-   "OUPd"
+   "1A"
   ],
-  "target": 5,
+  "target": 3,
   "max": null,
   "note": ""
  },
  {
-  "id": "tomancova",
-  "name": "Tomancová",
+  "id": "lekar-39",
+  "name": "Dr. 39",
   "active": true,
   "positions": [
    "2A",
@@ -601,21 +522,35 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "tomaskova",
-  "name": "Tomášková",
+  "id": "lekar-40",
+  "name": "Dr. 40",
   "active": true,
   "positions": [
-   "1A",
+   "2A",
+   "t1",
    "OUPd",
    "OUPn"
   ],
-  "target": 4,
+  "target": 7,
   "max": null,
   "note": ""
  },
  {
-  "id": "trnkocyova",
-  "name": "Trnkócyová",
+  "id": "lekar-41",
+  "name": "Dr. 41",
+  "active": true,
+  "positions": [
+   "2A",
+   "t2",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-42",
+  "name": "Dr. 42",
   "active": true,
   "positions": [
    "2A",
@@ -627,8 +562,151 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "trebova",
-  "name": "Třebová",
+  "id": "lekar-43",
+  "name": "Dr. 43",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-44",
+  "name": "Dr. 44",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-45",
+  "name": "Dr. 45",
+  "active": true,
+  "positions": [
+   "2A",
+   "t2"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-46",
+  "name": "Dr. 46",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-47",
+  "name": "Dr. 47",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-48",
+  "name": "Dr. 48",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-49",
+  "name": "Dr. 49",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-50",
+  "name": "Dr. 50",
+  "active": true,
+  "positions": [
+   "2A",
+   "t1",
+   "t2"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-51",
+  "name": "Dr. 51",
+  "active": true,
+  "positions": [
+   "2A",
+   "t2"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-52",
+  "name": "Dr. 52",
+  "active": false,
+  "positions": [
+   "l2",
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 6,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-53",
+  "name": "Dr. 53",
+  "active": false,
+  "positions": [
+   "l2",
+   "1A",
+   "plast"
+  ],
+  "target": 3,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-54",
+  "name": "Dr. 54",
   "active": false,
   "positions": [
    "1A",
@@ -641,118 +719,40 @@ export const DEFAULT_DOCTORS = [
   "note": ""
  },
  {
-  "id": "valachova",
-  "name": "Valachová",
-  "active": true,
+  "id": "lekar-55",
+  "name": "Dr. 55",
+  "active": false,
+  "positions": [
+   "plast",
+   "OUPd",
+   "OUPn"
+  ],
+  "target": 5,
+  "max": null,
+  "note": ""
+ },
+ {
+  "id": "lekar-56",
+  "name": "Dr. 56",
+  "active": false,
   "positions": [
    "1A",
-   "plast",
+   "t1",
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": 9,
   "max": null,
   "note": ""
  },
  {
-  "id": "valouchova",
-  "name": "Valouchová",
-  "active": true,
+  "id": "lekar-57",
+  "name": "Dr. 57",
+  "active": false,
   "positions": [
-   "plast"
-  ],
-  "target": 3,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "vilhan",
-  "name": "Vilhan",
-  "active": true,
-  "positions": [
-   "2A",
-   "t1",
-   "t2"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "volava",
-  "name": "Volavá",
-  "active": true,
-  "positions": [
-   "2A",
-   "t1",
-   "t2"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "volcik",
-  "name": "Volčík",
-  "active": true,
-  "positions": [
-   "l1",
-   "l2",
-   "OUPd"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "zimmer",
-  "name": "Zimmer",
-  "active": true,
-  "positions": [
-   "l2",
-   "plast",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "zubikova",
-  "name": "Zubíková",
-  "active": true,
-  "positions": [
-   "2A",
-   "t2"
-  ],
-  "target": 5,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "zvonickova",
-  "name": "Zvoníčková",
-  "active": true,
-  "positions": [
-   "l2",
    "1A"
   ],
-  "target": 4,
-  "max": null,
-  "note": ""
- },
- {
-  "id": "zabkova",
-  "name": "Žabková",
-  "active": true,
-  "positions": [
-   "2A",
-   "t1",
-   "OUPd",
-   "OUPn"
-  ],
-  "target": 7,
+  "target": 2,
   "max": null,
   "note": ""
  }

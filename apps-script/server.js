@@ -13,6 +13,7 @@ const SETTINGS_DEFAULT = [
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
   ['Minimální odpočinek mezi službami (hodiny)', 11],
   ['Den po službě přes noc (24h, OUP noc): VŽDY VOLNO / VÝJIMEČNĚ / NE', 'VÝJIMEČNĚ'],
+  ['Po vygenerování rozeslat rozpis lékařům e-mailem (ANO/NE)', 'ANO'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -26,6 +27,8 @@ function onOpen() {
     .addSeparator()
     .addItem('Vygenerovat rozpis příštího měsíce teď', 'generovatTed')
     .addItem('Znovu otevřít požadavky příštího měsíce', 'odemknout')
+    .addSeparator()
+    .addItem('Rozeslat rozpis příštího měsíce lékařům e-mailem', 'rozeslatTed')
     .addToUi();
 }
 
@@ -115,6 +118,7 @@ function readDoctors() {
       row: i + 1, id, name, active: r[2] === true || String(r[2]).toUpperCase() === 'ANO',
       positions: String(r[3] || '').split(',').map((x) => x.trim()).filter(Boolean),
       target: r[4] === '' ? 0 : Number(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
+      email: String(r[8] || '').trim(),
     });
   }
   if (dirty) {
@@ -177,13 +181,15 @@ function writeRequest(key, doc, req) {
 
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
-  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Cíl služeb/měsíc', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře']);
+  // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
+  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Cíl služeb/měsíc', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)']);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target, d.max == null ? '' : d.max, newToken(), '']);
-    docS.getRange(2, 1, rows.length, 8).setValues(rows);
-    docS.getRange(2, 3, Math.max(rows.length, 200), 1).insertCheckboxes();
-    docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target, d.max == null ? '' : d.max, newToken(), '', '']);
+    docS.getRange(2, 1, rows.length, 9).setValues(rows);
   }
+  if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue('E-mail (pro rozeslání rozpisu)');
+  docS.getRange(2, 3, Math.max(docS.getLastRow() - 1, 200), 1).insertCheckboxes();
+  docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420); docS.setColumnWidth(9, 220);
   const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Začátek (HH:MM)', 'Délka (h)', 'Jen pracovní dny', 'Jak to lékaři píšou']);
   if (posS.getLastRow() < 2) {
     const rows = DEFAULT_POSITIONS.map((p) => [p.id, p.label, p.start, p.hours, p.workdaysOnly, (p.aliases || []).join(', ')]);
@@ -260,12 +266,15 @@ function generovat(key, notify) {
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
       missing.length ? `nezadali požadavky: ${missing.join(', ')}` : ''].filter(Boolean).join('; ');
     writeState(key, 'uzamčeno', note);
+    let sent = null;
+    if (notify && sendSetting()) sent = rozeslat(key);
     if (notify) {
       try {
         MailApp.sendEmail(adminEmail(), `Rozpis služeb ${key} vygenerován`,
           `Požadavky na ${key} byly uzamčeny a rozpis je vygenerovaný v listu „${scheduleSheetName(key)}".\n\n` +
           (res.warnings.length ? `Upozornění:\n${res.warnings.join('\n')}\n\n` : 'Všechny služby obsazeny bez upozornění.\n\n') +
-          (missing.length ? `Požadavky nezadali: ${missing.join(', ')}\n\n` : '') + ss().getUrl());
+          (missing.length ? `Požadavky nezadali: ${missing.join(', ')}\n\n` : '') +
+          (sent ? `Rozpis rozeslán e-mailem ${sent.sent} lékařům${sent.noEmail.length ? `; bez e-mailu: ${sent.noEmail.join(', ')}` : ''}.\n\n` : '') + ss().getUrl());
       } catch (e) { /* e-mail není kritický */ }
     }
     return res;
@@ -370,6 +379,57 @@ function prehledPozadavku() {
   s.getRange(1, 1, rows.length, rows[0].length).setValues(rows).setBackgrounds(colors).setFontSize(9);
   s.setFrozenRows(1); s.setFrozenColumns(2);
   s.activate();
+}
+
+// ---------------------------------------------------------------- rozeslání e-mailem
+const sendSetting = () => !/^(ne|no|false|0)$/i.test(String(getSetting(5)).trim());
+
+function rozeslatTed() {
+  const key = targetMonth();
+  if (!sheet(scheduleSheetName(key))) { info(`Rozpis ${key} ještě není vygenerovaný.`); return; }
+  const r = rozeslat(key);
+  info(`Rozesláno ${r.sent} lékařům.${r.noEmail.length ? `\nBez e-mailu (doplňte ve sloupci E-mail): ${r.noEmail.join(', ')}` : ''}${r.error ? `\n\nChyba: ${r.error}` : ''}`);
+}
+
+/** Pošle každému aktivnímu lékaři s e-mailem jeho služby a celý rozpis (aktuální stav listu, vč. ručních úprav). */
+function rozeslat(key) {
+  const s = sheet(scheduleSheetName(key));
+  const v = s.getDataRange().getDisplayValues();
+  const width = v[0].findIndex((x, i) => i > 0 && x === '') > 0 ? v[0].findIndex((x, i) => i > 0 && x === '') : v[0].length;
+  const header = v[0].slice(0, width);
+  const { year, month } = parseKey(key);
+  const rows = v.filter((r) => { const m = String(r[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[2] === month; }).map((r) => r.slice(0, width));
+  const days = buildMonth(year, month);
+  const base = String(getSetting(2));
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const out = { sent: 0, noEmail: [], error: '' };
+  for (const d of readDoctors().filter((x) => x.active)) {
+    if (!d.email) { out.noEmail.push(d.name); continue; }
+    const mine = [];
+    const trs = rows.map((r, t) => {
+      const day = days[+String(r[0]).match(/(\d{1,2})\./)[1] - 1];
+      const bg = day && (day.weekend || day.holiday) ? '#fce8b2' : '#ffffff';
+      const tds = r.map((c, i) => {
+        const me = i > 0 && c === d.name;
+        if (me) mine.push(`${r[0]} – ${header[i]}`);
+        return `<td style="border:1px solid #ccc;padding:2px 6px;${me ? 'background:#2563eb;color:#fff;font-weight:bold' : ''}">${esc(c)}</td>`;
+      }).join('');
+      return `<tr style="background:${bg}">${tds}</tr>`;
+    }).join('');
+    const ths = header.map((h) => `<th style="border:1px solid #ccc;padding:2px 6px;background:#ea9999">${esc(h)}</th>`).join('');
+    const link = `${base}?t=${d.token}`;
+    const html = `<p>Dobrý den,</p><p>rozpis služeb na <b>${MONTHS[month - 1]} ${year}</b> je hotový.</p>`
+      + `<p><b>Vaše služby (${mine.length}):</b><br>${mine.map(esc).join('<br>') || 'žádné'}</p>`
+      + `<p>Aktuální rozpis (i po případných změnách) najdete vždy na své stránce: <a href="${link}">${esc(link)}</a></p>`
+      + `<table style="border-collapse:collapse;font:12px Arial">${'<tr>' + ths + '</tr>' + trs}</table>`;
+    const text = `Rozpis služeb na ${MONTHS[month - 1]} ${year} je hotový.\n\nVaše služby (${mine.length}):\n${mine.join('\n') || 'žádné'}\n\nCelý rozpis: ${link}`;
+    try {
+      MailApp.sendEmail({ to: d.email, subject: `Rozpis služeb – ${MONTHS[month - 1]} ${year}`, body: text, htmlBody: html, name: 'Rozpis služeb' });
+      out.sent++;
+    } catch (e) { out.error = String(e.message || e); break; }
+  }
+  writeState(key, readState(key).status, `${readState(key).note}; rozesláno ${out.sent} e-mailů`);
+  return out;
 }
 
 // ---------------------------------------------------------------- webové API

@@ -11,14 +11,17 @@ const count = (grid, id) => grid.reduce((n, row) => n + oupIdx.filter((i) => row
 let fails = 0;
 const check = (c, msg) => { console.log(c ? '✔' : '✘', msg); if (!c) fails++; };
 
-const requests = { tomancova: { off: [], want: [], oupMax: 2 }, zabkova: { off: [], want: [], oupMax: 5 }, kriz: { off: [], want: [], oupMax: 1 } };
+// tři lékaři s OUP a vysokým cílem (bez volby by měli víc než 2 OUP)
+const oupDocs = doctors.filter((d) => d.positions.includes('OUPd') && d.positions.includes('OUPn')).sort((a, b) => b.target - a.target);
+const [T, Z, K] = oupDocs.map((d) => d.id);
+const requests = { [T]: { off: [], want: [], oupMax: 2 }, [Z]: { off: [], want: [], oupMax: 5 }, [K]: { off: [], want: [], oupMax: 1 } };
 const base = solve({ days, positions: P, doctors, requests: {}, seed: 1 });
-console.log(`  bez volby: Tomancová ${count(base.grid, 'tomancova')} OUP, Žabková ${count(base.grid, 'zabkova')}, Kříž ${count(base.grid, 'kriz')}`);
+console.log(`  bez volby: ${T} ${count(base.grid, T)} OUP, ${Z} ${count(base.grid, Z)}, ${K} ${count(base.grid, K)}`);
 const r = solve({ days, positions: P, doctors, requests, seed: 1 });
-const t = count(r.grid, 'tomancova'), z = count(r.grid, 'zabkova'), k = count(r.grid, 'kriz');
-check(t === 2, `Tomancová zvolila 2 → má ${t}`);
-check(z >= 2 && z <= 5, `Žabková zvolila 5 → má ${z} (2–5)`);
-check(k === 2, `Kříž zadal 1 → bere se minimum 2, má ${k}`);
+const t = count(r.grid, T), z = count(r.grid, Z), k = count(r.grid, K);
+check(t === 2, `${T} zvolil/a 2 → má ${t}`);
+check(z >= 2 && z <= 5, `${Z} zvolil/a 5 → má ${z} (2–5)`);
+check(k === 2, `${K} zadal/a 1 → bere se minimum 2, má ${k}`);
 check(r.unfilled.length === 0, 'všechny služby obsazené');
 check(validate({ days, positions: P, doctors, requests }, r.grid).length === 0, 'žádné porušení pravidel');
 // maximum se nepřekročí ani když by se to hodilo – mnoho lékařů s nízkým limitem

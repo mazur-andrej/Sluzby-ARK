@@ -55,7 +55,7 @@ export function createGas() {
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { createTextOutput: (s) => ({ setMimeType() { return this; }, s }), MimeType: { JSON: 1 } },
-    MailApp: { sendEmail: (to, subj, body) => mails.push({ to, subj, body }) },
+    MailApp: { sendEmail: (to, subj, body) => mails.push({ to, subj, body }), getRemainingDailyQuota: () => 100 },
     console,
   };
   vm.createContext(ctx);
