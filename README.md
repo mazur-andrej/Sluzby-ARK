@@ -21,16 +21,18 @@ Soubory se jmény, požadavky ani vygenerované rozpisy do repozitáře nepatř�
 Každý lékař má **osobní odkaz** (`lekar.html?t=…`), přes který zadává požadavky na příští měsíc a vidí hotový rozpis.
 Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 
-- Požadavky na příští měsíc se zadávají **do 12. dne** v měsíci (včetně, nastavitelné v listu *Nastavení*).
-- V noci po uzávěrce (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis** (list *Rozpis RRRR-MM*). Správci přijde e-mail.
-- Rozpis lze v tabulce ručně upravit – lékaři vidí vždy aktuální stav.
+- Požadavky na příští měsíc se zadávají **do 11. dne** v měsíci (včetně, nastavitelné v listu *Nastavení*).
+- V noci na 12. (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis ke schválení** (list *Rozpis RRRR-MM*). Správci přijde e-mail, lékaři zatím nic nevidí.
+- Správce rozpis během dne zkontroluje, případně ručně upraví v tabulce, a dá v menu **Schválit a rozeslat rozpis lékařům**.
+  Teprve tehdy ho lékaři uvidí na své stránce a dostanou e-mailem. Dokud není schváleno, připomíná to správci každou noc e-mail.
 - 1. dne dalšího měsíce se otevřou požadavky na následující měsíc.
 - Po vygenerování dostane každý lékař, který má v listu *Lékaři* vyplněný **e-mail**, zprávu se svými službami, celým rozpisem (se jmény) a odkazem na svou stránku.
-- **Všichni mají vždy stejnou verzi:** každé rozeslání má číslo verze (v e-mailu i na stránce lékaře) a uloží se.
-  Když správce rozpis po rozeslání upraví, rozešle se nová verze – menu *Rozeslat rozpis lékařům e-mailem*, nebo automaticky v noci.
+- **Všichni mají vždy stejnou, schválenou verzi:** každé schválení má číslo verze (v e-mailu i na stránce lékaře).
+  Lékaři vidí jen poslední schválenou verzi – rozpracované úpravy v tabulce ne. Změny po schválení se zveřejní až dalším *Schválit a rozeslat*
+  (na neschválené změny upozorní správce noční e-mail).
   Lékař, jehož se změna týká, dostane e-mail „ZMĚNA ve vašich službách" s přesným výpisem změn; ostatní dostanou novou verzi také.
-  Pokud je v rozpisu jméno, které neodpovídá seznamu lékařů (překlep), nerozešle se nic a správce dostane upozornění.
-  Rozesílání lze vypnout v listu *Nastavení* (pak lékaři vidí rozpis jen přes svůj odkaz).
+  Pokud je v rozpisu jméno, které neodpovídá seznamu lékařů (překlep), schválení se zastaví a nic se neodešle.
+  E-maily lze vypnout v listu *Nastavení* (schválený rozpis pak lékaři vidí jen přes svůj odkaz).
 
 ### Jednorázové nastavení (správce, cca 10 minut)
 
@@ -52,7 +54,7 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 - **Odchod / dlouhodobá nepřítomnost:** odškrtnout *Aktivní*.
 - **Ukradený/přeposlaný odkaz:** smazat buňku *Token* a dát *Doplnit odkazy* – vznikne nový odkaz, starý přestane fungovat.
 - *Přehled požadavků na příští měsíc* – tabulka lékaři × dny (jako dosavadní Excel), včetně toho, kdo ještě nezadal.
-- *Vygenerovat rozpis příštího měsíce teď* / *Znovu otevřít požadavky* – ruční zásah mimo automatiku.
+- *Vygenerovat rozpis příštího měsíce teď* / *Znovu otevřít požadavky* – ruční zásah mimo automatiku (vygenerovaný rozpis je vždy jen ke schválení).
 - Po změně `Kod.gs` je třeba v Apps Script dát *Nasadit → Spravovat nasazení → upravit → Nová verze*.
 
 ## Spuštění offline nástroje (správce)

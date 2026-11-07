@@ -1284,12 +1284,12 @@ const SH = {
 };
 const TZ = 'Europe/Prague';
 const SETTINGS_DEFAULT = [
-  ['Uzávěrka požadavků (poslední den v měsíci, kdy lze zadávat)', 12],
+  ['Uzávěrka požadavků – poslední den, kdy lze zadávat (v noci po něm se rozpis vygeneruje ke schválení)', 11],
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
   ['Minimální odpočinek mezi službami (hodiny)', 11],
   ['Den po službě přes noc (24h, OUP noc): VŽDY VOLNO / VÝJIMEČNĚ / NE', 'VÝJIMEČNĚ'],
-  ['Po vygenerování rozeslat rozpis lékařům e-mailem (ANO/NE)', 'ANO'],
+  ['Při schválení rozeslat rozpis lékařům e-mailem (ANO/NE)', 'ANO'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -1304,7 +1304,7 @@ function onOpen() {
     .addItem('Vygenerovat rozpis příštího měsíce teď', 'generovatTed')
     .addItem('Znovu otevřít požadavky příštího měsíce', 'odemknout')
     .addSeparator()
-    .addItem('Rozeslat rozpis příštího měsíce lékařům e-mailem', 'rozeslatTed')
+    .addItem('✔ Schválit a rozeslat rozpis lékařům', 'schvalitTed')
     .addToUi();
 }
 
@@ -1341,7 +1341,7 @@ function getSetting(i) {
   const v = s.getRange(i + 1, 2).getValue();
   return v === '' || v == null ? SETTINGS_DEFAULT[i][1] : v;
 }
-const deadlineDay = () => Number(getSetting(0)) || 12;
+const deadlineDay = () => Number(getSetting(0)) || 11;
 function adminEmail() { return getSetting(1) || Session.getEffectiveUser().getEmail(); }
 
 /** Uzávěrka pro daný cílový měsíc = den N v předchozím měsíci. */
@@ -1502,8 +1502,8 @@ function denniKontrola() {
   const key = targetMonth();
   const st = readState(key).status;
   // ručně znovu otevřeno = čeká se na ruční generování; už vygenerováno = nic
-  if (deadlinePassed(key) && st !== 'otevřeno' && !sheet(scheduleSheetName(key))) generovat(key, true);
-  hlidatZmeny();
+  if (deadlinePassed(key) && st !== 'otevřeno' && !sheet(scheduleSheetName(key))) { generovat(key, true); return; }
+  pripomenout();
 }
 
 function generovatTed() {
@@ -1515,7 +1515,7 @@ function generovatTed() {
     if (r !== ui.Button.YES) return;
   }
   const res = generovat(key, false);
-  info(`Rozpis ${key} vygenerován. Požadavky jsou uzamčeny.${res.warnings.length ? '\n\nUpozornění:\n' + res.warnings.join('\n') : ''}`);
+  info(`Rozpis ${key} vygenerován, požadavky jsou uzamčeny. Lékaři ho uvidí až po „Schválit a rozeslat".${res.warnings.length ? '\n\nUpozornění:\n' + res.warnings.join('\n') : ''}`);
 }
 
 function odemknout() {
@@ -1541,15 +1541,13 @@ function generovat(key, notify) {
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
       missing.length ? `nezadali požadavky: ${missing.join(', ')}` : ''].filter(Boolean).join('; ');
     writeState(key, 'uzamčeno', note);
-    let sent = null;
-    if (notify && sendSetting()) sent = rozeslat(key, { force: true });
     if (notify) {
       try {
-        MailApp.sendEmail(adminEmail(), `Rozpis služeb ${key} vygenerován`,
-          `Požadavky na ${key} byly uzamčeny a rozpis je vygenerovaný v listu „${scheduleSheetName(key)}".\n\n` +
+        MailApp.sendEmail(adminEmail(), `Rozpis služeb ${key} čeká na schválení`,
+          `Požadavky na ${key} byly uzamčeny a rozpis je vygenerovaný v listu „${scheduleSheetName(key)}".\n` +
+          `Lékaři ho zatím nevidí. Zkontrolujte ho, případně upravte, a pak v menu Rozpis služeb dejte „Schválit a rozeslat rozpis lékařům".\n\n` +
           (res.warnings.length ? `Upozornění:\n${res.warnings.join('\n')}\n\n` : 'Všechny služby obsazeny bez upozornění.\n\n') +
-          (missing.length ? `Požadavky nezadali: ${missing.join(', ')}\n\n` : '') +
-          (sent ? (sent.error ? `Rozpis NEBYL rozeslán: ${sent.error}\n\n` : `Rozpis (verze ${sent.version}) rozeslán e-mailem ${sent.sent} lékařům${sent.noEmail.length ? `; bez e-mailu: ${sent.noEmail.join(', ')}` : ''}${sent.mailError ? `; CHYBA: ${sent.mailError}` : ''}.\n\n`) : '') + ss().getUrl());
+          (missing.length ? `Požadavky nezadali: ${missing.join(', ')}\n\n` : '') + ss().getUrl());
       } catch (e) { /* e-mail není kritický */ }
     }
     return res;
@@ -1659,13 +1657,6 @@ function prehledPozadavku() {
 // ---------------------------------------------------------------- rozeslání e-mailem
 const sendSetting = () => !/^(ne|no|false|0)$/i.test(String(getSetting(5)).trim());
 
-function rozeslatTed() {
-  const key = targetMonth();
-  if (!sheet(scheduleSheetName(key))) { info(`Rozpis ${key} ještě není vygenerovaný.`); return; }
-  const r = rozeslat(key);
-  info(`Rozesláno ${r.sent} lékařům.${r.noEmail.length ? `\nBez e-mailu (doplňte ve sloupci E-mail): ${r.noEmail.join(', ')}` : ''}${r.error ? `\n\nChyba: ${r.error}` : ''}`);
-}
-
 // Každé rozeslání se uloží (list „_Rozeslané verze“): měsíc, verze, čas, přesný obsah.
 // Díky tomu: všichni dostanou při jednom rozeslání totéž, každá změna dostane nové číslo verze,
 // dotčení lékaři dostanou „ZMĚNA ve vašich službách“ a noční kontrola rozešle zapomenuté změny.
@@ -1719,18 +1710,42 @@ function unknownNames(snap, doctors) {
   return [...bad];
 }
 
-function rozeslatTed() {
-  const key = targetMonth();
+
+/** Co čeká na schválení: měsíce s rozpisem, jehož obsah se liší od poslední schválené verze. */
+function pendingApprovals() {
   const cur = todayParts();
-  const keys = [monthKey(cur.year, cur.month), key].filter((k) => sheet(scheduleSheetName(k)));
-  if (!keys.length) { info('Zatím není žádný rozpis k rozeslání.'); return; }
-  const msgs = keys.map((k) => {
-    const r = rozeslat(k, { force: true });
-    if (r.error) return `${k}: NEROZESLÁNO – ${r.error}`;
-    return `${k}: verze ${r.version}${r.changes ? ` (${r.changes} změn)` : ''}, rozesláno ${r.sent} lékařům` +
-      (r.noEmail.length ? `\nbez e-mailu: ${r.noEmail.join(', ')}` : '') + (r.mailError ? `\nCHYBA odesílání: ${r.mailError}` : '');
-  });
-  info(msgs.join('\n\n'));
+  const out = [];
+  for (const k of [monthKey(cur.year, cur.month), targetMonth()]) {
+    const snap = scheduleSnapshot(k);
+    if (!snap) continue;
+    const prev = lastSent(k);
+    if (!prev) out.push({ key: k, first: true, changes: 0 });
+    else if (prev.json !== JSON.stringify(snap)) out.push({ key: k, first: false, changes: diffSnapshots(JSON.parse(prev.json), snap).length, version: prev.version });
+  }
+  return out;
+}
+
+/** Menu: zobrazí, co se schválí, a po potvrzení schválí a rozešle. */
+function schvalitTed() {
+  const todo = pendingApprovals();
+  if (!todo.length) { info('Není nic ke schválení – lékaři mají aktuální verzi.'); return; }
+  const desc = todo.map((t) => (t.first ? `${t.key}: první verze rozpisu` : `${t.key}: verze ${t.version + 1} (${t.changes} změn oproti verzi ${t.version})`)).join('\n');
+  let ui = null;
+  try { ui = SpreadsheetApp.getUi(); } catch (e) { /* z editoru */ }
+  if (ui) {
+    const r = ui.alert(`Schválit a zveřejnit lékařům${sendSetting() ? ' (a rozeslat e-mailem)' : ''}?\n\n${desc}`, ui.ButtonSet.YES_NO);
+    if (r !== ui.Button.YES) return;
+  }
+  info(todo.map((t) => schvalit(t.key)).join('\n\n'));
+}
+
+/** Schválí aktuální obsah rozpisu: uloží ho jako novou verzi (tu vidí lékaři) a rozešle e-mailem. */
+function schvalit(key) {
+  const r = rozeslat(key, { force: true, noEmail: !sendSetting() });
+  if (r.error) return `${key}: NESCHVÁLENO – ${r.error}`;
+  return `${key}: schválena verze ${r.version}${r.changes ? ` (${r.changes} změn)` : ''}` +
+    (sendSetting() ? `, rozesláno ${r.sent} lékařům` : ', zveřejněno na stránkách lékařů (e-maily vypnuté)') +
+    (r.noEmail.length && sendSetting() ? `\nbez e-mailu: ${r.noEmail.join(', ')}` : '') + (r.mailError ? `\nCHYBA odesílání: ${r.mailError}` : '');
 }
 
 /**
@@ -1759,6 +1774,7 @@ function rozeslat(key, opts) {
   const th = 'border:1px solid #ccc;padding:2px 6px;background:#ea9999';
   const ths = snap.header.map((h) => `<th style="${th}">${esc(h)}</th>`).join('');
   for (const d of doctors) {
+    if (opts.noEmail) continue;
     if (!d.email) { out.noEmail.push(d.name); continue; }
     const mine = [];
     const changedCells = new Set(changes.map((c) => `${c.day}|${c.pos}`));
@@ -1800,20 +1816,15 @@ function rozeslat(key, opts) {
   return out;
 }
 
-/** Noční pojistka: změny v rozpisech po rozeslání se rozešlou automaticky. */
-function hlidatZmeny() {
-  if (!sendSetting()) return;
-  const cur = todayParts();
-  const reports = [];
-  for (const k of [monthKey(cur.year, cur.month), targetMonth()]) {
-    if (!sheet(scheduleSheetName(k)) || !lastSent(k)) continue;
-    const r = rozeslat(k, {});
-    if (r.unchanged) continue;
-    reports.push(r.error ? `${k}: NEROZESLÁNO – ${r.error}` : `${k}: rozeslána verze ${r.version} (${r.changes} změn) ${r.sent} lékařům${r.mailError ? ', CHYBA: ' + r.mailError : ''}`);
-  }
-  if (reports.length) {
-    try { MailApp.sendEmail(adminEmail(), 'Rozpis služeb – změny rozeslány', reports.join('\n') + '\n\n' + ss().getUrl()); } catch (e) { /* nevadí */ }
-  }
+/** Noční připomínka správci: rozpis čeká na schválení nebo má neschválené změny. Lékařům se nic neposílá. */
+function pripomenout() {
+  const todo = pendingApprovals();
+  if (!todo.length) return;
+  const lines = todo.map((t) => (t.first ? `${t.key}: rozpis čeká na schválení – lékaři ho zatím nevidí` : `${t.key}: ${t.changes} neschválených změn – lékaři vidí verzi ${t.version}`));
+  try {
+    MailApp.sendEmail(adminEmail(), 'Rozpis služeb – čeká na schválení',
+      lines.join('\n') + '\n\nPo kontrole dejte v menu Rozpis služeb „Schválit a rozeslat rozpis lékařům".\n\n' + ss().getUrl());
+  } catch (e) { /* nevadí */ }
 }
 
 // ---------------------------------------------------------------- webové API
@@ -1844,7 +1855,8 @@ function handle(p, body) {
       month: key, open: isOpen(key) && doc.active,
       deadline: `${dl.day}. ${dl.month}. ${dl.year}`,
       request: readRequests(key)[doc.id] || null,
-      schedules: ss().getSheets().map((s) => s.getName()).filter((n) => /^Rozpis \d{4}-\d{2}$/.test(n)).map((n) => n.slice(7)).sort().reverse(),
+      schedules: ss().getSheets().map((s) => s.getName()).filter((n) => /^Rozpis \d{4}-\d{2}$/.test(n)).map((n) => n.slice(7)).filter((k) => lastSent(k)).sort().reverse(),
+      awaiting: !!sheet(scheduleSheetName(key)) && !lastSent(key),
     };
   }
   if (action === 'save') {
@@ -1860,16 +1872,12 @@ function handle(p, body) {
     } finally { lock.releaseLock(); }
   }
   if (action === 'schedule') {
+    // lékaři vidí jen poslední SCHVÁLENOU verzi, ne rozpracované úpravy v listu
     const m = String(p.month || '');
-    const s = sheet(scheduleSheetName(m));
-    if (!/^\d{4}-\d{2}$/.test(m) || !s) return { error: 'Rozpis pro tento měsíc zatím není.' };
-    const v = s.getDataRange().getDisplayValues();
-    const width = v[0].findIndex((x, i) => i > 0 && x === '') > 0 ? v[0].findIndex((x, i) => i > 0 && x === '') : v[0].length;
-    const rows = v.filter((r) => /\d{1,2}\.\s*\d{1,2}\./.test(r[0])).map((r) => r.slice(0, width));
-    const ls = lastSent(m);
-    const snap = scheduleSnapshot(m);
-    return { month: m, header: v[0].slice(0, width), rows, me: doc.name,
-      version: ls ? ls.version : null, sentAt: ls ? ls.at : null, changedSinceSent: !!ls && ls.json !== JSON.stringify(snap) };
+    const ls = /^\d{4}-\d{2}$/.test(m) ? lastSent(m) : null;
+    if (!ls) return { error: 'Rozpis pro tento měsíc zatím nebyl schválen.' };
+    const snap = JSON.parse(ls.json);
+    return { month: m, header: snap.header, rows: snap.rows, me: doc.name, version: ls.version, sentAt: ls.at };
   }
   return { error: 'Neznámá akce.' };
 }

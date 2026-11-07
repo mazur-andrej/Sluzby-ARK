@@ -1,6 +1,13 @@
 // Test serverové části s napodobeným Google prostředím: node tests/test-gas.mjs
 import { createGas } from './gas-mock.mjs';
+import { readFileSync } from 'node:fs';
 const { clock, sheets, book, triggers, mails, call, api, post } = createGas();
+// pojistka: žádné duplicitní funkce/konstanty v Kod.gs (vytvořen v createGas)
+{
+  const names = [...readFileSync(new URL('../apps-script/Kod.gs', import.meta.url), 'utf8').matchAll(/^(?:function|const) ([A-Za-z_]+)/gm)].map((m) => m[1]);
+  const dup = names.filter((n, i) => names.indexOf(n) !== i);
+  if (dup.length) { console.log('✘ duplicitní definice v Kod.gs:', dup); process.exit(1); }
+}
 let fails = 0;
 const check = (cond, msg) => { console.log(cond ? '✔' : '✘', msg); if (!cond) fails++; };
 
@@ -51,70 +58,78 @@ check(post({ t: tok(DOC_A), action: 'save', month: '2027-01', request: {} }).err
 me = api({ t: tok(DOC_A) });
 check(me.request && me.request.off.length === 8, `${DOC_A} vidí své uložené požadavky`);
 
-// 4) uzávěrka
-clock.now = new Date('2026-11-12T22:30:00Z'); // 12. 11. 23:30 v Praze
+// 4) uzávěrka (do 11. včetně), v noci na 12. se vygeneruje rozpis KE SCHVÁLENÍ
+clock.now = new Date('2026-11-11T22:30:00Z'); // 11. 11. 23:30 v Praze
 call('denniKontrola');
-check(!book.getSheetByName('Rozpis 2026-12') && api({ t: tok(DOC_A) }).open, '12. 11. ještě otevřeno, nic negenerováno');
-clock.now = new Date('2026-11-13T00:30:00Z'); // 13. 11. 1:30
+check(!book.getSheetByName('Rozpis 2026-12') && api({ t: tok(DOC_A) }).open, '11. 11. večer ještě otevřeno, nic negenerováno');
+clock.now = new Date('2026-11-12T00:30:00Z'); // 12. 11. 1:30
 const t0 = Date.now();
 call('denniKontrola');
-check(!!book.getSheetByName('Rozpis 2026-12'), `13. 11. rozpis vygenerován (${Date.now() - t0} ms)`);
-check(api({ t: tok(DOC_A) }).open === false, 'požadavky uzamčeny');
+check(!!book.getSheetByName('Rozpis 2026-12'), `12. 11. v noci rozpis vygenerován (${Date.now() - t0} ms)`);
+const meLocked = api({ t: tok(DOC_A) });
+check(meLocked.open === false && meLocked.awaiting === true, 'požadavky uzamčeny, lékař vidí „čeká na schválení“');
 check(post({ t: tok(DOC_A), action: 'save', month: '2026-12', request: { off: [1] } }).error, 'uložení po uzávěrce odmítnuto');
-const docMails = mails.filter((m) => typeof m.to === 'object');
 const adminMail = mails.find((m) => typeof m.to === 'string');
-check(!!adminMail && /vygenerován/.test(adminMail.subj), 'e-mail správci: ' + adminMail?.subj);
+check(!!adminMail && /čeká na schválení/.test(adminMail.subj), 'e-mail správci: ' + adminMail?.subj);
+check(!mails.some((m) => typeof m.to === 'object'), 'lékařům zatím NIC neodešlo');
+check(!!api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' }).error && meLocked.schedules.length === 0, 'neschválený rozpis lékaři nevidí');
+console.log('  stav:', call('readState', '2026-12').note.slice(0, 120));
+// během dne kontrola – další noc jen připomínka správci, lékařům nic
+clock.now = new Date('2026-11-13T00:30:00Z');
+const m0 = mails.length; call('denniKontrola');
+check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].subj) && typeof mails[m0].to === 'string', 'neschváleno → v noci připomínka jen správci');
+
+// 4b) správce schválí → rozeslání verze 1
+const res1 = call('schvalit', '2026-12');
+const docMails = mails.filter((m) => typeof m.to === 'object');
+check(/schválena verze 1/.test(res1), 'schváleno: ' + res1.split('\n')[0]);
 check(docMails.length === 2 && docMails.map((m) => m.to.to).sort().join() === 'a@nemocnice.cz,b@nemocnice.cz', 'rozpis rozeslán 2 lékařům s e-mailem');
 const mA = docMails.find((m) => m.to.to === 'a@nemocnice.cz').to;
 const svcA = (mA.body.match(/Vaše služby \((\d+)\)/) || [])[1];
-check(+svcA > 0 && mA.htmlBody.includes(DOC_A) && mA.htmlBody.includes('?t='), `e-mail lékaře A: ${svcA} služeb, celý rozpis se jmény, osobní odkaz`);
-check(/bez e-mailu: /.test(adminMail.body), 'správce ví, kdo nemá e-mail');
-console.log('  stav:', call('readState', '2026-12').note.slice(0, 120));
-  console.log('  ', book.getSheetByName('Rozpis 2026-12').getDataRange().getValues().slice(34).map((r) => r[0]).filter(Boolean).slice(0, 4).join(' | '));
+check(+svcA > 0 && mA.htmlBody.includes(DOC_A) && mA.htmlBody.includes('?t=') && /verze 1/.test(mA.subject), `e-mail lékaře A: ${svcA} služeb, verze 1, celý rozpis se jmény, osobní odkaz`);
+check(/bez e-mailu: /.test(res1), 'správce ví, kdo nemá e-mail');
 
 // 5) rozpis pro lékaře
 const sch = api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' });
-check(sch.rows?.length === 31 && sch.header.length === 10, `rozpis: ${sch.rows?.length} dní × ${sch.header?.length - 1} pozic`);
+check(sch.rows?.length === 31 && sch.header.length === 10 && sch.version === 1, `rozpis: ${sch.rows?.length} dní × ${sch.header?.length - 1} pozic, verze ${sch.version}`);
 const empty = sch.rows.reduce((n, r) => n + r.slice(1).filter((x, i) => !x && !(['tečka1', 'tečka2'].includes(sch.header[i + 1]))).length, 0);
 check(empty === 0, 'všechny noční/denní služby obsazeny');
-// kontrola: nikdo neslouží v den, který si vyškrtl
 const reqs = call('readRequests', '2026-12'); const byName = new Map(docRows.map((r) => [r[1], r[0]]));
 let viol = 0; sch.rows.forEach((r, t) => r.slice(1).forEach((n) => { const id = byName.get(n); if (id && reqs[id]?.off.includes(t + 1)) viol++; }));
 check(viol === 0, 'žádná služba ve vyškrtnutý den');
 check(api({ t: tok(DOC_B) }).schedules[0] === '2026-12', 'seznam rozpisů obsahuje 2026-12');
 
-// 5b) verze a změny po rozeslání
+// 5b) změna po schválení: lékaři vidí dál verzi 1, dokud správce neschválí verzi 2
 const dec = book.getSheetByName('Rozpis 2026-12');
 const firstMails = mails.length;
-check(api({ t: tok(DOC_A), action: 'schedule', month: '2026-12' }).version === 1, 'stránka lékaře: verze 1');
 call('denniKontrola');
 check(mails.length === firstMails, 'beze změny se v noci nic neposílá');
-// správce ručně přepíše jednu službu lékaře B na lékaře A (najdeme buňku s B)
 const dv = dec.getDataRange().getValues();
 let cell = null;
 for (let r = 1; r < dv.length && !cell; r++) for (let c = 1; c < 10; c++) if (dv[r][c] === DOC_B) { cell = [r + 1, c + 1, dv[r][0], dv[0][c]]; break; }
 dec.getRange(cell[0], cell[1]).setValue(DOC_A);
 const sch2 = api({ t: tok(DOC_A), action: 'schedule', month: '2026-12' });
-check(sch2.version === 1 && sch2.changedSinceSent === true, 'stránka lékaře: „upraveno po rozeslání“');
+const shown = sch2.rows.find((r) => r[0] === cell[2])[cell[1] - 1];
+check(sch2.version === 1 && shown === DOC_B, 'neschválená úprava: lékaři pořád vidí verzi 1 (původní jméno)');
 call('denniKontrola');
+const night = mails.slice(firstMails);
+check(night.length === 1 && typeof night[0].to === 'string' && /1 neschválených změn/.test(night[0].body), 'v noci jen připomínka správci „1 neschválených změn“');
+const res2 = call('schvalit', '2026-12');
 const v2 = mails.slice(firstMails).filter((m) => typeof m.to === 'object').map((m) => m.to);
 const toA = v2.find((m) => m.to === 'a@nemocnice.cz'), toB = v2.find((m) => m.to === 'b@nemocnice.cz');
-check(v2.length === 2 && toA.subject.startsWith('ZMĚNA') && toB.subject.startsWith('ZMĚNA') && /verze 2/.test(toA.subject),
-  `noc: verze 2 rozeslána, oba dotčení mají „ZMĚNA…“ (${toA?.subject})`);
+check(/verze 2 \(1 změn\)/.test(res2) && v2.length === 2 && toA.subject.startsWith('ZMĚNA') && toB.subject.startsWith('ZMĚNA'),
+  `schválena verze 2, oba dotčení mají „ZMĚNA…“ (${toA?.subject})`);
 check(toB.body.includes(`${cell[2]} ${cell[3]}: ${DOC_B} → ${DOC_A}`), `změna popsaná přesně: ${cell[2]} ${cell[3]}: ${DOC_B} → ${DOC_A}`);
-check(mails.slice(firstMails).some((m) => typeof m.to === 'string' && /změny rozeslány/.test(m.subj)), 'správce dostal souhrn rozeslaných změn');
-check(api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' }).version === 2, 'stránka lékaře: verze 2, bez upozornění');
-// překlep ve jméně → nic se nerozešle, správce je upozorněn
+check(api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' }).version === 2, 'stránka lékaře: verze 2');
+// překlep ve jméně → schválení se zastaví
 const before = mails.length;
 dec.getRange(cell[0], cell[1]).setValue(DOC_A + 'x');
-call('denniKontrola');
-const after = mails.slice(before);
-check(after.every((m) => typeof m.to === 'string') && after.some((m) => /NEROZESLÁNO/.test(m.body)), 'překlep ve jméně: lékařům nic, správci upozornění');
-dec.getRange(cell[0], cell[1]).setValue(DOC_A); // oprava → obsah = verze 2, nic nového
-const b2 = mails.length; call('denniKontrola');
-check(mails.length === b2, 'po opravě překlepu (obsah = verze 2) se nic neposílá');
+const res3 = call('schvalit', '2026-12');
+check(/NESCHVÁLENO/.test(res3) && mails.length === before, 'překlep ve jméně: schválení zastaveno, nic neodešlo');
+dec.getRange(cell[0], cell[1]).setValue(DOC_A);
+check(call('pendingApprovals').length === 0, 'po opravě překlepu není nic ke schválení');
 
-
+// 6) další měsíc navazuje na konec prosince
 clock.now = new Date('2026-12-02T10:00:00Z');
 me = api({ t: tok(DOC_B) });
 check(me.month === '2027-01' && me.open, 'v prosinci se otevřely požadavky na leden');

@@ -88,8 +88,12 @@ function renderReq() {
   $('#sub').textContent = `Požadavky na ${MONTHS[m - 1]} ${y}`;
   const info = $('#reqInfo');
   if (!me.doctor.active) { info.className = 'msg lock'; info.textContent = 'Jste vedený/á jako neaktivní – do rozpisu se teď nezařazujete. Pokud je to chyba, ozvěte se správci.'; }
-  else if (me.open) { info.className = 'msg'; info.innerHTML = `Zadáváte požadavky na <b>${MONTHS[m - 1]} ${y}</b>. Uzávěrka: <b>${me.deadline}</b> (do konce dne). Pak se rozpis vytvoří automaticky.`; }
-  else { info.className = 'msg lock'; info.innerHTML = `Požadavky na <b>${MONTHS[m - 1]} ${y}</b> jsou uzamčené (uzávěrka byla ${me.deadline}). Níže vidíte, co jste zadali.`; }
+  else if (me.open) { info.className = 'msg'; info.innerHTML = `Zadáváte požadavky na <b>${MONTHS[m - 1]} ${y}</b>. Uzávěrka: <b>${me.deadline}</b> (do konce dne). Potom se rozpis připraví a po schválení vám přijde e-mailem.`; }
+  else {
+    info.className = 'msg lock';
+    info.innerHTML = `Požadavky na <b>${MONTHS[m - 1]} ${y}</b> jsou uzamčené (uzávěrka byla ${me.deadline}). Níže vidíte, co jste zadali.`
+      + (me.awaiting ? '<br>Rozpis se právě kontroluje – po schválení vám přijde e-mailem a uvidíte ho v záložce <b>Rozpis</b>.' : '');
+  }
   const days = buildMonth(y, m);
   const cal = $('#cal');
   cal.classList.toggle('locked', !me.open);
@@ -186,7 +190,7 @@ function lockOup() { ['#oupMax', '#oupMinus', '#oupPlus'].forEach((x) => { $(x).
 function fillSchedMonths() {
   const sel = $('#schedMonth');
   sel.replaceChildren(...(me.schedules.length ? me.schedules : ['']).map((k) => {
-    if (!k) return el('option', { value: '' }, 'Zatím žádný rozpis');
+    if (!k) return el('option', { value: '' }, me.awaiting ? 'Rozpis čeká na schválení' : 'Zatím žádný schválený rozpis');
     const { y, m } = ymOf(k); return el('option', { value: k }, `${MONTHS[m - 1]} ${y}`);
   }));
   sel.onchange = loadSchedule;
@@ -194,7 +198,7 @@ function fillSchedMonths() {
 let schedLoaded = null;
 async function loadSchedule() {
   const k = $('#schedMonth').value;
-  if (!k) { $('#mine').textContent = 'Rozpis zatím nebyl vytvořen.'; $('#schedTable').replaceChildren(); return; }
+  if (!k) { $('#mine').textContent = me.awaiting ? 'Rozpis se právě kontroluje – po schválení vám přijde e-mailem a objeví se zde.' : 'Zatím nebyl schválen žádný rozpis.'; $('#schedTable').replaceChildren(); return; }
   $('#mine').textContent = 'Načítám…';
   try {
     const s = await api({ action: 'schedule', month: k });
@@ -212,7 +216,7 @@ async function loadSchedule() {
     });
     $('#schedTable').replaceChildren(el('thead', {}, el('tr', {}, s.header.map((h) => el('th', {}, h)))), el('tbody', {}, rows));
     const ver = s.version
-      ? `<div class="ver">Verze ${s.version} · rozesláno ${s.sentAt}${s.changedSinceSent ? '<br><b>⚠ Rozpis byl po posledním rozeslání upraven – platí to, co vidíte zde.</b>' : ''}</div>`
+      ? `<div class="ver">Platná verze ${s.version} · schváleno ${s.sentAt}</div>`
       : '';
     $('#mine').innerHTML = ver + (mine.length ? `<b>Moje služby (${mine.length}):</b><br>${mine.join('<br>')}` : 'V tomto rozpisu nemáte žádnou službu.');
     applyOnlyMine();
