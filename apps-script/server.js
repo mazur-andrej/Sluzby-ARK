@@ -14,6 +14,7 @@ const SETTINGS_DEFAULT = [
   ['Minimální odpočinek mezi službami (hodiny)', 11],
   ['Den po službě přes noc (24h, OUP noc): VŽDY VOLNO / VÝJIMEČNĚ / NE', 'VÝJIMEČNĚ'],
   ['Při schválení rozeslat rozpis lékařům e-mailem (ANO/NE)', 'ANO'],
+  ['Připomenout lékařům bez požadavků – kolik dní před uzávěrkou (0 = v den uzávěrky, prázdné = nepřipomínat)', '3, 0'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -230,11 +231,55 @@ function doplnitOdkazy() {
   info(`Odkazy doplněny (${d.length} lékařů). Najdete je ve sloupci „Osobní odkaz pro lékaře".`);
 }
 
+// ---------------------------------------------------------------- připomínka požadavků
+/** Dny před uzávěrkou, kdy se připomíná (z Nastavení, např. "3, 0"). */
+function reminderDays() {
+  return String(getSetting(6) ?? '').split(/[,;\s]+/).map((x) => x.trim()).filter((x) => x !== '').map(Number).filter((n) => Number.isInteger(n) && n >= 0);
+}
+/** Kolik dní zbývá do uzávěrky (0 = dnes je poslední den). */
+function daysToDeadline(key) {
+  const d = deadlineOf(key), t = todayParts();
+  return Math.round((Date.UTC(d.year, d.month - 1, d.day) - Date.UTC(t.year, t.month - 1, t.day)) / 86400000);
+}
+/**
+ * Spouští se každou noc: v nastavené dny před uzávěrkou pošle e-mail aktivním lékařům,
+ * kteří ještě nezadali požadavky. Každá připomínka jde nejvýš jednou (pamatuje si ji).
+ */
+function pripomenoutPozadavky(key) {
+  if (!isOpen(key)) return null;
+  const left = daysToDeadline(key);
+  if (!reminderDays().includes(left)) return null;
+  const props = PropertiesService.getScriptProperties();
+  const flag = `pripominka-${key}-${left}`;
+  if (props.getProperty(flag)) return null;
+  props.setProperty(flag, Utilities.formatDate(new Date(), TZ, 'd. M. yyyy HH:mm'));
+  const reqs = readRequests(key);
+  const { year, month } = parseKey(key);
+  const dl = deadlineOf(key);
+  const base = String(getSetting(2));
+  const out = { sent: 0, noEmail: [], error: '' };
+  for (const d of readDoctors().filter((x) => x.active && !reqs[x.id])) {
+    if (!d.email) { out.noEmail.push(d.name); continue; }
+    const link = `${base}?t=${d.token}`;
+    const when = left === 0 ? 'dnes' : `${dl.day}. ${dl.month}. ${dl.year}`;
+    const text = `Dobrý den,\n\nzatím jste nezadal/a požadavky na služby na ${MONTHS[month - 1]} ${year}. `
+      + `Uzávěrka je ${when} (do konce dne).\n\nZadat je můžete zde: ${link}\n\n`
+      + 'Pokud žádné požadavky nemáte, stačí stránku otevřít a stisknout „Uložit požadavky" – připomínky pak přestanou.';
+    try {
+      MailApp.sendEmail({ to: d.email, subject: `${left === 0 ? 'Dnes je uzávěrka' : 'Připomínka'}: požadavky na služby – ${MONTHS[month - 1]} ${year}`, body: text, name: 'Rozpis služeb' });
+      out.sent++;
+    } catch (e) { out.error = String(e.message || e); break; }
+  }
+  writeState(key, readState(key).status, `připomínka (${left} dní před uzávěrkou): ${out.sent} e-mailů${out.noEmail.length ? `, bez e-mailu ${out.noEmail.length}` : ''}${out.error ? `, CHYBA ${out.error}` : ''}`);
+  return out;
+}
+
 // ---------------------------------------------------------------- automatika
 /** Spouští se každou noc v 1:00. Po uzávěrce zamkne požadavky a vygeneruje rozpis. */
 function denniKontrola() {
   const key = targetMonth();
   const st = readState(key).status;
+  pripomenoutPozadavky(key);
   // ručně znovu otevřeno = čeká se na ruční generování; už vygenerováno = nic
   if (deadlinePassed(key) && st !== 'otevřeno' && !sheet(scheduleSheetName(key))) { generovat(key, true); return; }
   pripomenout();
@@ -565,7 +610,24 @@ function pripomenout() {
 function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 
 function doGet(e) {
-  try { return json(handle(e.parameter || {}, null)); } catch (err) { return json({ error: String(err.message || err) }); }
+  const p = e.parameter || {};
+  if (p.action === 'ics') {
+    // odběr kalendáře: služby lékaře ze schválených rozpisů (Google/Apple kalendář si ho sám obnovuje)
+    try { return ContentService.createTextOutput(icsFeed(String(p.t || ''))).setMimeType(ContentService.MimeType.ICAL); }
+    catch (err) { return ContentService.createTextOutput(String(err.message || err)).setMimeType(ContentService.MimeType.TEXT); }
+  }
+  try { return json(handle(p, null)); } catch (err) { return json({ error: String(err.message || err) }); }
+}
+
+function icsFeed(token) {
+  const doc = readDoctors().find((d) => d.token && d.token === token);
+  if (!doc) throw new Error('Neplatný odkaz.');
+  const t = todayParts();
+  const from = monthKey(...Object.values(prevMonthOf(t.year, t.month)));
+  const keys = ss().getSheets().map((s) => s.getName()).filter((n) => /^Rozpis \d{4}-\d{2}$/.test(n)).map((n) => n.slice(7))
+    .filter((k) => k >= from && lastSent(k)).sort();
+  const schedules = keys.map((k) => { const ls = lastSent(k); const snap = JSON.parse(ls.json); return { month: k, header: snap.header, rows: snap.rows, version: ls.version }; });
+  return buildIcs({ schedules, positions: readPositions(), name: doc.name, uid: doc.id, calName: 'Moje služby' });
 }
 function doPost(e) {
   try {

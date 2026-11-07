@@ -44,6 +44,21 @@ let me = api({ t: tok(DOC_A) });
 check(me.doctor?.name === DOC_A && me.month === '2026-12' && me.open === true, `${DOC_A} vidí prosinec, otevřeno, uzávěrka ${me.deadline}`);
 check(api({ t: 'spatny' }).error, 'neplatný token odmítnut');
 
+// 2b) připomínka lékařům bez požadavků: 3 dny před uzávěrkou (8. 11.) a v den uzávěrky (11. 11.)
+clock.now = new Date('2026-11-07T00:30:00Z'); call('denniKontrola');
+check(mails.length === 0, '4 dny před uzávěrkou: nic');
+clock.now = new Date('2026-11-08T00:30:00Z'); call('denniKontrola');
+const rem1 = mails.map((m) => m.to);
+check(rem1.length === 2 && rem1.every((m) => /^Připomínka: požadavky na služby – prosinec 2026/.test(m.subject)) && rem1[0].body.includes('?t=') && rem1[0].body.includes('11. 11. 2026'),
+  '3 dny před uzávěrkou: připomínka oběma lékařům s e-mailem, s odkazem a datem');
+call('denniKontrola');
+check(mails.length === 2, 'druhé spuštění téhož dne už nic nepošle');
+post({ t: tok(DOC_A), action: 'save', month: '2026-12', request: { off: [], want: [] } }); // A uloží prázdné požadavky
+clock.now = new Date('2026-11-11T00:30:00Z'); call('denniKontrola');
+const rem2 = mails.slice(2).map((m) => m.to);
+check(rem2.length === 1 && rem2[0].to === 'b@nemocnice.cz' && /^Dnes je uzávěrka/.test(rem2[0].subject), 'v den uzávěrky: jen B (A už uložil/a), předmět „Dnes je uzávěrka“');
+mails.length = 0; clock.now = new Date('2026-11-06T10:00:00Z');
+
 // 3) všichni aktivní zadají požadavky
 let seed = 3; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 const active = docRows.filter((r) => r[2] === true);
@@ -88,6 +103,11 @@ const mA = docMails.find((m) => m.to.to === 'a@nemocnice.cz').to;
 const svcA = (mA.body.match(/Vaše služby \((\d+)\)/) || [])[1];
 check(+svcA > 0 && mA.htmlBody.includes(DOC_A) && mA.htmlBody.includes('?t=') && /verze 1/.test(mA.subject), `e-mail lékaře A: ${svcA} služeb, verze 1, celý rozpis se jmény, osobní odkaz`);
 check(/bez e-mailu: /.test(res1), 'správce ví, kdo nemá e-mail');
+// odběr kalendáře
+const feed = call('doGet', { parameter: { action: 'ics', t: tok(DOC_A) } });
+const nEv = (feed.s.match(/BEGIN:VEVENT/g) || []).length;
+check(feed.mime === 2 && feed.s.startsWith('BEGIN:VCALENDAR') && nEv === +svcA, `kalendář k odběru: ${nEv} událostí = ${svcA} služeb lékaře A`);
+check(!call('doGet', { parameter: { action: 'ics', t: 'zly' } }).s.includes('BEGIN:VCALENDAR'), 'kalendář se špatným odkazem se nevydá');
 
 // 5) rozpis pro lékaře
 const sch = api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' });

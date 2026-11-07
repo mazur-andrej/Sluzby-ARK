@@ -23,6 +23,8 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 
 - **Den kontroly je 12.** (nastavitelné v listu *Nastavení*). Připadne-li na víkend nebo svátek, posune se na nejbližší pracovní den.
 - Požadavky na příští měsíc se zadávají **do dne před dnem kontroly** (včetně) – obvykle do 11., při posunu déle (např. 12. 12. 2026 je sobota → uzávěrka v neděli 13. 12., kontrola v pondělí 14. 12.).
+- **Připomínka:** lékařům s e-mailem, kteří ještě nezadali požadavky, přijde e-mail 3 dny před uzávěrkou a v den uzávěrky (nastavitelné v listu *Nastavení*).
+  Kdo žádné požadavky nemá, stačí uložit prázdné – připomínky pak přestanou.
 - V noci na den kontroly (cca 1:00) se požadavky **automaticky uzamknou a vygeneruje se rozpis ke schválení** (list *Rozpis RRRR-MM*). Správci přijde e-mail, lékaři zatím nic nevidí.
 - Správce rozpis během dne zkontroluje, případně ručně upraví v tabulce, a dá v menu **Schválit a rozeslat rozpis lékařům**.
   Teprve tehdy ho lékaři uvidí na své stránce a dostanou e-mailem. Dokud není schváleno, připomíná to správci každou noc e-mail.
@@ -34,6 +36,9 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
   Lékař, jehož se změna týká, dostane e-mail „ZMĚNA ve vašich službách" s přesným výpisem změn; ostatní dostanou novou verzi také.
   Pokud je v rozpisu jméno, které neodpovídá seznamu lékařů (překlep), schválení se zastaví a nic se neodešle.
   E-maily lze vypnout v listu *Nastavení* (schválený rozpis pak lékaři vidí jen přes svůj odkaz).
+
+- **Kalendář:** na stránce lékaře v záložce *Rozpis* lze služby *Stáhnout do kalendáře* (soubor .ics) nebo *Odebírat kalendář* –
+  odběr se sám aktualizuje po každém schválení (Google/Apple kalendář si ho obnovuje zhruba po několika hodinách).
 
 ### Jednorázové nastavení (správce, cca 10 minut)
 
@@ -140,7 +145,7 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css
@@ -149,6 +154,7 @@ js/solver.js          algoritmus (greedy + simulované žíhání)
 js/requests.js        čtení požadavků
 js/docx.js            čtení/zápis .docx
 js/xlsx.js            čtení .xlsx
+js/ics.js             kalendář (.ics) se službami lékaře
 js/calendar.js        dny, svátky
 js/config.js          pozice
 js/default-doctors.js výchozí seznam lékařů

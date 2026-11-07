@@ -2,6 +2,7 @@
 import { buildMonth, MONTHS } from './calendar.js';
 import { API_URL } from './online-config.js';
 import { OUP_LIMIT } from './config.js';
+import { buildIcs } from './ics.js';
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, attrs = {}, ...kids) => {
@@ -56,6 +57,7 @@ async function init() {
   setupOup();
   renderReq();
   fillSchedMonths();
+  setupCalendar();
   if (!me.open && me.schedules.length) switchTab('sched');
 }
 
@@ -222,6 +224,31 @@ async function loadSchedule() {
     applyOnlyMine();
   } catch (e) { $('#mine').textContent = e.message; }
 }
+// ---------------------------------------------------------------- kalendář
+function setupCalendar() {
+  $('#calBox').classList.toggle('hidden', !me.schedules.length);
+  const url = `${API_URL}?${new URLSearchParams({ action: 'ics', t: token })}`;
+  $('#subUrl').value = url;
+  $('#webcalLink').href = url.replace(/^https?:/, 'webcal:');
+  $('#icsSubscribe').onclick = () => $('#subHelp').classList.toggle('hidden');
+  $('#copySub').onclick = async () => { try { await navigator.clipboard.writeText(url); $('#copySub').textContent = '✔ Zkopírováno'; } catch { $('#subUrl').select(); } };
+  $('#icsDownload').onclick = async () => {
+    $('#icsDownload').disabled = true;
+    try {
+      // všechny schválené rozpisy od minulého měsíce dál
+      const now = new Date();
+      const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const keys = me.schedules.filter((k) => k >= from || k === me.schedules[0]);
+      const schedules = [];
+      for (const k of keys) { const sch = await api({ action: 'schedule', month: k }); schedules.push({ month: k, header: sch.header, rows: sch.rows, version: sch.version }); }
+      const text = buildIcs({ schedules, positions: me.positions, name: me.doctor.name, uid: token.slice(0, 8), calName: 'Moje služby' });
+      const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' })), download: 'moje-sluzby.ics' });
+      document.body.append(a); a.click(); a.remove();
+    } catch (e) { alert(e.message); }
+    $('#icsDownload').disabled = false;
+  };
+}
+
 function applyOnlyMine() {
   const only = $('#onlyMine').checked;
   document.querySelectorAll('#schedTable tbody tr').forEach((tr) => tr.classList.toggle('hide', only && !tr.classList.contains('mine')));

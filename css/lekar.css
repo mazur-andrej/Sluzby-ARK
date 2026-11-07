@@ -70,3 +70,6 @@ tr.hide { display: none; }
 .ouprow button { width: 44px; font-size: 20px; padding: 4px 0; }
 .ver { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .ver b { color: #b45309; }
+.calbox { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.calbox > div { flex-basis: 100%; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.calbox input { width: 100%; font: 12px monospace; padding: 6px; border: 1px solid var(--line); border-radius: 6px; margin: 4px 0; }

@@ -53,6 +53,18 @@
         <label class="muted"><input type="checkbox" id="onlyMine"> jen moje služby</label>
       </div>
       <div id="mine" class="msg"></div>
+      <div id="calBox" class="calbox hidden">
+        <button id="icsDownload">📅 Stáhnout do kalendáře</button>
+        <button id="icsSubscribe">🔄 Odebírat kalendář</button>
+        <div id="subHelp" class="muted hidden">
+          <p><b>Odebírání</b> – kalendář se sám aktualizuje po každé schválené změně (telefon si ho obnovuje zhruba po několika hodinách).</p>
+          <p><b>iPhone:</b> klepněte na <a id="webcalLink" href="#">přidat do Kalendáře</a>.<br>
+          <b>Android / Google Kalendář:</b> v počítači na calendar.google.com → Další kalendáře → <b>+</b> → Z adresy URL → vložte adresu:</p>
+          <input id="subUrl" readonly onclick="this.select()">
+          <button id="copySub">Kopírovat adresu</button>
+          <p>Adresa je osobní jako váš odkaz – nesdílejte ji.</p>
+        </div>
+      </div>
       <div class="table-wrap"><table id="schedTable" class="schedule"></table></div>
     </section>
   </main>

@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const root = new URL('../', import.meta.url);
-const parts = ['js/calendar.js', 'js/config.js', 'js/default-doctors.js', 'js/solver.js', 'apps-script/server.js'];
+const parts = ['js/calendar.js', 'js/config.js', 'js/default-doctors.js', 'js/solver.js', 'js/ics.js', 'apps-script/server.js'];
 const strip = (src) => src
   .replace(/^import .*$/gm, '')
   .replace(/^export (const|function|let|class) /gm, '$1 ');

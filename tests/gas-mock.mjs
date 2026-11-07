@@ -9,6 +9,7 @@ export function createGas() {
 
   const clock = { now: new Date('2026-11-06T10:00:00Z') };
   const mails = [];
+  const props = {};
   class Range {
     constructor(sh, r, c, nr, nc) { Object.assign(this, { sh, r, c, nr, nc }); }
     _cell(i, j) { const row = (this.sh.data[this.r - 1 + i] ||= []); return row[this.c - 1 + j]; }
@@ -54,7 +55,8 @@ export function createGas() {
       newTrigger: (fn) => { const b = { timeBased: () => b, everyDays: () => b, atHour: () => b, inTimezone: () => b, create: () => triggers.push({ getHandlerFunction: () => fn }) }; return b; },
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-    ContentService: { createTextOutput: (s) => ({ setMimeType() { return this; }, s }), MimeType: { JSON: 1 } },
+    ContentService: { createTextOutput: (s) => ({ mime: null, setMimeType(m) { this.mime = m; return this; }, s }), MimeType: { JSON: 1, ICAL: 2, TEXT: 3 } },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props[k] ?? null, setProperty: (k, v) => { props[k] = v; } }) },
     MailApp: { sendEmail: (to, subj, body) => mails.push({ to, subj, body }), getRemainingDailyQuota: () => 100 },
     console,
   };
