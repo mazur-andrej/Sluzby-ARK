@@ -1501,10 +1501,9 @@ function doplnitOdkazy() {
 function denniKontrola() {
   const key = targetMonth();
   const st = readState(key).status;
-  if (!deadlinePassed(key)) return;
-  if (st === 'otevřeno') return; // ručně znovu otevřeno – čeká se na ruční generování
-  if (sheet(scheduleSheetName(key))) return; // už vygenerováno
-  generovat(key, true);
+  // ručně znovu otevřeno = čeká se na ruční generování; už vygenerováno = nic
+  if (deadlinePassed(key) && st !== 'otevřeno' && !sheet(scheduleSheetName(key))) generovat(key, true);
+  hlidatZmeny();
 }
 
 function generovatTed() {
@@ -1543,14 +1542,14 @@ function generovat(key, notify) {
       missing.length ? `nezadali požadavky: ${missing.join(', ')}` : ''].filter(Boolean).join('; ');
     writeState(key, 'uzamčeno', note);
     let sent = null;
-    if (notify && sendSetting()) sent = rozeslat(key);
+    if (notify && sendSetting()) sent = rozeslat(key, { force: true });
     if (notify) {
       try {
         MailApp.sendEmail(adminEmail(), `Rozpis služeb ${key} vygenerován`,
           `Požadavky na ${key} byly uzamčeny a rozpis je vygenerovaný v listu „${scheduleSheetName(key)}".\n\n` +
           (res.warnings.length ? `Upozornění:\n${res.warnings.join('\n')}\n\n` : 'Všechny služby obsazeny bez upozornění.\n\n') +
           (missing.length ? `Požadavky nezadali: ${missing.join(', ')}\n\n` : '') +
-          (sent ? `Rozpis rozeslán e-mailem ${sent.sent} lékařům${sent.noEmail.length ? `; bez e-mailu: ${sent.noEmail.join(', ')}` : ''}.\n\n` : '') + ss().getUrl());
+          (sent ? (sent.error ? `Rozpis NEBYL rozeslán: ${sent.error}\n\n` : `Rozpis (verze ${sent.version}) rozeslán e-mailem ${sent.sent} lékařům${sent.noEmail.length ? `; bez e-mailu: ${sent.noEmail.join(', ')}` : ''}${sent.mailError ? `; CHYBA: ${sent.mailError}` : ''}.\n\n`) : '') + ss().getUrl());
       } catch (e) { /* e-mail není kritický */ }
     }
     return res;
@@ -1667,45 +1666,154 @@ function rozeslatTed() {
   info(`Rozesláno ${r.sent} lékařům.${r.noEmail.length ? `\nBez e-mailu (doplňte ve sloupci E-mail): ${r.noEmail.join(', ')}` : ''}${r.error ? `\n\nChyba: ${r.error}` : ''}`);
 }
 
-/** Pošle každému aktivnímu lékaři s e-mailem jeho služby a celý rozpis (aktuální stav listu, vč. ručních úprav). */
-function rozeslat(key) {
+// Každé rozeslání se uloží (list „_Rozeslané verze“): měsíc, verze, čas, přesný obsah.
+// Díky tomu: všichni dostanou při jednom rozeslání totéž, každá změna dostane nové číslo verze,
+// dotčení lékaři dostanou „ZMĚNA ve vašich službách“ a noční kontrola rozešle zapomenuté změny.
+const SENT_SHEET = '_Rozeslané verze';
+
+/** Aktuální obsah rozpisu (jen dny daného měsíce), přesně jak je v listu – včetně ručních úprav. */
+function scheduleSnapshot(key) {
   const s = sheet(scheduleSheetName(key));
+  if (!s) return null;
   const v = s.getDataRange().getDisplayValues();
   const width = v[0].findIndex((x, i) => i > 0 && x === '') > 0 ? v[0].findIndex((x, i) => i > 0 && x === '') : v[0].length;
-  const header = v[0].slice(0, width);
+  const { month } = parseKey(key);
+  const rows = v.filter((r) => { const m = String(r[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[2] === month; })
+    .map((r) => r.slice(0, width).map((c) => String(c).trim()));
+  return { header: v[0].slice(0, width).map((c) => String(c).trim()), rows };
+}
+function lastSent(key) {
+  const s = sheet(SENT_SHEET);
+  if (!s) return null;
+  const v = s.getDataRange().getValues();
+  for (let i = v.length - 1; i >= 1; i--) {
+    if (String(v[i][0]) === key) return { version: Number(v[i][1]), at: String(v[i][2]), json: String(v[i][3]) };
+  }
+  return null;
+}
+function recordSent(key, version, json, note) {
+  let s = sheet(SENT_SHEET);
+  if (!s) { s = ensureSheet(SENT_SHEET, ['Měsíc', 'Verze', 'Rozesláno', 'Obsah (neměnit)', 'Poznámka']); s.hideSheet && s.hideSheet(); }
+  const row = s.getLastRow() + 1;
+  s.getRange(row, 1, 1, 5).setValues([[key, version, Utilities.formatDate(new Date(), TZ, 'd. M. yyyy HH:mm'), json, note]]);
+  s.getRange(row, 1).setNumberFormat('@');
+}
+/** Rozdíly mezi dvěma verzemi: [{day, pos, from, to}] */
+function diffSnapshots(a, b) {
+  const out = [];
+  const byDay = new Map(a.rows.map((r) => [r[0], r]));
+  for (const r of b.rows) {
+    const old = byDay.get(r[0]) || [];
+    for (let c = 1; c < b.header.length; c++) {
+      const from = old[c] || '', to = r[c] || '';
+      if (from !== to) out.push({ day: r[0], pos: b.header[c], from, to });
+    }
+  }
+  return out;
+}
+/** Jména v rozpisu, která neodpovídají žádnému aktivnímu lékaři (překlep při ruční úpravě). */
+function unknownNames(snap, doctors) {
+  const known = new Set(doctors.map((d) => d.name));
+  const bad = new Set();
+  snap.rows.forEach((r) => r.slice(1).forEach((c) => { if (c && !known.has(c)) bad.add(c); }));
+  return [...bad];
+}
+
+function rozeslatTed() {
+  const key = targetMonth();
+  const cur = todayParts();
+  const keys = [monthKey(cur.year, cur.month), key].filter((k) => sheet(scheduleSheetName(k)));
+  if (!keys.length) { info('Zatím není žádný rozpis k rozeslání.'); return; }
+  const msgs = keys.map((k) => {
+    const r = rozeslat(k, { force: true });
+    if (r.error) return `${k}: NEROZESLÁNO – ${r.error}`;
+    return `${k}: verze ${r.version}${r.changes ? ` (${r.changes} změn)` : ''}, rozesláno ${r.sent} lékařům` +
+      (r.noEmail.length ? `\nbez e-mailu: ${r.noEmail.join(', ')}` : '') + (r.mailError ? `\nCHYBA odesílání: ${r.mailError}` : '');
+  });
+  info(msgs.join('\n\n'));
+}
+
+/**
+ * Rozešle rozpis všem aktivním lékařům s e-mailem – všem stejnou verzi.
+ * opts.force = rozeslat i bez změny (ruční rozeslání); bez force se posílá jen nová verze.
+ */
+function rozeslat(key, opts) {
+  opts = opts || {};
+  const snap = scheduleSnapshot(key);
+  if (!snap) return { error: 'rozpis neexistuje', sent: 0, noEmail: [] };
+  const doctors = readDoctors().filter((x) => x.active);
+  const bad = unknownNames(snap, doctors);
+  if (bad.length) return { error: `v rozpisu jsou jména, která nejsou v seznamu aktivních lékařů: ${bad.join(', ')}. Opravte je a rozešlete znovu.`, sent: 0, noEmail: [] };
+  const json = JSON.stringify(snap);
+  const prev = lastSent(key);
+  const changed = !prev || prev.json !== json;
+  if (!changed && !opts.force) return { unchanged: true, sent: 0, noEmail: [], version: prev.version };
+  const version = prev ? prev.version + (changed ? 1 : 0) : 1;
+  const changes = prev && changed ? diffSnapshots(JSON.parse(prev.json), snap) : [];
   const { year, month } = parseKey(key);
-  const rows = v.filter((r) => { const m = String(r[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[2] === month; }).map((r) => r.slice(0, width));
   const days = buildMonth(year, month);
   const base = String(getSetting(2));
+  const when = Utilities.formatDate(new Date(), TZ, 'd. M. yyyy HH:mm');
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const out = { sent: 0, noEmail: [], error: '' };
-  for (const d of readDoctors().filter((x) => x.active)) {
+  const out = { sent: 0, noEmail: [], mailError: '', version, changes: changes.length };
+  const th = 'border:1px solid #ccc;padding:2px 6px;background:#ea9999';
+  const ths = snap.header.map((h) => `<th style="${th}">${esc(h)}</th>`).join('');
+  for (const d of doctors) {
     if (!d.email) { out.noEmail.push(d.name); continue; }
     const mine = [];
-    const trs = rows.map((r, t) => {
-      const day = days[+String(r[0]).match(/(\d{1,2})\./)[1] - 1];
+    const changedCells = new Set(changes.map((c) => `${c.day}|${c.pos}`));
+    const trs = snap.rows.map((r) => {
+      const dm = String(r[0]).match(/(\d{1,2})\./);
+      const day = dm ? days[+dm[1] - 1] : null;
       const bg = day && (day.weekend || day.holiday) ? '#fce8b2' : '#ffffff';
-      const tds = r.map((c, i) => {
+      return `<tr style="background:${bg}">` + r.map((c, i) => {
         const me = i > 0 && c === d.name;
-        if (me) mine.push(`${r[0]} – ${header[i]}`);
-        return `<td style="border:1px solid #ccc;padding:2px 6px;${me ? 'background:#2563eb;color:#fff;font-weight:bold' : ''}">${esc(c)}</td>`;
-      }).join('');
-      return `<tr style="background:${bg}">${tds}</tr>`;
+        if (me) mine.push(`${r[0]} – ${snap.header[i]}`);
+        const ch = i > 0 && changedCells.has(`${r[0]}|${snap.header[i]}`);
+        const st = me ? 'background:#2563eb;color:#fff;font-weight:bold;' : ch ? 'background:#fde68a;' : '';
+        return `<td style="border:1px solid #ccc;padding:2px 6px;${st}">${esc(c)}</td>`;
+      }).join('') + '</tr>';
     }).join('');
-    const ths = header.map((h) => `<th style="border:1px solid #ccc;padding:2px 6px;background:#ea9999">${esc(h)}</th>`).join('');
+    const myChanges = changes.filter((c) => c.from === d.name || c.to === d.name);
+    const fmtChange = (c) => `${c.day} ${c.pos}: ${c.from || '—'} → ${c.to || '—'}`;
     const link = `${base}?t=${d.token}`;
-    const html = `<p>Dobrý den,</p><p>rozpis služeb na <b>${MONTHS[month - 1]} ${year}</b> je hotový.</p>`
-      + `<p><b>Vaše služby (${mine.length}):</b><br>${mine.map(esc).join('<br>') || 'žádné'}</p>`
-      + `<p>Aktuální rozpis (i po případných změnách) najdete vždy na své stránce: <a href="${link}">${esc(link)}</a></p>`
-      + `<table style="border-collapse:collapse;font:12px Arial">${'<tr>' + ths + '</tr>' + trs}</table>`;
-    const text = `Rozpis služeb na ${MONTHS[month - 1]} ${year} je hotový.\n\nVaše služby (${mine.length}):\n${mine.join('\n') || 'žádné'}\n\nCelý rozpis: ${link}`;
+    const title = `${MONTHS[month - 1]} ${year}`;
+    const subject = (myChanges.length ? `ZMĚNA ve vašich službách – ${title}` : `Rozpis služeb – ${title}`) + ` (verze ${version})`;
+    let html = `<p>Dobrý den,</p><p>rozpis služeb na <b>${title}</b> – <b>verze ${version}</b> (rozesláno ${when}).`
+      + (version > 1 ? ' Tato verze nahrazuje všechny předchozí.' : '') + '</p>';
+    if (myChanges.length) html += `<p style="background:#fde68a;padding:8px"><b>⚠ Změna ve vašich službách:</b><br>${myChanges.map((c) => esc(fmtChange(c))).join('<br>')}</p>`;
+    html += `<p><b>Vaše služby (${mine.length}):</b><br>${mine.map(esc).join('<br>') || 'žádné'}</p>`;
+    if (changes.length) html += `<p>Všechny změny oproti verzi ${version - 1} (žlutě v tabulce):<br>${changes.map((c) => esc(fmtChange(c))).join('<br>')}</p>`;
+    html += `<p>Platí vždy aktuální rozpis na vaší stránce: <a href="${link}">${esc(link)}</a></p>`
+      + `<table style="border-collapse:collapse;font:12px Arial"><tr>${ths}</tr>${trs}</table>`;
+    const text = `Rozpis služeb na ${title} – verze ${version} (rozesláno ${when}).\n\n`
+      + (myChanges.length ? `ZMĚNA ve vašich službách:\n${myChanges.map(fmtChange).join('\n')}\n\n` : '')
+      + `Vaše služby (${mine.length}):\n${mine.join('\n') || 'žádné'}\n\nAktuální rozpis: ${link}`;
     try {
-      MailApp.sendEmail({ to: d.email, subject: `Rozpis služeb – ${MONTHS[month - 1]} ${year}`, body: text, htmlBody: html, name: 'Rozpis služeb' });
+      MailApp.sendEmail({ to: d.email, subject, body: text, htmlBody: html, name: 'Rozpis služeb' });
       out.sent++;
-    } catch (e) { out.error = String(e.message || e); break; }
+    } catch (e) { out.mailError = String(e.message || e); break; }
   }
-  writeState(key, readState(key).status, `${readState(key).note}; rozesláno ${out.sent} e-mailů`);
+  const note = `rozesláno ${out.sent}` + (out.mailError ? `; PŘERUŠENO: ${out.mailError}` : '') + (out.noEmail.length ? `; bez e-mailu ${out.noEmail.length}` : '');
+  recordSent(key, version, json, note);
+  writeState(key, readState(key).status, `${readState(key).note.replace(/; verze \d+ rozeslána.*$/, '')}; verze ${version} rozeslána ${when} (${out.sent})`);
   return out;
+}
+
+/** Noční pojistka: změny v rozpisech po rozeslání se rozešlou automaticky. */
+function hlidatZmeny() {
+  if (!sendSetting()) return;
+  const cur = todayParts();
+  const reports = [];
+  for (const k of [monthKey(cur.year, cur.month), targetMonth()]) {
+    if (!sheet(scheduleSheetName(k)) || !lastSent(k)) continue;
+    const r = rozeslat(k, {});
+    if (r.unchanged) continue;
+    reports.push(r.error ? `${k}: NEROZESLÁNO – ${r.error}` : `${k}: rozeslána verze ${r.version} (${r.changes} změn) ${r.sent} lékařům${r.mailError ? ', CHYBA: ' + r.mailError : ''}`);
+  }
+  if (reports.length) {
+    try { MailApp.sendEmail(adminEmail(), 'Rozpis služeb – změny rozeslány', reports.join('\n') + '\n\n' + ss().getUrl()); } catch (e) { /* nevadí */ }
+  }
 }
 
 // ---------------------------------------------------------------- webové API
@@ -1758,7 +1866,10 @@ function handle(p, body) {
     const v = s.getDataRange().getDisplayValues();
     const width = v[0].findIndex((x, i) => i > 0 && x === '') > 0 ? v[0].findIndex((x, i) => i > 0 && x === '') : v[0].length;
     const rows = v.filter((r) => /\d{1,2}\.\s*\d{1,2}\./.test(r[0])).map((r) => r.slice(0, width));
-    return { month: m, header: v[0].slice(0, width), rows, me: doc.name };
+    const ls = lastSent(m);
+    const snap = scheduleSnapshot(m);
+    return { month: m, header: v[0].slice(0, width), rows, me: doc.name,
+      version: ls ? ls.version : null, sentAt: ls ? ls.at : null, changedSinceSent: !!ls && ls.json !== JSON.stringify(snap) };
   }
   return { error: 'Neznámá akce.' };
 }

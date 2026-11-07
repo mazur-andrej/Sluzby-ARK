@@ -83,7 +83,38 @@ let viol = 0; sch.rows.forEach((r, t) => r.slice(1).forEach((n) => { const id = 
 check(viol === 0, 'žádná služba ve vyškrtnutý den');
 check(api({ t: tok(DOC_B) }).schedules[0] === '2026-12', 'seznam rozpisů obsahuje 2026-12');
 
-// 6) další měsíc navazuje na konec prosince
+// 5b) verze a změny po rozeslání
+const dec = book.getSheetByName('Rozpis 2026-12');
+const firstMails = mails.length;
+check(api({ t: tok(DOC_A), action: 'schedule', month: '2026-12' }).version === 1, 'stránka lékaře: verze 1');
+call('denniKontrola');
+check(mails.length === firstMails, 'beze změny se v noci nic neposílá');
+// správce ručně přepíše jednu službu lékaře B na lékaře A (najdeme buňku s B)
+const dv = dec.getDataRange().getValues();
+let cell = null;
+for (let r = 1; r < dv.length && !cell; r++) for (let c = 1; c < 10; c++) if (dv[r][c] === DOC_B) { cell = [r + 1, c + 1, dv[r][0], dv[0][c]]; break; }
+dec.getRange(cell[0], cell[1]).setValue(DOC_A);
+const sch2 = api({ t: tok(DOC_A), action: 'schedule', month: '2026-12' });
+check(sch2.version === 1 && sch2.changedSinceSent === true, 'stránka lékaře: „upraveno po rozeslání“');
+call('denniKontrola');
+const v2 = mails.slice(firstMails).filter((m) => typeof m.to === 'object').map((m) => m.to);
+const toA = v2.find((m) => m.to === 'a@nemocnice.cz'), toB = v2.find((m) => m.to === 'b@nemocnice.cz');
+check(v2.length === 2 && toA.subject.startsWith('ZMĚNA') && toB.subject.startsWith('ZMĚNA') && /verze 2/.test(toA.subject),
+  `noc: verze 2 rozeslána, oba dotčení mají „ZMĚNA…“ (${toA?.subject})`);
+check(toB.body.includes(`${cell[2]} ${cell[3]}: ${DOC_B} → ${DOC_A}`), `změna popsaná přesně: ${cell[2]} ${cell[3]}: ${DOC_B} → ${DOC_A}`);
+check(mails.slice(firstMails).some((m) => typeof m.to === 'string' && /změny rozeslány/.test(m.subj)), 'správce dostal souhrn rozeslaných změn');
+check(api({ t: tok(DOC_B), action: 'schedule', month: '2026-12' }).version === 2, 'stránka lékaře: verze 2, bez upozornění');
+// překlep ve jméně → nic se nerozešle, správce je upozorněn
+const before = mails.length;
+dec.getRange(cell[0], cell[1]).setValue(DOC_A + 'x');
+call('denniKontrola');
+const after = mails.slice(before);
+check(after.every((m) => typeof m.to === 'string') && after.some((m) => /NEROZESLÁNO/.test(m.body)), 'překlep ve jméně: lékařům nic, správci upozornění');
+dec.getRange(cell[0], cell[1]).setValue(DOC_A); // oprava → obsah = verze 2, nic nového
+const b2 = mails.length; call('denniKontrola');
+check(mails.length === b2, 'po opravě překlepu (obsah = verze 2) se nic neposílá');
+
+
 clock.now = new Date('2026-12-02T10:00:00Z');
 me = api({ t: tok(DOC_B) });
 check(me.month === '2027-01' && me.open, 'v prosinci se otevřely požadavky na leden');

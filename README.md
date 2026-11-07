@@ -26,7 +26,11 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 - Rozpis lze v tabulce ručně upravit – lékaři vidí vždy aktuální stav.
 - 1. dne dalšího měsíce se otevřou požadavky na následující měsíc.
 - Po vygenerování dostane každý lékař, který má v listu *Lékaři* vyplněný **e-mail**, zprávu se svými službami, celým rozpisem (se jmény) a odkazem na svou stránku.
-  Po ručních úpravách lze rozeslat znovu: menu *Rozeslat rozpis příštího měsíce lékařům e-mailem*. Vypnout jde v listu *Nastavení*.
+- **Všichni mají vždy stejnou verzi:** každé rozeslání má číslo verze (v e-mailu i na stránce lékaře) a uloží se.
+  Když správce rozpis po rozeslání upraví, rozešle se nová verze – menu *Rozeslat rozpis lékařům e-mailem*, nebo automaticky v noci.
+  Lékař, jehož se změna týká, dostane e-mail „ZMĚNA ve vašich službách" s přesným výpisem změn; ostatní dostanou novou verzi také.
+  Pokud je v rozpisu jméno, které neodpovídá seznamu lékařů (překlep), nerozešle se nic a správce dostane upozornění.
+  Rozesílání lze vypnout v listu *Nastavení* (pak lékaři vidí rozpis jen přes svůj odkaz).
 
 ### Jednorázové nastavení (správce, cca 10 minut)
 

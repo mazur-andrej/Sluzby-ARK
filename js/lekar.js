@@ -211,7 +211,10 @@ async function loadSchedule() {
         r.map((c, i) => el('td', { class: i > 0 && c === s.me ? 'me' : '' }, c)));
     });
     $('#schedTable').replaceChildren(el('thead', {}, el('tr', {}, s.header.map((h) => el('th', {}, h)))), el('tbody', {}, rows));
-    $('#mine').innerHTML = mine.length ? `<b>Moje služby (${mine.length}):</b><br>${mine.join('<br>')}` : 'V tomto rozpisu nemáte žádnou službu.';
+    const ver = s.version
+      ? `<div class="ver">Verze ${s.version} · rozesláno ${s.sentAt}${s.changedSinceSent ? '<br><b>⚠ Rozpis byl po posledním rozeslání upraven – platí to, co vidíte zde.</b>' : ''}</div>`
+      : '';
+    $('#mine').innerHTML = ver + (mine.length ? `<b>Moje služby (${mine.length}):</b><br>${mine.join('<br>')}` : 'V tomto rozpisu nemáte žádnou službu.');
     applyOnlyMine();
   } catch (e) { $('#mine').textContent = e.message; }
 }

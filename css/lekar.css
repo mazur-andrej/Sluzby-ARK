@@ -68,3 +68,5 @@ tr.hide { display: none; }
 .ouprow { display: flex; gap: 6px; align-items: center; margin: 6px 0 4px; }
 .ouprow input { width: 110px; text-align: center; font: inherit; font-size: 18px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; }
 .ouprow button { width: 44px; font-size: 20px; padding: 4px 0; }
+.ver { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.ver b { color: #b45309; }
