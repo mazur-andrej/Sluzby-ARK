@@ -17,9 +17,19 @@ export const DEFAULT_POSITIONS = [
 
 // Minimálny odpočinok medzi koncom jednej a začiatkom ďalšej služby (hodiny).
 export const DEFAULT_MIN_REST_HOURS = 11;
-// Po službe, ktorá končí až nasledujúci deň (24 h, OUP noc), má lekár celý ten deň voľno
-// – aj keby hodinovo vychádzal odpočinok (napr. 24 h do 7:30 a večer OUP noc = 11,5 h).
-export const DEFAULT_NEXT_DAY_OFF = true;
+// Deň po službe, ktorá končí až nasledujúci deň (24 h, OUP noc):
+//   'hard' = celý deň voľno vždy
+//   'soft' = výnimočne smie mať večer ďalšiu službu (napr. 24 h do 7:30 a OUP noc od 19:00 = 11,5 h),
+//            ale len keď by inak služba ostala neobsadená; každá výnimka sa nahlási
+//   'off'  = stačí minimálny odpočinok v hodinách
+export const DEFAULT_AFTER_NIGHT = 'soft';
+export const AFTER_NIGHT_LABELS = {
+  hard: 'Vždy celý další den volno',
+  soft: 'Výjimečně – jen když by jinak zůstala služba neobsazená',
+  off: 'Stačí minimální odpočinek v hodinách',
+};
+/** převod starého nastavení (true/false) na nový režim */
+export const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === false ? 'off' : input.nextDayOff === true ? 'hard' : DEFAULT_AFTER_NIGHT));
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 export const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };

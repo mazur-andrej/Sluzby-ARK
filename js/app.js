@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_NEXT_DAY_OFF, shiftTimes } from './config.js';
+import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -44,7 +44,8 @@ for (const p of state.positions) {
   delete p.night;
 }
 if (state.minRestHours == null) state.minRestHours = DEFAULT_MIN_REST_HOURS;
-if (state.nextDayOff == null) state.nextDayOff = DEFAULT_NEXT_DAY_OFF;
+if (!state.afterNight) state.afterNight = DEFAULT_AFTER_NIGHT;
+delete state.nextDayOff;
 // v2: pracovní doba začíná v 7:30 (kromě OUP) – oprava časů uložených dřívější verzí
 if ((state.schema || 1) < 2) {
   for (const p of state.positions) {
@@ -90,7 +91,7 @@ function renderMonth() {
   $('#monthLabel').textContent = `${MONTHS[state.current.month - 1]} ${state.current.year}`;
   $('#extraHol').value = (monthData().extraHolidays || []).join(', ');
   $('#minRest').value = state.minRestHours;
-  $('#nextDayOff').checked = state.nextDayOff;
+  $('#afterNight').replaceChildren(...Object.entries(AFTER_NIGHT_LABELS).map(([k, v]) => el('option', { value: k, selected: k === state.afterNight }, v)));
   renderAll();
 }
 function shiftMonth(delta) {
@@ -284,7 +285,7 @@ function solverInput() {
   return {
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
-    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, nextDayOff: state.nextDayOff,
+    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight,
   };
 }
 
@@ -326,9 +327,12 @@ function renderSchedule() {
     return;
   }
   const input = solverInput();
-  const issues = validate(input, md.grid);
+  const allIssues = validate(input, md.grid);
+  const issues = allIssues.filter((i) => i.level !== 'warn');
+  const exceptions = allIssues.filter((i) => i.level === 'warn');
   const badCells = new Map();
   for (const i of issues) if (i.day) badCells.set(`${i.day}|${i.pos}`, i.msg);
+  const excCells = new Map(exceptions.filter((i) => i.day).map((i) => [`${i.day}|${i.pos}`, i.msg]));
   const wishSet = new Set();
   for (const [id, r] of Object.entries(md.requests)) for (const w of r.want || []) wishSet.add(`${w.day}|${id}`);
   const docs = activeDoctors();
@@ -342,12 +346,12 @@ function renderSchedule() {
         const key = `${d.day}|${p.id}`;
         const offIds = new Set(Object.entries(md.requests).filter(([, r]) => (r.off || []).map(Number).includes(d.day)
           || (r.ban || []).some((b) => +b.day === d.day && [].concat(b.pos).includes(p.id))).map(([id]) => id));
-        const sel = el('select', { onchange: (e) => setCell(t, pi, e.target.value), title: badCells.get(key) || '' },
+        const sel = el('select', { onchange: (e) => setCell(t, pi, e.target.value), title: badCells.get(key) || excCells.get(key) || '' },
           el('option', { value: '' }, ''),
           docs.filter((x) => x.positions.includes(p.id) || x.id === cur)
             .map((x) => el('option', { value: x.id, selected: x.id === cur }, x.name + (offIds.has(x.id) ? ' ✗' : ''))));
         const cls = [d.weekend || d.holiday ? 'we' : '', md.locked[key] ? 'locked' : '', cur && wishSet.has(`${d.day}|${cur}`) ? 'wish' : '',
-          badCells.has(key) ? 'bad' : '', !cur ? 'empty' : '', highlightDoc && cur === highlightDoc ? 'hl' : ''].join(' ');
+          badCells.has(key) ? 'bad' : excCells.has(key) ? 'exc' : '', !cur ? 'empty' : '', highlightDoc && cur === highlightDoc ? 'hl' : ''].join(' ');
         return el('td', { class: cls }, sel);
       })));
   });
@@ -365,8 +369,9 @@ function renderSchedule() {
     if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chtěl(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
   }
   let html = '';
-  if (!empty.length && !issues.length && !unmet.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
+  if (!empty.length && !issues.length && !unmet.length && !exceptions.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
   if (empty.length) html += `<div class="msg err"><b>Neobsazené služby (${empty.length})</b> – nikdo volný nesplňuje pravidla, doplňte ručně:${list(empty)}</div>`;
+  if (exceptions.length) html += `<div class="msg warn"><b>Výjimky – služba den po noční/24h službě (${exceptions.length})</b>, jinak by zůstala neobsazená. Zkontrolujte, zda je to přijatelné:${list(exceptions.map((i) => i.day + '. ' + i.msg))}</div>`;
   if (issues.length) html += `<div class="msg err"><b>Porušení pravidel (${issues.length})</b> – po ruční úpravě:${list(issues.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
   if (unmet.length) html += `<div class="msg warn"><b>Nesplněná přání (${unmet.length})</b>:${list(unmet)}</div>`;
   html += '<p class="muted">Buňku změníte výběrem lékaře – změna se zamkne (modrá) a při dalším generování zůstane. Zelená = přání lékaře. ✗ u jména = lékař si den vyškrtl nebo tu pozici nechce.</p>';
@@ -517,7 +522,7 @@ function renderSettings() {
       } }, '🗑')))),
   );
   const labels = { unfilled: 'Neobsazená služba', target: 'Odchylka od cílového počtu', overTarget: 'Služba nad cíl (navíc)', weekend: 'Nerovnoměrné víkendy/svátky',
-    gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle' };
+    gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle', afterNight: 'Výjimka: služba den po noční/24h' };
   $('#weightsTable').replaceChildren(...Object.entries(DEFAULT_WEIGHTS).map(([k, v]) => el('tr', {},
     el('td', {}, labels[k] || k),
     el('td', {}, el('input', { type: 'number', min: 0, step: 'any', value: state.weights[k] ?? v, onchange: (e) => { state.weights[k] = +e.target.value; save(); } })))));
@@ -532,7 +537,7 @@ $('#addPos').onclick = () => {
   save(); renderAll();
 };
 $('#minRest').onchange = (e) => { state.minRestHours = Math.max(0, +e.target.value || 0); save(); };
-$('#nextDayOff').onchange = (e) => { state.nextDayOff = e.target.checked; save(); };
+$('#afterNight').onchange = (e) => { state.afterNight = e.target.value; save(); };
 $('#extraHol').onchange = (e) => {
   monthData().extraHolidays = (e.target.value.match(/\d+/g) || []).map(Number);
   save(); renderAll();

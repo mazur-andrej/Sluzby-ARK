@@ -109,7 +109,7 @@ Data se ukládají v prohlížeči; *Záloha (JSON)* je uloží do souboru (dopo
 Vždy dodržena:
 - lékař slouží jen na povolených pozicích a ne ve dny, které si vyškrtl, ani na pozicích, které ten den nechce,
 - nejvýše 1 služba denně a mezi koncem jedné a začátkem další služby aspoň 11 h odpočinku (nastavitelné);
-  po službě přes noc (24h služby, OUP noc) má lékař navíc celý další den volno (lze vypnout); po OUP den nebo tečce lze další den sloužit,
+  po službě přes noc (24h služby, OUP noc) má lékař celý další den volno – výjimku (např. 24h a večer OUP noc) program použije jen tehdy, když by jinak zůstala služba neobsazená, a vypíše ji; po OUP den nebo tečce lze další den sloužit,
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
 Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víkendy/svátky, rozestup mezi službami, přání „chci".

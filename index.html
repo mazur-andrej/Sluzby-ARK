@@ -92,8 +92,8 @@ Zvoníčková – nemůže 24.12., 25.12.</pre>
         <button id="addPos">+ Přidat pozici</button>
         <p style="margin-top:14px"><label>Minimální odpočinek mezi koncem jedné a začátkem další služby:
           <input id="minRest" type="number" min="0" max="24" step="1" style="width:64px"> h</label></p>
-        <p><label><input id="nextDayOff" type="checkbox"> Po službě přes noc (24h služby, OUP noc) má lékař celý další den volno</label></p>
-        <p class="muted">Bez této volby by šlo např. 24h službu (do 7:30) a večer OUP noc (od 19:00) – to je 11,5 h odpočinku. Po OUP den nebo tečce může lékař další den sloužit.</p>
+        <p><label>Den po službě přes noc (24h služby, OUP noc): <select id="afterNight"></select></label></p>
+        <p class="muted">Výjimka znamená např. 24h službu (do 7:30) a večer OUP noc (od 19:00) = 11,5 h odpočinku, nebo dvě OUP noci po sobě. Při volbě „výjimečně" ji program použije jen tehdy, když by jinak zůstala služba neobsazená, a každou výjimku vypíše. Po OUP den nebo tečce může lékař další den sloužit vždy.</p>
       </div>
       <div class="card">
         <h3>Svátky navíc v tomto měsíci</h3>

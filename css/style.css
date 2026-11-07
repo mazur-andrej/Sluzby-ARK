@@ -66,6 +66,7 @@ th.we, td.we { background: var(--we); }
 .schedule select { border: none; border-radius: 0; background: transparent; padding: 4px 2px; width: 112px; cursor: pointer; appearance: none; -webkit-appearance: none; }
 .schedule td.locked select { background: var(--lock); }
 .schedule td.wish select { background: var(--want); }
+.schedule td.exc { outline: 2px solid #f59e0b; outline-offset: -2px; }
 .schedule td.bad { outline: 2px solid var(--bad); outline-offset: -2px; }
 .schedule td.empty select { background: repeating-linear-gradient(45deg, #fff, #fff 4px, #fde2e2 4px, #fde2e2 8px); }
 .schedule td.na { background: #eceef1; }

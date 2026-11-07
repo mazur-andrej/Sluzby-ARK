@@ -79,9 +79,19 @@ const DEFAULT_POSITIONS = [
 
 // Minimálny odpočinok medzi koncom jednej a začiatkom ďalšej služby (hodiny).
 const DEFAULT_MIN_REST_HOURS = 11;
-// Po službe, ktorá končí až nasledujúci deň (24 h, OUP noc), má lekár celý ten deň voľno
-// – aj keby hodinovo vychádzal odpočinok (napr. 24 h do 7:30 a večer OUP noc = 11,5 h).
-const DEFAULT_NEXT_DAY_OFF = true;
+// Deň po službe, ktorá končí až nasledujúci deň (24 h, OUP noc):
+//   'hard' = celý deň voľno vždy
+//   'soft' = výnimočne smie mať večer ďalšiu službu (napr. 24 h do 7:30 a OUP noc od 19:00 = 11,5 h),
+//            ale len keď by inak služba ostala neobsadená; každá výnimka sa nahlási
+//   'off'  = stačí minimálny odpočinok v hodinách
+const DEFAULT_AFTER_NIGHT = 'soft';
+const AFTER_NIGHT_LABELS = {
+  hard: 'Vždy celý další den volno',
+  soft: 'Výjimečně – jen když by jinak zůstala služba neobsazená',
+  off: 'Stačí minimální odpočinek v hodinách',
+};
+/** převod starého nastavení (true/false) na nový režim */
+const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === false ? 'off' : input.nextDayOff === true ? 'hard' : DEFAULT_AFTER_NIGHT));
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
@@ -872,13 +882,14 @@ const DEFAULT_DOCTORS = [
 //  - v daný deň neslúži na pozícii, ktorú vylúčil (napr. "ne OUP")
 //  - max. 1 služba za deň
 //  - medzi koncom jednej a začiatkom ďalšej služby je aspoň minRestHours hodín odpočinku
-//  - po službe končiacej až nasledujúci deň (24 h, OUP noc) je celý ten deň voľno (nextDayOff)
+//  - po službe končiacej až nasledujúci deň (24 h, OUP noc) je celý ten deň voľno (afterNight = 'hard')
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
 // Mäkké pravidlá (optimalizujú sa):
 //  - počet služieb čo najbližšie k cieľu lekára
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
+//  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
 
 
@@ -891,6 +902,7 @@ const DEFAULT_WEIGHTS = {
   gap2: 6,         // služby ob deň
   gap3: 1.5,
   sameWeekend: 15, // 2 služby v jednom víkende (so+ne)
+  afterNight: 400, // výnimka: služba v deň, keď končí služba cez noc (len pri afterNight = 'soft')
 };
 
 function mulberry32(seed) {
@@ -909,7 +921,7 @@ function mulberry32(seed) {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
- *   nextDayOff: po službe cez noc celý nasledujúci deň voľno (predvolene áno),
+ *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   doctors: [{id, name, positions:[posId], target, max}],
  *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
@@ -971,7 +983,8 @@ function solve(input) {
   const times = P.map(shiftTimes);
   const timeOf = (p) => (p >= 0 ? times[p] : { start: 450, end: 450 + 1440 });
   const minRest = (input.minRestHours ?? DEFAULT_MIN_REST_HOURS) * 60;
-  const nextDayOff = input.nextDayOff ?? DEFAULT_NEXT_DAY_OFF;
+  const anMode = afterNightMode(input);
+  const nextDayOff = anMode === 'hard';
   /** pozícia služby lekára v daný deň (aj z minulého mesiaca) alebo undefined */
   const serviceAt = (i, day) => {
     if (day >= 1 && day <= D) return docDay[i].get(day);
@@ -1013,6 +1026,12 @@ function solve(input) {
     let c = W.target * (n - tgt) * (n - tgt);
     if (n > tgt) c += W.overTarget * (n - tgt);
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
+    if (anMode === 'soft') {
+      for (const d of docDay[i].keys()) {
+        const b = serviceAt(i, d - 1);
+        if (b !== undefined && timeOf(b).end > 1440) c += W.afterNight;
+      }
+    }
     let we = 0;
     for (const d of docDay[i].keys()) if (isWe[d - 1]) we++;
     const exp = n * weRatio[i];
@@ -1159,6 +1178,12 @@ function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
+  if (anMode !== 'hard') {
+    for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) {
+      const b = serviceAt(i, d - 1);
+      if (b !== undefined && timeOf(b).end > 1440) warnings.push(`Výjimka: ${docs[i].name} má ${d}. ${P[p].label} hned po službě přes noc (${b >= 0 ? P[b].label : 'minulý měsíc'})`);
+    }
+  }
   for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
   const stats = docs.map((doc, i) => {
@@ -1208,7 +1233,10 @@ function validate(input, grid) {
         const ta = a.p >= 0 ? shiftTimes(P[a.p]) : { end: 450 + 1440 };
         const rest = (1440 + shiftTimes(P[b.p]).start - ta.end) / 60;
         if (rest < (input.minRestHours ?? DEFAULT_MIN_REST_HOURS)) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má jen ${Math.max(0, rest)} h odpočinku po předchozí službě` });
-        else if ((input.nextDayOff ?? DEFAULT_NEXT_DAY_OFF) && ta.end > 1440) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} slouží den po noční/24h službě` });
+        else if (ta.end > 1440 && afterNightMode(input) !== 'off') {
+          const soft = afterNightMode(input) === 'soft';
+          issues.push({ day: b.day, pos: P[b.p].id, level: soft ? 'warn' : 'error', msg: `${name} slouží den po noční/24h službě${soft ? ' (výjimka)' : ''}` });
+        }
       }
     }
     const doc = byId.get(id);
@@ -1233,7 +1261,7 @@ const SETTINGS_DEFAULT = [
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
   ['Minimální odpočinek mezi službami (hodiny)', 11],
-  ['Po službě přes noc (24h, OUP noc) celý další den volno (ANO/NE)', 'ANO'],
+  ['Den po službě přes noc (24h, OUP noc): VŽDY VOLNO / VÝJIMEČNĚ / NE', 'VÝJIMEČNĚ'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -1311,7 +1339,12 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
-const nextDayOff = () => !/^(ne|no|false|0)$/i.test(String(getSetting(4)).trim());
+function afterNightSetting() {
+  const v = String(getSetting(4)).trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/^(vzdy|ano|true|1)/.test(v)) return 'hard';
+  if (/^(ne|no|false|0)/.test(v)) return 'off';
+  return 'soft';
+}
 
 /** Načte lékaře; chybějící ID/token doplní a zapíše zpět. */
 function readDoctors() {
@@ -1470,7 +1503,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), nextDayOff: nextDayOff() });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
