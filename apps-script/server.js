@@ -321,9 +321,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours]));
-  s.getRange(1, sc, stats.length, 5).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 5).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny', `${OUP_LIMIT.label} (max)`]].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours, x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup]));
+  s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }
@@ -339,12 +339,12 @@ function prehledPozadavku() {
   const name = `Požadavky ${key}`;
   let s = sheet(name);
   if (s) s.clear(); else s = ss().insertSheet(name);
-  const rows = [['Lékař'].concat(days.map((d) => d.label))];
-  const colors = [rows[0].map((_, i) => (i && (days[i - 1].weekend || days[i - 1].holiday) ? YELLOW : '#eeeeee'))];
+  const rows = [['Lékař', `${OUP_LIMIT.label} max`].concat(days.map((d) => d.label))];
+  const colors = [rows[0].map((_, i) => (i > 1 && (days[i - 2].weekend || days[i - 2].holiday) ? YELLOW : '#eeeeee'))];
   for (const d of doctors) {
     const r = reqs[d.id];
-    const row = [r ? d.name : `${d.name} (nezadal/a)`];
-    const col = ['#ffffff'];
+    const row = [r ? d.name : `${d.name} (nezadal/a)`, r && r.oupMax ? r.oupMax : ''];
+    const col = ['#ffffff', '#ffffff'];
     days.forEach((day) => {
       let txt = '', c = day.weekend || day.holiday ? YELLOW : '#ffffff';
       if (r) {
@@ -360,8 +360,15 @@ function prehledPozadavku() {
     });
     rows.push(row); colors.push(col);
   }
+  // součet zvolených OUP vs. kolik OUP služeb měsíc potřebuje
+  const positions = readPositions();
+  const need = days.reduce((n, d) => n + positions.filter((p) => OUP_LIMIT.positions.includes(p.id) && !(p.workdaysOnly && !d.workday)).length, 0);
+  const chosen = doctors.map((d) => (reqs[d.id] || {}).oupMax).filter(Boolean);
+  const total = chosen.reduce((a, b) => a + b, 0);
+  rows.push([`Součet zvolených ${OUP_LIMIT.label} (${chosen.length} lékařů): ${total} / potřeba ${need}${total < need ? ' – zbytek dostanou lékaři bez volby' : ''}`, ''].concat(days.map(() => '')));
+  colors.push(rows[0].map(() => '#ffffff'));
   s.getRange(1, 1, rows.length, rows[0].length).setValues(rows).setBackgrounds(colors).setFontSize(9);
-  s.setFrozenRows(1); s.setFrozenColumns(1);
+  s.setFrozenRows(1); s.setFrozenColumns(2);
   s.activate();
 }
 
@@ -432,5 +439,6 @@ function cleanRequest(r, key) {
     ban: (r.ban || []).filter((b) => ok(b.day)).map((b) => ({ day: +b.day, pos: okPos(b.pos) || [] })).filter((b) => b.pos.length),
     notes: Object.fromEntries(Object.entries(r.notes || {}).filter(([d, t]) => ok(d) && t).map(([d, t]) => [d, String(t).slice(0, 200)])),
     note: String(r.note || '').slice(0, 500),
+    oupMax: Number(r.oupMax) > 0 ? Math.min(31, Math.max(OUP_LIMIT.min, Math.round(Number(r.oupMax)))) : null,
   };
 }

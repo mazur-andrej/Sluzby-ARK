@@ -1,6 +1,7 @@
 // Stránka pro lékaře: zadávání vlastních požadavků a náhled rozpisu.
 import { buildMonth, MONTHS } from './calendar.js';
 import { API_URL } from './online-config.js';
+import { OUP_LIMIT } from './config.js';
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, attrs = {}, ...kids) => {
@@ -52,6 +53,7 @@ async function init() {
   if (me.request) req = { off: [], want: [], ban: [], notes: {}, note: '', ...me.request };
   $('#genNote').value = req.note || '';
   $('#genNote').addEventListener('input', () => { req.note = $('#genNote').value; markDirty(); });
+  setupOup();
   renderReq();
   fillSchedMonths();
   if (!me.open && me.schedules.length) switchTab('sched');
@@ -110,6 +112,7 @@ function renderReq() {
   cal.replaceChildren(...cells);
   $('#saveBtn').disabled = !me.open;
   $('#genNote').disabled = !me.open;
+  lockOup();
   if (!me.open) $('#saveState').textContent = '';
   else if (!dirty) { $('#saveState').textContent = me.request ? 'Uloženo' : 'Zatím nic neuloženo'; $('#saveState').style.color = ''; }
 }
@@ -159,6 +162,25 @@ $('#saveBtn').onclick = async () => {
   $('#saveBtn').disabled = !me.open;
 };
 window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------------------------------------------------------------- počet OUP
+function setupOup() {
+  const hasOup = me.doctor.positions.some((id) => OUP_LIMIT.positions.includes(id));
+  $('#oupBox').classList.toggle('hidden', !hasOup);
+  if (!hasOup) return;
+  const inp = $('#oupMax');
+  inp.min = OUP_LIMIT.min;
+  inp.value = req.oupMax || '';
+  const set = (v) => {
+    if (v === '' || v == null || Number.isNaN(v)) { delete req.oupMax; inp.value = ''; }
+    else { req.oupMax = Math.min(31, Math.max(OUP_LIMIT.min, Math.round(v))); inp.value = req.oupMax; }
+    markDirty();
+  };
+  inp.onchange = () => set(inp.value === '' ? '' : +inp.value);
+  $('#oupMinus').onclick = () => set(req.oupMax ? req.oupMax - 1 : OUP_LIMIT.min);
+  $('#oupPlus').onclick = () => set(req.oupMax ? req.oupMax + 1 : OUP_LIMIT.min);
+}
+function lockOup() { ['#oupMax', '#oupMinus', '#oupPlus'].forEach((x) => { $(x).disabled = !me.open; }); }
 
 // ---------------------------------------------------------------- rozpis
 function fillSchedMonths() {

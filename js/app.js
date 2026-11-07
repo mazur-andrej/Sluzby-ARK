@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
+import { OUP_LIMIT, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -126,7 +126,7 @@ function renderRequests() {
   const tbl = $('#reqTable');
   const head = el('tr', {}, el('th', { class: 'name' }, 'Lékař'),
     ds.map((d) => el('th', { class: d.weekend || d.holiday ? 'we' : '', title: d.holiday ? 'svátek' : '' }, `${d.day}`, el('br'), d.label.split(' ')[0])),
-    el('th', {}, '✗'), el('th', {}, '✓'));
+    el('th', {}, '✗'), el('th', {}, '✓'), el('th', { title: `Kolik ${OUP_LIMIT.label} služeb si lékař zvolil (nejvýš; minimum ${OUP_LIMIT.min})` }, `${OUP_LIMIT.label} max`));
   const body = activeDoctors().map((doc) => {
     const req = md.requests[doc.id] || { off: [], want: [] };
     const offSet = new Set(req.off.map(Number));
@@ -147,9 +147,18 @@ function renderRequests() {
           oncontextmenu: (e) => { e.preventDefault(); posMenu(e, doc, d.day); },
         }, txt);
       }),
-      el('td', { class: 'cnt' }, String(offSet.size)), el('td', { class: 'cnt' }, String(wantMap.size)));
+      el('td', { class: 'cnt' }, String(offSet.size)), el('td', { class: 'cnt' }, String(wantMap.size)),
+      el('td', { class: 'cnt' }, doc.positions.some((id) => OUP_LIMIT.positions.includes(id))
+        ? el('input', { type: 'number', min: OUP_LIMIT.min, max: 31, value: req.oupMax || '', style: 'width:52px', onchange: (e) => setOupMax(doc.id, e.target.value) }) : ''));
   });
   tbl.replaceChildren(el('thead', {}, head), el('tbody', {}, body));
+  // součet zvolených OUP vs. potřeba
+  const need = ds.reduce((n, d) => n + state.positions.filter((p) => OUP_LIMIT.positions.includes(p.id) && !(p.workdaysOnly && !d.workday)).length, 0);
+  const chosen = activeDoctors().map((d) => md.requests[d.id]?.oupMax).filter(Boolean);
+  const total = chosen.reduce((a, b) => a + b, 0);
+  $('#oupInfo').textContent = chosen.length
+    ? `${OUP_LIMIT.label}: ${chosen.length} lékařů si zvolilo dohromady nejvýš ${total} služeb, měsíc potřebuje ${need}.${total < need ? ' Zbytek dostanou lékaři bez volby.' : ''}`
+    : '';
   const prev = prevServices();
   $('#prevInfo').textContent = prev.length
     ? `Konec minulého měsíce (kvůli odpočinku po službě): ${prev.filter((p) => p.day === 0).map((p) => docById(p.doctorId)?.name || p.doctorId).join(', ')}`
@@ -160,6 +169,13 @@ function banLabel(ids) {
   for (const [g, members] of Object.entries(GROUP_ALIASES)) if (members.length === ids.length && members.every((m) => ids.includes(m))) return g;
   if (ids.length > state.positions.length / 2) return '';
   return ids.map(posShort).join('/');
+}
+
+function setOupMax(docId, v) {
+  const md = monthData();
+  const req = md.requests[docId] || (md.requests[docId] = { off: [], want: [], note: '' });
+  if (v === '' || !(+v > 0)) delete req.oupMax; else req.oupMax = Math.min(31, Math.max(OUP_LIMIT.min, Math.round(+v)));
+  save(); renderRequests();
 }
 
 function cycleReq(docId, day) {
@@ -397,11 +413,12 @@ function renderStats(md, ds) {
       n++; if (ds[t].weekend || ds[t].holiday) we++; hours += shiftTimes(P[pi]).hours;
     }));
     const req = md.requests[doc.id] || { off: [], want: [] };
-    return { doc, n, we, hours, off: req.off.length, diff: n - (+doc.target || 0) };
+    let oup = 0; md.grid.forEach((row) => row.forEach((id, pi) => { if (id === doc.id && OUP_LIMIT.positions.includes(P[pi].id)) oup++; }));
+    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, diff: n - (+doc.target || 0) };
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Hodiny', `${OUP_LIMIT.label} (max)`, 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
       title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
@@ -412,6 +429,7 @@ function renderStats(md, ds) {
     el('td', { class: 'num' }, String(r.doc.target ?? '')),
     el('td', { class: 'num' }, String(r.we)),
     el('td', { class: 'num' }, String(Math.round(r.hours * 10) / 10)),
+    el('td', { class: 'num' }, r.oupMax ? `${r.oup} (${r.oupMax})` : String(r.oup)),
     el('td', { class: 'num' }, String(r.off))))),
   );
 }

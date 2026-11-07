@@ -31,6 +31,9 @@ export const AFTER_NIGHT_LABELS = {
 /** převod starého nastavení (true/false) na nový režim */
 export const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === false ? 'off' : input.nextDayOff === true ? 'hard' : DEFAULT_AFTER_NIGHT));
 
+// Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
+export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
+
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 export const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
 

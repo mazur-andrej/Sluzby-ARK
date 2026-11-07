@@ -33,6 +33,11 @@
         <span class="tag ban">¬ ne na pozici</span>
         <span class="tag note">✎ poznámka</span>
       </div>
+      <div id="oupBox" class="oupbox hidden">
+        <label for="oupMax"><b>Kolik chci mít OUP služeb</b> (den + noc dohromady) tento měsíc:</label>
+        <div class="ouprow"><button id="oupMinus" type="button">−</button><input id="oupMax" type="number" min="2" max="31" inputmode="numeric" placeholder="neurčeno"><button id="oupPlus" type="button">+</button></div>
+        <div class="muted">Nejméně 2. Víc, než zadáte, nedostanete. Nevyplněno = rozhodne program.</div>
+      </div>
       <div id="cal" class="cal"></div>
       <label class="muted" for="genNote">Poznámka pro správce rozpisu (nepovinné):</label>
       <textarea id="genNote" rows="2" maxlength="500"></textarea>

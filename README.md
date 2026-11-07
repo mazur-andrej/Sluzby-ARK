@@ -112,11 +112,14 @@ Vždy dodržena:
   po službě přes noc (24h služby, OUP noc) má lékař celý další den volno – výjimku (např. 24h a večer OUP noc) program použije jen tehdy, když by jinak zůstala služba neobsazená, a vypíše ji; po OUP den nebo tečce lze další den sloužit,
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
+Počet OUP služeb (OUP den + OUP noc dohromady) si může každý lékař zvolit v požadavcích – program mu jich nedá víc a snaží se dát aspoň 2.
+Kdo nevyplní, rozhodne program. V přehledu požadavků je součet zvolených OUP oproti potřebě měsíce (cca 62).
+
 Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víkendy/svátky, rozestup mezi službami, přání „chci".
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css

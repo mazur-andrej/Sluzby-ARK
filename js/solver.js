@@ -8,14 +8,16 @@
 //  - medzi koncom jednej a začiatkom ďalšej služby je aspoň minRestHours hodín odpočinku
 //  - po službe končiacej až nasledujúci deň (24 h, OUP noc) je celý ten deň voľno (afterNight = 'hard')
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
+//  - neprekročí sa počet OUP služieb, ktorý si lekár zvolil (oupMax)
 // Mäkké pravidlá (optimalizujú sa):
 //  - počet služieb čo najbližšie k cieľu lekára
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
+//  - ak si lekár zvolil počet OUP, dostane ich aspoň OUP_LIMIT.min
 //  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,
@@ -26,6 +28,7 @@ export const DEFAULT_WEIGHTS = {
   gap2: 6,         // služby ob deň
   gap3: 1.5,
   sameWeekend: 15, // 2 služby v jednom víkende (so+ne)
+  oupMin: 150,     // za každú chýbajúcu OUP službu do minima (ak si lekár zvolil počet)
   afterNight: 400, // výnimka: služba v deň, keď končí služba cez noc (len pri afterNight = 'soft')
 };
 
@@ -47,7 +50,7 @@ function mulberry32(seed) {
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   doctors: [{id, name, positions:[posId], target, max}],
- *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
+ *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}], oupMax?: number } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
  *   locked: { "den|posId": doctorId } // ručne zadané bunky, ktoré sa nemenia
  *   weights, seed, iterations, restarts
@@ -81,6 +84,13 @@ export function solve(input) {
     (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
   const maxOf = docs.map((d) => (d.max != null && d.max !== '' ? +d.max : Infinity));
+  // OUP: počet zvolený lekárom = maximum, minimum OUP_LIMIT.min
+  const oupSet = new Set(OUP_LIMIT.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
+  const oupMax = docs.map((d) => {
+    const v = Number((input.requests || {})[d.id]?.oupMax);
+    return Number.isFinite(v) && v > 0 ? Math.max(OUP_LIMIT.min, Math.round(v)) : null;
+  });
+  const oupCount = (i) => { let c = 0; for (const p of docDay[i].values()) if (oupSet.has(p)) c++; return c; };
   const targetOf = docs.map((d) => (d.target != null && d.target !== '' ? +d.target : 0));
 
   // Očakávaný podiel víkendových slotov pre každého lekára (podľa jeho pozícií)
@@ -138,6 +148,7 @@ export function solve(input) {
     if (docDay[i].has(day)) return false;
     if (!restOk(i, day, p)) return false;
     if (docDay[i].size >= maxOf[i]) return false;
+    if (oupMax[i] != null && oupSet.has(p) && oupCount(i) >= oupMax[i]) return false;
     return true;
   }
   function place(i, day, p) { assign[day - 1][p] = i; docDay[i].set(day, p); }
@@ -148,6 +159,11 @@ export function solve(input) {
     const n = docDay[i].size;
     const tgt = targetOf[i];
     let c = W.target * (n - tgt) * (n - tgt);
+    if (oupMax[i] != null) {
+      const minO = Math.min(OUP_LIMIT.min, oupMax[i]);
+      const o = oupCount(i);
+      if (o < minO) c += W.oupMin * (minO - o);
+    }
     if (n > tgt) c += W.overTarget * (n - tgt);
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
@@ -308,13 +324,16 @@ export function solve(input) {
       if (b !== undefined && timeOf(b).end > 1440) warnings.push(`Výjimka: ${docs[i].name} má ${d}. ${P[p].label} hned po službě přes noc (${b >= 0 ? P[b].label : 'minulý měsíc'})`);
     }
   }
+  for (let i = 0; i < N; i++) {
+    if (oupMax[i] != null && oupCount(i) < Math.min(OUP_LIMIT.min, oupMax[i])) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (chtěl/a ${OUP_LIMIT.min}–${oupMax[i]}) – jinak to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+  }
   for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
   const stats = docs.map((doc, i) => {
     let we = 0;
     let hours = 0;
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
-    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours };
+    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i] };
   });
 
   return {
@@ -365,6 +384,11 @@ export function validate(input, grid) {
     }
     const doc = byId.get(id);
     const n = list.filter((x) => !x.prev).length;
+    const om = Number((input.requests || {})[id]?.oupMax);
+    if (om > 0) {
+      const o = list.filter((x) => !x.prev && OUP_LIMIT.positions.includes(P[x.p]?.id)).length;
+      if (o > Math.max(OUP_LIMIT.min, om)) issues.push({ day: null, pos: null, msg: `${name} má ${o} ${OUP_LIMIT.label}, chtěl/a nejvýš ${Math.max(OUP_LIMIT.min, om)}` });
+    }
     if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služeb (max ${doc.max})` });
   }
   return issues;

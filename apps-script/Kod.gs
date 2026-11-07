@@ -93,6 +93,9 @@ const AFTER_NIGHT_LABELS = {
 /** převod starého nastavení (true/false) na nový režim */
 const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === false ? 'off' : input.nextDayOff === true ? 'hard' : DEFAULT_AFTER_NIGHT));
 
+// Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
+const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
+
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
 
@@ -884,11 +887,13 @@ const DEFAULT_DOCTORS = [
 //  - medzi koncom jednej a začiatkom ďalšej služby je aspoň minRestHours hodín odpočinku
 //  - po službe končiacej až nasledujúci deň (24 h, OUP noc) je celý ten deň voľno (afterNight = 'hard')
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
+//  - neprekročí sa počet OUP služieb, ktorý si lekár zvolil (oupMax)
 // Mäkké pravidlá (optimalizujú sa):
 //  - počet služieb čo najbližšie k cieľu lekára
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
+//  - ak si lekár zvolil počet OUP, dostane ich aspoň OUP_LIMIT.min
 //  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
 
@@ -902,6 +907,7 @@ const DEFAULT_WEIGHTS = {
   gap2: 6,         // služby ob deň
   gap3: 1.5,
   sameWeekend: 15, // 2 služby v jednom víkende (so+ne)
+  oupMin: 150,     // za každú chýbajúcu OUP službu do minima (ak si lekár zvolil počet)
   afterNight: 400, // výnimka: služba v deň, keď končí služba cez noc (len pri afterNight = 'soft')
 };
 
@@ -923,7 +929,7 @@ function mulberry32(seed) {
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   doctors: [{id, name, positions:[posId], target, max}],
- *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
+ *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}], oupMax?: number } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
  *   locked: { "den|posId": doctorId } // ručne zadané bunky, ktoré sa nemenia
  *   weights, seed, iterations, restarts
@@ -957,6 +963,13 @@ function solve(input) {
     (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
   const maxOf = docs.map((d) => (d.max != null && d.max !== '' ? +d.max : Infinity));
+  // OUP: počet zvolený lekárom = maximum, minimum OUP_LIMIT.min
+  const oupSet = new Set(OUP_LIMIT.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
+  const oupMax = docs.map((d) => {
+    const v = Number((input.requests || {})[d.id]?.oupMax);
+    return Number.isFinite(v) && v > 0 ? Math.max(OUP_LIMIT.min, Math.round(v)) : null;
+  });
+  const oupCount = (i) => { let c = 0; for (const p of docDay[i].values()) if (oupSet.has(p)) c++; return c; };
   const targetOf = docs.map((d) => (d.target != null && d.target !== '' ? +d.target : 0));
 
   // Očakávaný podiel víkendových slotov pre každého lekára (podľa jeho pozícií)
@@ -1014,6 +1027,7 @@ function solve(input) {
     if (docDay[i].has(day)) return false;
     if (!restOk(i, day, p)) return false;
     if (docDay[i].size >= maxOf[i]) return false;
+    if (oupMax[i] != null && oupSet.has(p) && oupCount(i) >= oupMax[i]) return false;
     return true;
   }
   function place(i, day, p) { assign[day - 1][p] = i; docDay[i].set(day, p); }
@@ -1024,6 +1038,11 @@ function solve(input) {
     const n = docDay[i].size;
     const tgt = targetOf[i];
     let c = W.target * (n - tgt) * (n - tgt);
+    if (oupMax[i] != null) {
+      const minO = Math.min(OUP_LIMIT.min, oupMax[i]);
+      const o = oupCount(i);
+      if (o < minO) c += W.oupMin * (minO - o);
+    }
     if (n > tgt) c += W.overTarget * (n - tgt);
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
@@ -1184,13 +1203,16 @@ function solve(input) {
       if (b !== undefined && timeOf(b).end > 1440) warnings.push(`Výjimka: ${docs[i].name} má ${d}. ${P[p].label} hned po službě přes noc (${b >= 0 ? P[b].label : 'minulý měsíc'})`);
     }
   }
+  for (let i = 0; i < N; i++) {
+    if (oupMax[i] != null && oupCount(i) < Math.min(OUP_LIMIT.min, oupMax[i])) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (chtěl/a ${OUP_LIMIT.min}–${oupMax[i]}) – jinak to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+  }
   for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
   const stats = docs.map((doc, i) => {
     let we = 0;
     let hours = 0;
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
-    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours };
+    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i] };
   });
 
   return {
@@ -1241,6 +1263,11 @@ function validate(input, grid) {
     }
     const doc = byId.get(id);
     const n = list.filter((x) => !x.prev).length;
+    const om = Number((input.requests || {})[id]?.oupMax);
+    if (om > 0) {
+      const o = list.filter((x) => !x.prev && OUP_LIMIT.positions.includes(P[x.p]?.id)).length;
+      if (o > Math.max(OUP_LIMIT.min, om)) issues.push({ day: null, pos: null, msg: `${name} má ${o} ${OUP_LIMIT.label}, chtěl/a nejvýš ${Math.max(OUP_LIMIT.min, om)}` });
+    }
     if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služeb (max ${doc.max})` });
   }
   return issues;
@@ -1570,9 +1597,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours]));
-  s.getRange(1, sc, stats.length, 5).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 5).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny', `${OUP_LIMIT.label} (max)`]].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours, x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup]));
+  s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }
@@ -1588,12 +1615,12 @@ function prehledPozadavku() {
   const name = `Požadavky ${key}`;
   let s = sheet(name);
   if (s) s.clear(); else s = ss().insertSheet(name);
-  const rows = [['Lékař'].concat(days.map((d) => d.label))];
-  const colors = [rows[0].map((_, i) => (i && (days[i - 1].weekend || days[i - 1].holiday) ? YELLOW : '#eeeeee'))];
+  const rows = [['Lékař', `${OUP_LIMIT.label} max`].concat(days.map((d) => d.label))];
+  const colors = [rows[0].map((_, i) => (i > 1 && (days[i - 2].weekend || days[i - 2].holiday) ? YELLOW : '#eeeeee'))];
   for (const d of doctors) {
     const r = reqs[d.id];
-    const row = [r ? d.name : `${d.name} (nezadal/a)`];
-    const col = ['#ffffff'];
+    const row = [r ? d.name : `${d.name} (nezadal/a)`, r && r.oupMax ? r.oupMax : ''];
+    const col = ['#ffffff', '#ffffff'];
     days.forEach((day) => {
       let txt = '', c = day.weekend || day.holiday ? YELLOW : '#ffffff';
       if (r) {
@@ -1609,8 +1636,15 @@ function prehledPozadavku() {
     });
     rows.push(row); colors.push(col);
   }
+  // součet zvolených OUP vs. kolik OUP služeb měsíc potřebuje
+  const positions = readPositions();
+  const need = days.reduce((n, d) => n + positions.filter((p) => OUP_LIMIT.positions.includes(p.id) && !(p.workdaysOnly && !d.workday)).length, 0);
+  const chosen = doctors.map((d) => (reqs[d.id] || {}).oupMax).filter(Boolean);
+  const total = chosen.reduce((a, b) => a + b, 0);
+  rows.push([`Součet zvolených ${OUP_LIMIT.label} (${chosen.length} lékařů): ${total} / potřeba ${need}${total < need ? ' – zbytek dostanou lékaři bez volby' : ''}`, ''].concat(days.map(() => '')));
+  colors.push(rows[0].map(() => '#ffffff'));
   s.getRange(1, 1, rows.length, rows[0].length).setValues(rows).setBackgrounds(colors).setFontSize(9);
-  s.setFrozenRows(1); s.setFrozenColumns(1);
+  s.setFrozenRows(1); s.setFrozenColumns(2);
   s.activate();
 }
 
@@ -1681,5 +1715,6 @@ function cleanRequest(r, key) {
     ban: (r.ban || []).filter((b) => ok(b.day)).map((b) => ({ day: +b.day, pos: okPos(b.pos) || [] })).filter((b) => b.pos.length),
     notes: Object.fromEntries(Object.entries(r.notes || {}).filter(([d, t]) => ok(d) && t).map(([d, t]) => [d, String(t).slice(0, 200)])),
     note: String(r.note || '').slice(0, 500),
+    oupMax: Number(r.oupMax) > 0 ? Math.min(31, Math.max(OUP_LIMIT.min, Math.round(Number(r.oupMax)))) : null,
   };
 }
