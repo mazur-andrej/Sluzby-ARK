@@ -4,12 +4,12 @@
 // workdaysOnly = slúži sa len v pracovné dni (nie víkend/sviatok)
 // aliases = ako lekári pozíciu píšu v požiadavkách (napr. "chci KPECH" = plast)
 export const DEFAULT_POSITIONS = [
-  { id: 'l1', label: 'lékař1', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['lekar1', 'lékař 1'] },
-  { id: 'l2', label: 'lékař2', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['lekar2', 'lékař 2'] },
-  { id: '1A', label: 'lékař3=1A', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['A1', '1A'] },
-  { id: '2A', label: 'lékař4=2A', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['A2', '2A'] },
-  { id: 'plast', label: 'lékař5=plast', start: '07:00', hours: 24, workdaysOnly: false, aliases: ['KPECH', 'plast', 'plastika'] },
-  { id: 't1', label: 'tečka1', start: '07:00', hours: 10.5, workdaysOnly: true, aliases: ['tečka 1', 'tecka1', 't1'] },
+  { id: 'l1', label: 'lékař1', start: '07:30', hours: 24, workdaysOnly: false, aliases: ['lekar1', 'lékař 1'] },
+  { id: 'l2', label: 'lékař2', start: '07:30', hours: 24, workdaysOnly: false, aliases: ['lekar2', 'lékař 2'] },
+  { id: '1A', label: 'lékař3=1A', start: '07:30', hours: 24, workdaysOnly: false, aliases: ['A1', '1A'] },
+  { id: '2A', label: 'lékař4=2A', start: '07:30', hours: 24, workdaysOnly: false, aliases: ['A2', '2A'] },
+  { id: 'plast', label: 'lékař5=plast', start: '07:30', hours: 24, workdaysOnly: false, aliases: ['KPECH', 'plast', 'plastika'] },
+  { id: 't1', label: 'tečka1', start: '07:30', hours: 10, workdaysOnly: true, aliases: ['tečka 1', 'tecka1', 't1'] },
   { id: 't2', label: 'tečka2', start: '09:30', hours: 8, workdaysOnly: true, aliases: ['tečka 2', 'tecka2', 't2'] },
   { id: 'OUPd', label: 'OUP den', start: '07:00', hours: 12, workdaysOnly: false, aliases: ['OUP den', 'OUPden'] },
   { id: 'OUPn', label: 'OUP noc', start: '19:00', hours: 12, workdaysOnly: false, aliases: ['OUP noc', 'OUPnoc'] },
@@ -17,6 +17,9 @@ export const DEFAULT_POSITIONS = [
 
 // Minimálny odpočinok medzi koncom jednej a začiatkom ďalšej služby (hodiny).
 export const DEFAULT_MIN_REST_HOURS = 11;
+// Po službe, ktorá končí až nasledujúci deň (24 h, OUP noc), má lekár celý ten deň voľno
+// – aj keby hodinovo vychádzal odpočinok (napr. 24 h do 7:30 a večer OUP noc = 11,5 h).
+export const DEFAULT_NEXT_DAY_OFF = true;
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 export const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };

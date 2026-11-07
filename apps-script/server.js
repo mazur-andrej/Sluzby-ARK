@@ -12,6 +12,7 @@ const SETTINGS_DEFAULT = [
   ['E-mail pro upozornění (prázdné = vlastník tabulky)', ''],
   ['Adresa stránky pro lékaře', 'https://mazur-andrej.github.io/Sluzby-ARK/lekar.html'],
   ['Minimální odpočinek mezi službami (hodiny)', 11],
+  ['Po službě přes noc (24h, OUP noc) celý další den volno (ANO/NE)', 'ANO'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -89,6 +90,7 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
+const nextDayOff = () => !/^(ne|no|false|0)$/i.test(String(getSetting(4)).trim());
 
 /** Načte lékaře; chybějící ID/token doplní a zapíše zpět. */
 function readDoctors() {
@@ -247,7 +249,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours() });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), nextDayOff: nextDayOff() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',

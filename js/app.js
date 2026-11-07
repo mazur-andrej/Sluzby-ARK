@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, shiftTimes } from './config.js';
+import { DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_NEXT_DAY_OFF, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -44,6 +44,15 @@ for (const p of state.positions) {
   delete p.night;
 }
 if (state.minRestHours == null) state.minRestHours = DEFAULT_MIN_REST_HOURS;
+if (state.nextDayOff == null) state.nextDayOff = DEFAULT_NEXT_DAY_OFF;
+// v2: pracovní doba začíná v 7:30 (kromě OUP) – oprava časů uložených dřívější verzí
+if ((state.schema || 1) < 2) {
+  for (const p of state.positions) {
+    const def = DEFAULT_POSITIONS.find((d) => d.id === p.id);
+    if (def && p.start === '07:00' && def.start === '07:30') { p.start = '07:30'; if (p.id === 't1' && p.hours === 10.5) p.hours = 10; }
+  }
+  state.schema = 2;
+}
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -81,6 +90,7 @@ function renderMonth() {
   $('#monthLabel').textContent = `${MONTHS[state.current.month - 1]} ${state.current.year}`;
   $('#extraHol').value = (monthData().extraHolidays || []).join(', ');
   $('#minRest').value = state.minRestHours;
+  $('#nextDayOff').checked = state.nextDayOff;
   renderAll();
 }
 function shiftMonth(delta) {
@@ -274,7 +284,7 @@ function solverInput() {
   return {
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
-    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours,
+    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, nextDayOff: state.nextDayOff,
   };
 }
 
@@ -522,6 +532,7 @@ $('#addPos').onclick = () => {
   save(); renderAll();
 };
 $('#minRest').onchange = (e) => { state.minRestHours = Math.max(0, +e.target.value || 0); save(); };
+$('#nextDayOff').onchange = (e) => { state.nextDayOff = e.target.checked; save(); };
 $('#extraHol').onchange = (e) => {
   monthData().extraHolidays = (e.target.value.match(/\d+/g) || []).map(Number);
   save(); renderAll();

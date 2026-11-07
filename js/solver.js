@@ -6,7 +6,7 @@
 //  - v daný deň neslúži na pozícii, ktorú vylúčil (napr. "ne OUP")
 //  - max. 1 služba za deň
 //  - medzi koncom jednej a začiatkom ďalšej služby je aspoň minRestHours hodín odpočinku
-//    (z časov služieb: po 24 h službe alebo OUP noci je nasledujúci deň voľno)
+//  - po službe končiacej až nasledujúci deň (24 h, OUP noc) je celý ten deň voľno (nextDayOff)
 //  - neprekročí sa maximum služieb za mesiac (ak je zadané)
 // Mäkké pravidlá (optimalizujú sa):
 //  - počet služieb čo najbližšie k cieľu lekára
@@ -14,7 +14,7 @@
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, DEFAULT_NEXT_DAY_OFF } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,
@@ -43,6 +43,7 @@ function mulberry32(seed) {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
+ *   nextDayOff: po službe cez noc celý nasledujúci deň voľno (predvolene áno),
  *   doctors: [{id, name, positions:[posId], target, max}],
  *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}] } },
  *   prev: [{doctorId, day, posId}]  // služby z konca minulého mesiaca, day <= 0 (0 = posledný deň)
@@ -100,10 +101,11 @@ export function solve(input) {
   const locked = Array.from({ length: D }, () => new Array(P.length).fill(false));
   const docDay = docs.map(() => new Map()); // den -> posIdx
 
-  // Časy služieb v minútach; -1 = neznáma pozícia z minulého mesiaca (berie sa ako 24 h od 7:00)
+  // Časy služieb v minútach; -1 = neznáma pozícia z minulého mesiaca (berie sa ako 24 h od 7:30)
   const times = P.map(shiftTimes);
-  const timeOf = (p) => (p >= 0 ? times[p] : { start: 420, end: 420 + 1440 });
+  const timeOf = (p) => (p >= 0 ? times[p] : { start: 450, end: 450 + 1440 });
   const minRest = (input.minRestHours ?? DEFAULT_MIN_REST_HOURS) * 60;
+  const nextDayOff = input.nextDayOff ?? DEFAULT_NEXT_DAY_OFF;
   /** pozícia služby lekára v daný deň (aj z minulého mesiaca) alebo undefined */
   const serviceAt = (i, day) => {
     if (day >= 1 && day <= D) return docDay[i].get(day);
@@ -113,9 +115,15 @@ export function solve(input) {
   /** dodrží sa odpočinok voči službe deň pred a deň po? */
   function restOk(i, day, p) {
     const before = serviceAt(i, day - 1);
-    if (before !== undefined && 1440 + times[p].start - timeOf(before).end < minRest) return false;
+    if (before !== undefined) {
+      if (nextDayOff && timeOf(before).end > 1440) return false;
+      if (1440 + times[p].start - timeOf(before).end < minRest) return false;
+    }
     const after = serviceAt(i, day + 1);
-    if (after !== undefined && 1440 + timeOf(after).start - times[p].end < minRest) return false;
+    if (after !== undefined) {
+      if (nextDayOff && times[p].end > 1440) return false;
+      if (1440 + timeOf(after).start - times[p].end < minRest) return false;
+    }
     return true;
   }
 
@@ -331,9 +339,10 @@ export function validate(input, grid) {
       const a = list[k - 1], b = list[k];
       if (a.day === b.day && !b.prev) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má 2 služby ve stejný den` });
       if (b.day - a.day === 1 && !b.prev) {
-        const ta = a.p >= 0 ? shiftTimes(P[a.p]) : { end: 420 + 1440 };
+        const ta = a.p >= 0 ? shiftTimes(P[a.p]) : { end: 450 + 1440 };
         const rest = (1440 + shiftTimes(P[b.p]).start - ta.end) / 60;
         if (rest < (input.minRestHours ?? DEFAULT_MIN_REST_HOURS)) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} má jen ${Math.max(0, rest)} h odpočinku po předchozí službě` });
+        else if ((input.nextDayOff ?? DEFAULT_NEXT_DAY_OFF) && ta.end > 1440) issues.push({ day: b.day, pos: P[b.p].id, msg: `${name} slouží den po noční/24h službě` });
       }
     }
     const doc = byId.get(id);
