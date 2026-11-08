@@ -136,7 +136,9 @@ function shiftTimes(p) {
 // víkendy a sviatky sa vyrovnávajú za posledných `windowMonths` mesiacov, pomerne k počtu 24 h služieb;
 // každý lekár má mesačne aspoň 1 víkendovú 24 h službu, ak to počty dovolia (inak striedanie).
 // Počiatočný stav je pri lekárovi v poli `fair` (z rozpisov za mesiace FAIR_BASE_MONTHS).
-const FAIRNESS = { windowMonths: 12, weekendMin: 1 };
+// Váha dňa pre víkend: sobota/nedeľa = 1, piatok = 0,5 („pol víkendu“), ostatné 0.
+const FAIRNESS = { windowMonths: 12, weekendMin: 1, fridayWeight: 0.5 };
+const weekendWeight = (day) => (day.weekend ? 1 : day.dow === 5 ? FAIRNESS.fridayWeight : 0);
 const FAIR_BASE_MONTHS = ['2026-05', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
 
 // ----- js/default-doctors.js -----
@@ -157,9 +159,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 8.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -175,9 +177,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -194,9 +196,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 5,
+   "we": 7.0,
    "hol": 3,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -214,9 +216,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 8,
+   "we": 8.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -233,9 +235,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 8,
+   "we": 9.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -253,9 +255,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 4,
+   "we": 6.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -274,9 +276,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 7,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -295,9 +297,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 7,
+   "we": 8.0,
    "hol": 2,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -314,9 +316,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 7,
+   "we": 8.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -333,9 +335,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 13,
-   "we": 3,
+   "we": 5.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -352,9 +354,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -373,9 +375,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 9,
+   "we": 10.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -394,9 +396,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 6,
-   "we": 2,
+   "we": 2.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -416,9 +418,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 22,
-   "we": 5,
+   "we": 6.5,
    "hol": 2,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -437,9 +439,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -459,9 +461,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 6,
+   "we": 8.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -481,9 +483,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 3,
+   "we": 5.0,
    "hol": 2,
-   "noWe": 3
+   "noWe": 1.5
   }
  },
  {
@@ -502,9 +504,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 5,
+   "we": 7.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -521,9 +523,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -541,9 +543,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 21,
-   "we": 4,
+   "we": 4.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -559,9 +561,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 6
+   "noWe": 5.5
   }
  },
  {
@@ -580,9 +582,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 2,
+   "we": 5.0,
    "hol": 2,
-   "noWe": 4
+   "noWe": 1.5
   }
  },
  {
@@ -601,9 +603,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 6,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -622,9 +624,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 18,
-   "we": 7,
+   "we": 9.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -643,9 +645,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 6,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -664,9 +666,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -685,9 +687,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 7,
+   "we": 7.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -706,9 +708,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 16,
-   "we": 7,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -727,9 +729,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 16,
-   "we": 5,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.5
   }
  },
  {
@@ -745,9 +747,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 21,
-   "we": 7,
+   "we": 8.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -763,9 +765,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 6,
+   "we": 8.0,
    "hol": 2,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -781,9 +783,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 9,
+   "we": 11.5,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -803,9 +805,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.8,
   "fair": {
    "n24": 17,
-   "we": 5,
+   "we": 6.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -825,9 +827,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.3,
   "fair": {
    "n24": 18,
-   "we": 4,
+   "we": 5.5,
    "hol": 2,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -847,9 +849,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.8,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -867,9 +869,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 8,
-   "we": 2,
+   "we": 2.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -887,9 +889,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 3,
+   "we": 4.0,
    "hol": 3,
-   "noWe": 3
+   "noWe": 2.5
   }
  },
  {
@@ -905,9 +907,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 6,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -927,9 +929,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 2.8,
   "fair": {
    "n24": 16,
-   "we": 4,
+   "we": 6.0,
    "hol": 2,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -948,9 +950,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 15,
-   "we": 4,
+   "we": 4.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -968,9 +970,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3.6,
   "fair": {
    "n24": 4,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 3
+   "noWe": 2.5
   }
  },
  {
@@ -988,9 +990,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3.5,
   "fair": {
    "n24": 12,
-   "we": 4,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -1008,9 +1010,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1028,9 +1030,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3.3,
   "fair": {
    "n24": 12,
-   "we": 1,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 5
+   "noWe": 3.5
   }
  },
  {
@@ -1047,9 +1049,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 4,
   "fair": {
    "n24": 2,
-   "we": 0,
+   "we": 1.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -1068,9 +1070,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 6.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1088,9 +1090,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 2.8,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -1108,9 +1110,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 5.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -1128,9 +1130,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 15,
-   "we": 7,
+   "we": 8.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1148,9 +1150,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 2.7,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1167,9 +1169,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": 3.2,
   "fair": {
    "n24": 5,
-   "we": 1,
+   "we": 2.0,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -1188,9 +1190,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 5,
+   "we": 5.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1208,9 +1210,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 3,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1229,9 +1231,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 5,
+   "we": 5.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1249,9 +1251,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 11,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 4
+   "noWe": 3.5
   }
  },
  {
@@ -1270,9 +1272,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 9,
-   "we": 2,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1288,9 +1290,9 @@ const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 0,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 4
+   "noWe": 1.5
   }
  }
 ];
@@ -1312,7 +1314,7 @@ const DEFAULT_DOCTORS = [
 //  - 24 h služby a tečky zvlášť podľa obvyklého počtu lekára (typical24 / typicalT),
 //    prepočítané na mesiac; rozsah ⌊cieľ⌋–⌈cieľ⌉; lekár len na JIP má pevný počet
 //  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
-//  - férové víkendy a sviatky (len 24 h): za 12 mesiacov pomerne k počtu 24 h služieb,
+//  - férové víkendy a sviatky (len 24 h; piatok = pol víkendu): za 12 mesiacov pomerne k počtu 24 h služieb,
 //    mesačne aspoň 1 víkend pre každého, ak to počty dovolia (inak prednosť tí, čo dlho nemali)
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
@@ -1448,7 +1450,7 @@ function solve(input) {
   const fh = input.fairHistory || {};
   const hist = docs.map((d) => ({ n24: +(fh[d.id]?.n24 || 0), we: +(fh[d.id]?.we || 0), hol: +(fh[d.id]?.hol || 0), noWe: +(fh[d.id]?.noWe || 0) }));
   let slots24 = 0, we24 = 0, hol24 = 0;
-  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; if (days[t].weekend) we24++; if (days[t].holiday) hol24++; }
+  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; we24 += weekendWeight(days[t]); if (days[t].holiday) hol24++; }
   const sumH = hist.reduce((a, h) => ({ n24: a.n24 + h.n24, we: a.we + h.we, hol: a.hol + h.hol }), { n24: 0, we: 0, hol: 0 });
   const gWe = (sumH.we + we24) / Math.max(1, sumH.n24 + slots24);
   const gHol = (sumH.hol + hol24) / Math.max(1, sumH.n24 + slots24);
@@ -1458,7 +1460,7 @@ function solve(input) {
   /** víkendové a sviatočné 24 h služby lekára v tomto mesiaci */
   const fairNow = (i) => {
     let n = 0, we = 0, hol = 0;
-    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; if (days[d - 1].weekend) we++; if (days[d - 1].holiday) hol++; }
+    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; we += weekendWeight(days[d - 1]); if (days[d - 1].holiday) hol++; }
     return { n, we, hol };
   };
 
@@ -1551,6 +1553,7 @@ function solve(input) {
       const dWe = h.we + f.we - gWe * nC, dHol = h.hol + f.hol - gHol * nC;
       c += W.weFair * dWe * dWe + W.holFair * dHol * dHol;
       // bez víkendu: čím viac mesiacov už bez víkendu bol, tým väčšia prednosť (striedanie)
+      // (piatok = 0,5 → kto nemá sobotu/nedeľu, aspoň piatok zmierni chýbajúci víkend)
       if (expects24[i] && f.we < FAIRNESS.weekendMin) c += W.weMin * (1 + 2 * h.noWe) * (FAIRNESS.weekendMin - f.we);
       if (f.we > 1) c += W.weMulti * (f.we - 1) * (f.we - 1);
     }
@@ -1734,7 +1737,8 @@ function solve(input) {
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id),
+      onlyFriday: docs.filter((_, i) => expects24[i] && fairNow(i).we > 0 && fairNow(i).we < FAIRNESS.weekendMin).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
 }
 
@@ -1811,11 +1815,12 @@ function buildFairHistory({ targetKey, past, doctors, positions }) {
       if (!day) return;
       row.forEach((id, c) => {
         if (!id || !h24labels.has(pm.header[c])) return;
-        add(id, 'n24', 1); if (day.weekend) add(id, 'we', 1); if (day.holiday) add(id, 'hol', 1);
-        (month[id] ||= { n: 0, we: 0 }).n++; if (day.weekend) month[id].we++;
+        const w = weekendWeight(day);
+        add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) add(id, 'hol', 1);
+        (month[id] ||= { n: 0, we: 0 }).n++; month[id].we += w;
       });
     });
-    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we === 0) add(id, 'noWe', 1);
+    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we < FAIRNESS.weekendMin) add(id, 'noWe', FAIRNESS.weekendMin - x.we);
   }
   return out;
 }

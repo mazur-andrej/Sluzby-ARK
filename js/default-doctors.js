@@ -15,9 +15,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 8.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -33,9 +33,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -52,9 +52,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 5,
+   "we": 7.0,
    "hol": 3,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -72,9 +72,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 8,
+   "we": 8.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -91,9 +91,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 8,
+   "we": 9.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -111,9 +111,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 4,
+   "we": 6.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -132,9 +132,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 7,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -153,9 +153,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 7,
+   "we": 8.0,
    "hol": 2,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -172,9 +172,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 7,
+   "we": 8.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -191,9 +191,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 13,
-   "we": 3,
+   "we": 5.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -210,9 +210,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -231,9 +231,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 9,
+   "we": 10.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -252,9 +252,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 6,
-   "we": 2,
+   "we": 2.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -274,9 +274,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 22,
-   "we": 5,
+   "we": 6.5,
    "hol": 2,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -295,9 +295,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -317,9 +317,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 6,
+   "we": 8.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -339,9 +339,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 3,
+   "we": 5.0,
    "hol": 2,
-   "noWe": 3
+   "noWe": 1.5
   }
  },
  {
@@ -360,9 +360,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 5,
+   "we": 7.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -379,9 +379,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 24,
-   "we": 6,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -399,9 +399,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 21,
-   "we": 4,
+   "we": 4.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -417,9 +417,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 6
+   "noWe": 5.5
   }
  },
  {
@@ -438,9 +438,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 2,
+   "we": 5.0,
    "hol": 2,
-   "noWe": 4
+   "noWe": 1.5
   }
  },
  {
@@ -459,9 +459,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 6,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -480,9 +480,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 18,
-   "we": 7,
+   "we": 9.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -501,9 +501,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 17,
-   "we": 6,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -522,9 +522,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 7,
+   "we": 9.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -543,9 +543,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 20,
-   "we": 7,
+   "we": 7.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -564,9 +564,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 16,
-   "we": 7,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -585,9 +585,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 16,
-   "we": 5,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.5
   }
  },
  {
@@ -603,9 +603,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 21,
-   "we": 7,
+   "we": 8.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -621,9 +621,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 6,
+   "we": 8.0,
    "hol": 2,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -639,9 +639,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 9,
+   "we": 11.5,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -661,9 +661,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.8,
   "fair": {
    "n24": 17,
-   "we": 5,
+   "we": 6.5,
    "hol": 1,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -683,9 +683,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.3,
   "fair": {
    "n24": 18,
-   "we": 4,
+   "we": 5.5,
    "hol": 2,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -705,9 +705,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.8,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -725,9 +725,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 8,
-   "we": 2,
+   "we": 2.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -745,9 +745,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 3,
+   "we": 4.0,
    "hol": 3,
-   "noWe": 3
+   "noWe": 2.5
   }
  },
  {
@@ -763,9 +763,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 19,
-   "we": 6,
+   "we": 7.5,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -785,9 +785,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 2.8,
   "fair": {
    "n24": 16,
-   "we": 4,
+   "we": 6.0,
    "hol": 2,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -806,9 +806,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 15,
-   "we": 4,
+   "we": 4.0,
    "hol": 1,
-   "noWe": 2
+   "noWe": 2.0
   }
  },
  {
@@ -826,9 +826,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3.6,
   "fair": {
    "n24": 4,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 3
+   "noWe": 2.5
   }
  },
  {
@@ -846,9 +846,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3.5,
   "fair": {
    "n24": 12,
-   "we": 4,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -866,9 +866,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 6.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -886,9 +886,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3.3,
   "fair": {
    "n24": 12,
-   "we": 1,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 5
+   "noWe": 3.5
   }
  },
  {
@@ -905,9 +905,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 4,
   "fair": {
    "n24": 2,
-   "we": 0,
+   "we": 1.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.0
   }
  },
  {
@@ -926,9 +926,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 1.7,
   "fair": {
    "n24": 15,
-   "we": 5,
+   "we": 6.0,
    "hol": 1,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -946,9 +946,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 2.8,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -966,9 +966,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 5.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 1.0
   }
  },
  {
@@ -986,9 +986,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3,
   "fair": {
    "n24": 15,
-   "we": 7,
+   "we": 8.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1006,9 +1006,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 2.7,
   "fair": {
    "n24": 14,
-   "we": 5,
+   "we": 6.0,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1025,9 +1025,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": 3.2,
   "fair": {
    "n24": 5,
-   "we": 1,
+   "we": 2.0,
    "hol": 0,
-   "noWe": 2
+   "noWe": 1.0
   }
  },
  {
@@ -1046,9 +1046,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 5,
+   "we": 5.0,
    "hol": 1,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1066,9 +1066,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 12,
-   "we": 3,
+   "we": 5.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1087,9 +1087,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 5,
+   "we": 5.0,
    "hol": 0,
-   "noWe": 0
+   "noWe": 0.0
   }
  },
  {
@@ -1107,9 +1107,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 11,
-   "we": 0,
+   "we": 0.5,
    "hol": 0,
-   "noWe": 4
+   "noWe": 3.5
   }
  },
  {
@@ -1128,9 +1128,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 9,
-   "we": 2,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 1
+   "noWe": 0.5
   }
  },
  {
@@ -1146,9 +1146,9 @@ export const DEFAULT_DOCTORS = [
   "typicalT": null,
   "fair": {
    "n24": 7,
-   "we": 0,
+   "we": 2.5,
    "hol": 0,
-   "noWe": 4
+   "noWe": 1.5
   }
  }
 ];

@@ -14,7 +14,7 @@
 //  - 24 h služby a tečky zvlášť podľa obvyklého počtu lekára (typical24 / typicalT),
 //    prepočítané na mesiac; rozsah ⌊cieľ⌋–⌈cieľ⌉; lekár len na JIP má pevný počet
 //  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
-//  - férové víkendy a sviatky (len 24 h): za 12 mesiacov pomerne k počtu 24 h služieb,
+//  - férové víkendy a sviatky (len 24 h; piatok = pol víkendu): za 12 mesiacov pomerne k počtu 24 h služieb,
 //    mesačne aspoň 1 víkend pre každého, ak to počty dovolia (inak prednosť tí, čo dlho nemali)
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
@@ -23,7 +23,7 @@
 //  - minimum na pozícii (positionMin, napr. 2A aspoň 2× pre lekárov bez 1A)
 //  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS, weekendWeight } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,
@@ -150,7 +150,7 @@ export function solve(input) {
   const fh = input.fairHistory || {};
   const hist = docs.map((d) => ({ n24: +(fh[d.id]?.n24 || 0), we: +(fh[d.id]?.we || 0), hol: +(fh[d.id]?.hol || 0), noWe: +(fh[d.id]?.noWe || 0) }));
   let slots24 = 0, we24 = 0, hol24 = 0;
-  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; if (days[t].weekend) we24++; if (days[t].holiday) hol24++; }
+  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; we24 += weekendWeight(days[t]); if (days[t].holiday) hol24++; }
   const sumH = hist.reduce((a, h) => ({ n24: a.n24 + h.n24, we: a.we + h.we, hol: a.hol + h.hol }), { n24: 0, we: 0, hol: 0 });
   const gWe = (sumH.we + we24) / Math.max(1, sumH.n24 + slots24);
   const gHol = (sumH.hol + hol24) / Math.max(1, sumH.n24 + slots24);
@@ -160,7 +160,7 @@ export function solve(input) {
   /** víkendové a sviatočné 24 h služby lekára v tomto mesiaci */
   const fairNow = (i) => {
     let n = 0, we = 0, hol = 0;
-    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; if (days[d - 1].weekend) we++; if (days[d - 1].holiday) hol++; }
+    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; we += weekendWeight(days[d - 1]); if (days[d - 1].holiday) hol++; }
     return { n, we, hol };
   };
 
@@ -253,6 +253,7 @@ export function solve(input) {
       const dWe = h.we + f.we - gWe * nC, dHol = h.hol + f.hol - gHol * nC;
       c += W.weFair * dWe * dWe + W.holFair * dHol * dHol;
       // bez víkendu: čím viac mesiacov už bez víkendu bol, tým väčšia prednosť (striedanie)
+      // (piatok = 0,5 → kto nemá sobotu/nedeľu, aspoň piatok zmierni chýbajúci víkend)
       if (expects24[i] && f.we < FAIRNESS.weekendMin) c += W.weMin * (1 + 2 * h.noWe) * (FAIRNESS.weekendMin - f.we);
       if (f.we > 1) c += W.weMulti * (f.we - 1) * (f.we - 1);
     }
@@ -436,7 +437,8 @@ export function solve(input) {
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id),
+      onlyFriday: docs.filter((_, i) => expects24[i] && fairNow(i).we > 0 && fairNow(i).we < FAIRNESS.weekendMin).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
 }
 
@@ -513,11 +515,12 @@ export function buildFairHistory({ targetKey, past, doctors, positions }) {
       if (!day) return;
       row.forEach((id, c) => {
         if (!id || !h24labels.has(pm.header[c])) return;
-        add(id, 'n24', 1); if (day.weekend) add(id, 'we', 1); if (day.holiday) add(id, 'hol', 1);
-        (month[id] ||= { n: 0, we: 0 }).n++; if (day.weekend) month[id].we++;
+        const w = weekendWeight(day);
+        add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) add(id, 'hol', 1);
+        (month[id] ||= { n: 0, we: 0 }).n++; month[id].we += w;
       });
     });
-    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we === 0) add(id, 'noWe', 1);
+    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we < FAIRNESS.weekendMin) add(id, 'noWe', FAIRNESS.weekendMin - x.we);
   }
   return out;
 }

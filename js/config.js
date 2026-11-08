@@ -74,5 +74,7 @@ export function shiftTimes(p) {
 // víkendy a sviatky sa vyrovnávajú za posledných `windowMonths` mesiacov, pomerne k počtu 24 h služieb;
 // každý lekár má mesačne aspoň 1 víkendovú 24 h službu, ak to počty dovolia (inak striedanie).
 // Počiatočný stav je pri lekárovi v poli `fair` (z rozpisov za mesiace FAIR_BASE_MONTHS).
-export const FAIRNESS = { windowMonths: 12, weekendMin: 1 };
+// Váha dňa pre víkend: sobota/nedeľa = 1, piatok = 0,5 („pol víkendu“), ostatné 0.
+export const FAIRNESS = { windowMonths: 12, weekendMin: 1, fridayWeight: 0.5 };
+export const weekendWeight = (day) => (day.weekend ? 1 : day.dow === 5 ? FAIRNESS.fridayWeight : 0);
 export const FAIR_BASE_MONTHS = ['2026-05', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
