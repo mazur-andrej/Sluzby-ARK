@@ -33,7 +33,7 @@ check(count(r3.grid, blocked.id) === 3 && r3.warnings.some((w) => w.includes(`${
 
 // pravidlo vypnuté
 const r4 = solve({ days, positions: P, doctors, requests: {}, seed: 1, fixedGroup: null });
-check(count(r4.grid, low.id) >= r4.share.lo && count(r4.grid, low.id) <= r4.share.hi, `pravidlo vypnuté → ${low.name} rovnoměrně jako ostatní (${count(r4.grid, low.id)}, podíl ${r4.share.label})`);
+{ const t = r4.plan[low.id].h24; check(count(r4.grid, low.id) >= t.lo && count(r4.grid, low.id) <= t.hi, `pravidlo vypnuté → ${low.name} podle obvyklého počtu (${count(r4.grid, low.id)}, obvykle ${t.label})`); }
 
 // ruční úprava: 5 služeb = chyba
 const g = r.grid.map((row) => row.slice());

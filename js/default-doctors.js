@@ -1,4 +1,4 @@
-// Výchozí seznam lékařů – ANONYMIZOVANÝ (struktura pozic a cílů z rozpisů 2026, bez jmen).
+// Výchozí seznam lékařů – ANONYMIZOVANÝ (struktura pozic a obvyklých počtů služeb z rozpisů 2026, bez jmen).
 // Skutečná jména jsou jen v Google tabulce správce a v prohlížeči správce (karta Lékaři → Načíst seznam).
 export const DEFAULT_DOCTORS = [
  {
@@ -10,9 +10,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-02",
@@ -22,9 +23,10 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "OUPd"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-03",
@@ -35,9 +37,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-04",
@@ -48,9 +51,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-05",
@@ -60,9 +64,10 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-06",
@@ -73,9 +78,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-07",
@@ -87,9 +93,10 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-08",
@@ -101,9 +108,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.3,
+  "typicalT": null
  },
  {
   "id": "lekar-09",
@@ -113,9 +121,10 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-10",
@@ -125,9 +134,10 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-11",
@@ -137,9 +147,10 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-12",
@@ -151,9 +162,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-13",
@@ -165,9 +177,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3,
+  "typicalT": null
  },
  {
   "id": "lekar-14",
@@ -180,9 +193,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.7,
+  "typicalT": null
  },
  {
   "id": "lekar-15",
@@ -194,9 +208,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-16",
@@ -209,9 +224,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.3,
+  "typicalT": null
  },
  {
   "id": "lekar-17",
@@ -224,9 +240,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-18",
@@ -238,9 +255,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.3,
+  "typicalT": null
  },
  {
   "id": "lekar-19",
@@ -250,9 +268,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "1A"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 4,
+  "typicalT": null
  },
  {
   "id": "lekar-20",
@@ -263,9 +282,10 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.5,
+  "typicalT": null
  },
  {
   "id": "lekar-21",
@@ -275,9 +295,10 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 1.2,
+  "typicalT": null
  },
  {
   "id": "lekar-22",
@@ -289,9 +310,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.8,
+  "typicalT": null
  },
  {
   "id": "lekar-23",
@@ -303,9 +325,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.8,
+  "typicalT": null
  },
  {
   "id": "lekar-24",
@@ -317,9 +340,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3,
+  "typicalT": null
  },
  {
   "id": "lekar-25",
@@ -331,9 +355,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.8,
+  "typicalT": null
  },
  {
   "id": "lekar-26",
@@ -345,9 +370,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-27",
@@ -359,9 +385,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.3,
+  "typicalT": null
  },
  {
   "id": "lekar-28",
@@ -373,9 +400,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.7,
+  "typicalT": null
  },
  {
   "id": "lekar-29",
@@ -387,9 +415,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.7,
+  "typicalT": null
  },
  {
   "id": "lekar-30",
@@ -398,9 +427,10 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.5,
+  "typicalT": null
  },
  {
   "id": "lekar-31",
@@ -409,9 +439,10 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-32",
@@ -420,9 +451,10 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-33",
@@ -435,9 +467,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.8,
+  "typicalT": 1.8
  },
  {
   "id": "lekar-34",
@@ -450,9 +483,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3,
+  "typicalT": 1.3
  },
  {
   "id": "lekar-35",
@@ -465,9 +499,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3,
+  "typicalT": 1.8
  },
  {
   "id": "lekar-36",
@@ -478,9 +513,10 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t1"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.7,
+  "typicalT": 1.7
  },
  {
   "id": "lekar-37",
@@ -491,9 +527,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2,
+  "typicalT": null
  },
  {
   "id": "lekar-38",
@@ -502,9 +539,10 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 3.2,
+  "typicalT": null
  },
  {
   "id": "lekar-39",
@@ -517,9 +555,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.7,
+  "typicalT": 2.8
  },
  {
   "id": "lekar-40",
@@ -531,9 +570,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.5,
+  "typicalT": 1.7
  },
  {
   "id": "lekar-41",
@@ -544,9 +584,10 @@ export const DEFAULT_DOCTORS = [
    "t2",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 0.8,
+  "typicalT": 3.6
  },
  {
   "id": "lekar-42",
@@ -557,9 +598,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2,
+  "typicalT": 3.5
  },
  {
   "id": "lekar-43",
@@ -570,9 +612,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.5,
+  "typicalT": 3
  },
  {
   "id": "lekar-44",
@@ -583,9 +626,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2,
+  "typicalT": 3.3
  },
  {
   "id": "lekar-45",
@@ -595,9 +639,10 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2,
+  "typicalT": 4
  },
  {
   "id": "lekar-46",
@@ -609,9 +654,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.5,
+  "typicalT": 1.7
  },
  {
   "id": "lekar-47",
@@ -622,9 +668,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.3,
+  "typicalT": 2.8
  },
  {
   "id": "lekar-48",
@@ -635,9 +682,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.3,
+  "typicalT": 3
  },
  {
   "id": "lekar-49",
@@ -648,9 +696,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.5,
+  "typicalT": 3
  },
  {
   "id": "lekar-50",
@@ -661,9 +710,10 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 2.3,
+  "typicalT": 2.7
  },
  {
   "id": "lekar-51",
@@ -673,9 +723,10 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": 1,
+  "typicalT": 3.2
  },
  {
   "id": "lekar-52",
@@ -687,9 +738,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  },
  {
   "id": "lekar-53",
@@ -700,9 +752,10 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  },
  {
   "id": "lekar-54",
@@ -714,9 +767,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  },
  {
   "id": "lekar-55",
@@ -727,9 +781,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  },
  {
   "id": "lekar-56",
@@ -741,9 +796,10 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  },
  {
   "id": "lekar-57",
@@ -752,8 +808,9 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": null,
   "max": null,
-  "note": ""
+  "note": "",
+  "typical24": null,
+  "typicalT": null
  }
 ];

@@ -11,8 +11,8 @@
 //  - neprekročí sa počet OUP služieb, ktorý si lekár zvolil (oupMax)
 //  - lekár, ktorý slúži len na JIP (fixedGroup), nemá viac než fixedGroup.count služieb
 // Mäkké pravidlá (optimalizujú sa):
-//  - rovnomerne: služby okrem OUP (24 h + tečky) má každý lekár ⌊priemer⌋–⌈priemer⌉ (napr. 3–4);
-//    výnimky: lekár len na JIP (pevný počet), lekár s individuálnym počtom (target)
+//  - 24 h služby a tečky zvlášť podľa obvyklého počtu lekára (typical24 / typicalT),
+//    prepočítané na mesiac; rozsah ⌊cieľ⌋–⌈cieľ⌉; lekár len na JIP má pevný počet
 //  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
@@ -22,14 +22,16 @@
 //  - minimum na pozícii (positionMin, napr. 2A aspoň 2× pre lekárov bez 1A)
 //  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,
   target: 40,      // * (počet - individuálny počet)^2 (len lekári s individuálnym počtom)
   overTarget: 60,  // navyše za každú službu nad individuálny počet
-  even: 60,        // * (služby bez OUP - priemer)^2
-  evenRange: 250,  // za každú službu mimo rozsahu ⌊priemer⌋–⌈priemer⌉
+  even: 60,        // * (24h služby - cieľ)^2
+  evenRange: 250,  // za každú 24h službu mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
+  tEven: 30,       // * (tečky - cieľ)^2
+  tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
   weekend: 25,     // * (víkendy - očakávané)^2
@@ -120,11 +122,10 @@ export function solve(input) {
     return Number.isFinite(v) && v > 0 ? Math.max(OUP_LIMIT.min, Math.round(v)) : null;
   });
   const oupCount = (i) => { let c = 0; for (const p of docDay[i].values()) if (oupSet.has(p)) c++; return c; };
-  const mainCount = (i) => docDay[i].size - oupCount(i);
+  const catSet = Object.fromEntries(Object.entries(CATEGORIES).map(([k, c]) => [k, new Set(c.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined))]));
+  const catCount = (i, k) => { let c = 0; for (const p of docDay[i].values()) if (catSet[k].has(p)) c++; return c; };
   const oupEligible = docs.map((d) => (d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)));
-  // Individuálny počet (služby bez OUP) – len ak je zadaný (> 0); inak rovnomerne
-  const personalOf = docs.map((d, i) => (fixedOf[i] == null && Number(d.target) > 0 ? Number(d.target) : null));
-  const targetOf = docs.map((d, i) => fixedOf[i] ?? personalOf[i]);
+  const targetOf = docs.map((d, i) => fixedOf[i]);
 
   // Očakávaný podiel víkendových slotov pre každého lekára (podľa jeho pozícií)
   const weRatio = docs.map((_, i) => {
@@ -133,10 +134,10 @@ export function solve(input) {
     return all ? we / all : 0;
   });
 
-  // Férový podiel služieb bez OUP
-  const share = evenShare({ days, positions: P, doctors: docs, fixedGroup: fg });
-  const evenDoc = share.evenIds.map((id) => docIndex.get(id));
-  const isEven = docs.map((_, i) => evenDoc.includes(i));
+  // Cieľové počty 24h služieb a tečiek pre každého lekára
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm });
+  const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
+  const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
   // Služby z minulého mesiaca (len pre pravidlo odpočinku a rozostupy)
   const prevByDoc = docs.map(() => []);
@@ -195,18 +196,21 @@ export function solve(input) {
   // Cena jedného lekára
   function docCost(i) {
     const n = docDay[i].size;
-    const m = mainCount(i);
     let c = 0;
-    // služby bez OUP
+    // 24h služby
+    const m = catCount(i, 'h24');
     if (fixedOf[i] != null) {
-      c += W.target * (m - fixedOf[i]) * (m - fixedOf[i]);
-      if (m < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - m);
-    } else if (personalOf[i] != null) {
-      c += W.target * (m - personalOf[i]) * (m - personalOf[i]);
-      if (m > personalOf[i]) c += W.overTarget * (m - personalOf[i]);
-    } else if (isEven[i]) {
-      c += W.even * (m - share.avg) * (m - share.avg);
-      c += W.evenRange * (Math.max(0, share.lo - m) + Math.max(0, m - share.hi));
+      const f = n - oupCount(i);
+      c += W.target * (f - fixedOf[i]) * (f - fixedOf[i]);
+      if (f < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - f);
+    } else if (tgt24[i]) {
+      const t = tgt24[i];
+      c += W.even * (m - t.avg) * (m - t.avg) + W.evenRange * (Math.max(0, t.lo - m) + Math.max(0, m - t.hi));
+    }
+    // tečky
+    if (tgtT[i]) {
+      const k = catCount(i, 'tecky'), t = tgtT[i];
+      c += W.tEven * (k - t.avg) * (k - t.avg) + W.tRange * (Math.max(0, t.lo - k) + Math.max(0, k - t.hi));
     }
     if (pmOf[i] != null) { const k = pmCount(i); if (k < pmOf[i]) c += W.posMinMissing * (pmOf[i] - k); }
     // OUP: minimum pre každého, kto OUP slúži; zvolený počet = maximum (tvrdo) a prednosť pri ďalších OUP
@@ -380,8 +384,8 @@ export function solve(input) {
     if (pmOf[i] != null && pmCount(i) < pmOf[i]) warnings.push(`${docs[i].name} má jen ${pmCount(i)}× ${P[pmIdx].label} (minimum ${pmOf[i]}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (fixedOf[i] != null && docDay[i].size < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${docDay[i].size} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (oupEligible[i] && oupCount(i) < OUP_LIMIT.min) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (minimum ${OUP_LIMIT.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
-    if (isEven[i] && mainCount(i) < share.lo) warnings.push(`${docs[i].name} má jen ${mainCount(i)} služeb bez OUP (ostatní ${share.label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
-    if (isEven[i] && mainCount(i) > share.hi) warnings.push(`${docs[i].name} má ${mainCount(i)} služeb bez OUP, víc než ostatní (${share.label}) – jinak by zůstala služba neobsazená`);
+    if (tgt24[i] && catCount(i, 'h24') < tgt24[i].lo) warnings.push(`${docs[i].name} má jen ${catCount(i, 'h24')}× 24h (obvykle ${tgt24[i].label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (tgt24[i] && catCount(i, 'h24') > tgt24[i].hi) warnings.push(`${docs[i].name} má ${catCount(i, 'h24')}× 24h, víc než obvykle (${tgt24[i].label}) – jinak by zůstala služba neobsazená`);
   }
   for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
@@ -389,38 +393,61 @@ export function solve(input) {
     let we = 0;
     let hours = 0;
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
-    return { id: doc.id, name: doc.name, count: docDay[i].size, main: mainCount(i), target: targetOf[i] ?? (isEven[i] ? share.label : ''), weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
+    return { id: doc.id, name: doc.name, count: docDay[i].size, h24: catCount(i, 'h24'), tecky: catCount(i, 'tecky'),
+      exp24: fixedOf[i] != null ? `${fixedOf[i]} (JIP)` : tgt24[i]?.label || '', expT: tgtT[i]?.label || '',
+      weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
   });
 
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, share: { lo: share.lo, hi: share.hi, avg: share.avg, label: share.label }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, plan, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
 }
 
 /**
- * Férový podiel služieb bez OUP pre lekárov bez pevného/individuálneho počtu.
- * Vráti { avg, lo, hi, label: '3–4', evenIds }.
+ * Cieľové počty pre každého lekára: 24h služby a tečky zvlášť, podľa obvyklého počtu
+ * (typical24 / typicalT) prepočítaného tak, aby súčet sedel s počtom služieb v mesiaci.
+ * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
+ * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
-export function evenShare({ days, positions, doctors, fixedGroup }) {
+export function planTargets({ days, positions, doctors, fixedGroup, positionMin }) {
   const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
-  const isMain = (id) => !OUP_LIMIT.positions.includes(id);
-  let slots = 0;
-  for (const d of days) for (const p of positions) if (isMain(p.id) && !(p.workdaysOnly && !d.workday)) slots++;
-  let reserved = 0;
-  const evenIds = [];
-  for (const d of doctors) {
-    const ps = (d.positions || []).filter(isMain);
-    if (!ps.length) continue;
-    const fixed = fgx && fgx.count > 0 && (d.positions || []).every((id) => fgx.positions.includes(id)) ? +fgx.count : null;
-    if (fixed != null) { reserved += fixed; continue; }
-    if (Number(d.target) > 0) { reserved += Number(d.target); continue; }
-    evenIds.push(d.id);
+  const pmx = positionMin === undefined ? POSITION_MIN : positionMin;
+  const out = {};
+  for (const [key, cat] of Object.entries(CATEGORIES)) {
+    const inCat = (id) => cat.positions.includes(id);
+    let slots = 0;
+    for (const d of days) for (const p of positions) if (inCat(p.id) && !(p.workdaysOnly && !d.workday)) slots++;
+    let reserved = 0;
+    const members = [];
+    for (const d of doctors) {
+      if (!(d.positions || []).some(inCat)) continue;
+      const fixed = fgx && fgx.count > 0 && (d.positions || []).every((id) => fgx.positions.includes(id)) ? +fgx.count : null;
+      if (fixed != null && key === 'h24') { reserved += fixed; continue; }
+      const v = Number(d[cat.field]);
+      members.push({ id: d.id, w: v > 0 ? v : null, zero: d[cat.field] === 0 });
+    }
+    const known = members.filter((m) => m.w != null);
+    const avgW = known.length ? known.reduce((a, m) => a + m.w, 0) / known.length : 1;
+    for (const m of members) if (m.w == null) m.w = m.zero ? 0 : avgW;
+    const sumW = members.reduce((a, m) => a + m.w, 0);
+    const scale = sumW > 0 ? Math.max(0, slots - reserved) / sumW : 0;
+    for (const m of members) {
+      let avg = m.w * scale;
+      // blízko celého čísla (napr. 4,08) → presne to číslo
+      let lo = Math.floor(avg + 0.2), hi = Math.ceil(avg - 0.2);
+      if (hi < lo) hi = lo;
+      // výslovné pravidlo „minimum na pozícii“ má prednosť pred zvyklosťou
+      const d = doctors.find((x) => x.id === m.id);
+      if (key === 'h24' && pmx && pmx.min > 0 && cat.positions.includes(pmx.position)
+        && (d.positions || []).includes(pmx.position) && !(pmx.except || []).some((x) => d.positions.includes(x)) && hi < pmx.min) {
+        lo = Math.max(lo, pmx.min); hi = Math.max(hi, pmx.min); avg = Math.max(avg, pmx.min);
+      }
+      (out[m.id] ||= {})[key] = { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}` };
+    }
   }
-  const avg = evenIds.length ? Math.max(0, slots - reserved) / evenIds.length : 0;
-  const lo = Math.floor(avg + 1e-9), hi = Math.ceil(avg - 1e-9);
-  return { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}`, evenIds, slots };
+  return out;
 }
 
 /** Kontrola ručne upraveného rozpisu – vráti zoznam porušení pravidiel. */
@@ -471,14 +498,16 @@ export function validate(input, grid) {
     }
     if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služeb (max ${doc.max})` });
   }
-  // rovnomerné rozdelenie (služby bez OUP) a OUP minimum
+  // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const sh = evenShare({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin });
+    const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
       const oup = mine.filter((x) => OUP_LIMIT.positions.includes(P[x.p]?.id)).length;
-      const main = mine.length - oup;
-      if (sh.evenIds.includes(d.id) && (main < sh.lo || main > sh.hi)) issues.push({ day: null, pos: null, kind: 'even', level: 'warn', msg: `${d.name} má ${main} služeb bez OUP, ostatní ${sh.label}` });
+      const t = plan[d.id]?.h24;
+      const h = mine.filter((x) => in24(x.p)).length;
+      if (t && (h < t.lo || h > t.hi)) issues.push({ day: null, pos: null, kind: 'even', level: 'warn', msg: `${d.name} má ${h}× 24h, obvykle ${t.label}` });
       if ((d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)) && oup < OUP_LIMIT.min) issues.push({ day: null, pos: null, kind: 'oup', level: 'warn', msg: `${d.name} má ${oup} ${OUP_LIMIT.label}, minimum je ${OUP_LIMIT.min}` });
     }
   }

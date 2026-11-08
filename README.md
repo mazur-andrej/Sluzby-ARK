@@ -138,9 +138,10 @@ Vždy dodržena:
   po službě přes noc (24h služby, OUP noc) má lékař celý další den volno – výjimku (např. 24h a večer OUP noc) program použije jen tehdy, když by jinak zůstala služba neobsazená, a vypíše ji; po OUP den nebo tečce lze další den sloužit,
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
-**Rovnoměrné rozdělení:** všechny služby kromě OUP (24h služby + tečky) se sčítají a každý lékař má zhruba stejně – podíl se počítá
-každý měsíc z počtu služeb (např. 3–4). Kdo má víc nebo méně, je v přehledu vyznačen. *Individuální počet* u lékaře vyplňte jen výjimečně (částečný úvazek).
-Pozor: 2A a tečky umí jen část lékařů – v měsících s mnoha pracovními dny proto někteří z nich vyjdou na 5 (program to vypíše).
+**Rozdělení podle zvyklostí:** 24h služby (JIP, anestezie, KPECH) a tečky se dělí každé zvlášť podle toho, kolik jich lékař **obvykle** má
+(sloupce *Obvykle 24h* a *Obvykle teček*, předvyplněno z rozpisů květen–listopad 2026), přepočteno na počet služeb v daném měsíci.
+Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze svého rozsahu, je v přehledu vyznačen.
+Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, lékaři s 2A bez 1A aspoň 2× 2A.
 **OUP** (12 h) se počítá zvlášť: každý, kdo OUP slouží, má aspoň 2; kdo chce víc, zvolí si počet v požadavcích.
 
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
@@ -155,7 +156,7 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-plan.mjs` (rozdělení podle zvyklostí), `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css

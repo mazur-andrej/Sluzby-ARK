@@ -25,6 +25,6 @@ const all = validate(input, res.grid);
 const issues = all.filter((i) => i.level !== 'warn');
 console.log('upozornění (rovnoměrnost/OUP):', all.length - issues.length);
 console.log('porušenia pravidiel:', issues.length, issues.slice(0, 5));
-console.log(`podíl bez OUP: ${res.share.label}`, 'rozložení:', JSON.stringify(res.stats.reduce((m, x) => ((m[x.main] = (m[x.main] || 0) + 1), m), {})));
+console.log('24h rozložení:', JSON.stringify(res.stats.reduce((m, x) => ((m[x.h24] = (m[x.h24] || 0) + 1), m), {})));
 console.log(`${PREV} 1.12. (po 24h službě):`, res.grid[0].includes(PREV) ? 'CHYBA' : 'ok');
 if (issues.length) process.exit(1);
