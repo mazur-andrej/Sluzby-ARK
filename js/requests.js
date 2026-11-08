@@ -41,7 +41,7 @@ export function parseDays(s, maxDay = 31) {
 }
 
 const OFF_WORDS = /(nechce|nechcem|nemoze|nemuze|nemozem|nemuzu|nemam|nie|ne\b|volno|dovolena|dovolenka|absence|nepritom|x\b)/;
-const WANT_WORDS = /(chce|chcem|chci|preferuje|ano|ano\b|\+)/;
+const WANT_WORDS = /(chce|chcem|chci|preferuje|ano|\+)/;
 
 /**
  * Text požiadaviek, jeden lekár na riadok, napr.:
@@ -126,10 +126,14 @@ export function parseRequestsTable(rows, doctors, positions, maxDay = 31) {
   return { requests, unknown };
 }
 
-/** Spojí požiadavky (novšie prepíšu staršie pre toho istého lekára). */
+/** Spojí požiadavky (novšie prepíšu staršie pre toho istého lekára; zvolený počet OUP zostane). */
 export function mergeRequests(base, add) {
   const out = { ...base };
-  for (const [id, r] of Object.entries(add)) out[id] = { off: [...r.off], want: [...r.want], ban: [...(r.ban || [])], notes: { ...(r.notes || {}) }, note: r.note || '' };
+  for (const [id, r] of Object.entries(add)) {
+    out[id] = { off: [...r.off], want: [...r.want], ban: [...(r.ban || [])], notes: { ...(r.notes || {}) }, note: r.note || '' };
+    const oupMax = r.oupMax ?? base[id]?.oupMax;
+    if (oupMax) out[id].oupMax = oupMax;
+  }
   return out;
 }
 

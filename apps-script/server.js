@@ -64,6 +64,11 @@ function nextMonth(y, m) { return m === 12 ? { year: y + 1, month: 1 } : { year:
 function targetMonth() { const t = todayParts(); const n = nextMonth(t.year, t.month); return monthKey(n.year, n.month); }
 function newToken() { return Utilities.getUuid().replace(/-/g, '').slice(0, 20); }
 const scheduleSheetName = (key) => `Rozpis ${key}`;
+/** Den a měsíc z popisku řádku rozpisu („po 1. 12.“), jinak null – ostatní řádky (upozornění apod.) se přeskočí. */
+function dayOfLabel(label) {
+  const m = String(label).match(/^\D{0,4}(\d{1,2})\.\s*(\d{1,2})\.\s*$/);
+  return m ? { day: +m[1], month: +m[2] } : null;
+}
 
 function getSetting(i) {
   const s = sheet(SH.SET);
@@ -375,7 +380,7 @@ function fairHistoryFor(key, positions) {
     if (!snap) continue;
     const days = buildMonth(p.year, p.month);
     const rows = days.map((d) => {
-      const r = snap.rows.find((x) => { const m = String(x[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[1] === d.day && +m[2] === p.month; });
+      const r = snap.rows.find((x) => { const l = dayOfLabel(x[0]); return l && l.day === d.day && l.month === p.month; });
       return r ? r.slice(1).map((n) => byName.get(String(n).trim()) || null) : [];
     });
     past.push({ key: k, days, header: snap.header.slice(1), rows });
@@ -394,12 +399,12 @@ function prevTail(year, month, positions, doctors) {
   const byName = new Map(doctors.map((d) => [d.name, d.id]));
   const out = [];
   for (const r of v) {
-    const m = String(r[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./);
-    if (!m || +m[2] !== p.month || +m[1] < last - 1) continue;
+    const l = dayOfLabel(r[0]);
+    if (!l || l.month !== p.month || l.day < last - 1) continue;
     for (let c = 1; c < header.length; c++) {
       const pos = positions.find((x) => x.label === header[c]);
       const id = byName.get(String(r[c]).trim());
-      if (pos && id) out.push({ doctorId: id, day: +m[1] - last, posId: pos.id });
+      if (pos && id) out.push({ doctorId: id, day: l.day - last, posId: pos.id });
     }
   }
   return out;
@@ -498,7 +503,7 @@ function scheduleSnapshot(key) {
   const v = s.getDataRange().getDisplayValues();
   const width = v[0].findIndex((x, i) => i > 0 && x === '') > 0 ? v[0].findIndex((x, i) => i > 0 && x === '') : v[0].length;
   const { month } = parseKey(key);
-  const rows = v.filter((r) => { const m = String(r[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[2] === month; })
+  const rows = v.filter((r) => { const l = dayOfLabel(r[0]); return l && l.month === month; })
     .map((r) => r.slice(0, width).map((c) => String(c).trim()));
   return { header: v[0].slice(0, width).map((c) => String(c).trim()), rows };
 }
@@ -538,7 +543,6 @@ function unknownNames(snap, doctors) {
   snap.rows.forEach((r) => r.slice(1).forEach((c) => { if (c && !known.has(c)) bad.add(c); }));
   return [...bad];
 }
-
 
 /** Co čeká na schválení: měsíce s rozpisem, jehož obsah se liší od poslední schválené verze. */
 function pendingApprovals() {
@@ -602,14 +606,14 @@ function rozeslat(key, opts) {
   const out = { sent: 0, noEmail: [], mailError: '', version, changes: changes.length };
   const th = 'border:1px solid #ccc;padding:2px 6px;background:#ea9999';
   const ths = snap.header.map((h) => `<th style="${th}">${esc(h)}</th>`).join('');
+  const changedCells = new Set(changes.map((c) => `${c.day}|${c.pos}`));
   for (const d of doctors) {
     if (opts.noEmail) continue;
     if (!d.email) { out.noEmail.push(d.name); continue; }
     const mine = [];
-    const changedCells = new Set(changes.map((c) => `${c.day}|${c.pos}`));
     const trs = snap.rows.map((r) => {
-      const dm = String(r[0]).match(/(\d{1,2})\./);
-      const day = dm ? days[+dm[1] - 1] : null;
+      const l = dayOfLabel(r[0]);
+      const day = l ? days[l.day - 1] : null;
       const bg = day && (day.weekend || day.holiday) ? '#fce8b2' : '#ffffff';
       return `<tr style="background:${bg}">` + r.map((c, i) => {
         const me = i > 0 && c === d.name;
@@ -696,7 +700,7 @@ function handle(p, body) {
     const positions = readPositions();
     const dl = deadlineOf(key);
     return {
-      doctor: { name: doc.name, positions: doc.positions, active: doc.active },
+      doctor: { id: doc.id, name: doc.name, positions: doc.positions, active: doc.active },
       positions: positions.map((x) => ({ id: x.id, label: x.label, workdaysOnly: x.workdaysOnly, start: x.start, hours: x.hours })),
       month: key, open: isOpen(key) && doc.active,
       deadline: `${dl.day}. ${dl.month}. ${dl.year}`,

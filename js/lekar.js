@@ -235,13 +235,13 @@ function setupCalendar() {
   $('#icsDownload').onclick = async () => {
     $('#icsDownload').disabled = true;
     try {
-      // všechny schválené rozpisy od minulého měsíce dál
+      // schválené rozpisy od tohoto měsíce dál (aspoň ten nejnovější)
       const now = new Date();
       const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const keys = me.schedules.filter((k) => k >= from || k === me.schedules[0]);
       const schedules = [];
       for (const k of keys) { const sch = await api({ action: 'schedule', month: k }); schedules.push({ month: k, header: sch.header, rows: sch.rows, version: sch.version }); }
-      const text = buildIcs({ schedules, positions: me.positions, name: me.doctor.name, uid: token.slice(0, 8), calName: 'Moje služby' });
+      const text = buildIcs({ schedules, positions: me.positions, name: me.doctor.name, uid: me.doctor.id || token.slice(0, 8), calName: 'Moje služby' });
       const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' })), download: 'moje-sluzby.ics' });
       document.body.append(a); a.click(); a.remove();
     } catch (e) { alert(e.message); }

@@ -1,6 +1,6 @@
 import { buildMonth, prevMonthOf, MONTHS } from './calendar.js';
 import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
-import { solve, validate, planTargets, buildFairHistory, DEFAULT_WEIGHTS } from './solver.js';
+import { solve, validate, planTargets, buildFairHistory, fixedCountOf, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
 import { OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, weekendWeight, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
@@ -268,8 +268,9 @@ $('#reqFile').onchange = async (e) => {
         parsed = parseRequestsSheet(sh.rows, state.doctors, state.positions, state.current.month, GROUP_ALIASES);
         if (!parsed) throw new Error('V listu jsem nenašel řádek s daty.');
         parsed.sheet = sh.name;
-        // tabuľka obsahuje všetkých lekárov -> nahradí predchádzajúce požiadavky
-        monthData().requests = {};
+        // tabulka obsahuje všechny lékaře -> nahradí předchozí požadavky (zvolený počet OUP zůstane)
+        const md = monthData();
+        md.requests = Object.fromEntries(Object.entries(md.requests).filter(([, r]) => r.oupMax).map(([id, r]) => [id, { off: [], want: [], oupMax: r.oupMax }]));
       } else if (/\.docx$/i.test(f.name)) {
         const doc = await readDocx(await f.arrayBuffer());
         parsed = null;
@@ -344,7 +345,6 @@ function generate(newSeed) {
     const t0 = performance.now();
     const res = solve(solverInput());
     md.grid = res.grid;
-    md.lastWarnings = res.warnings;
     md.lastWants = res.wants;
     save();
     $('#genStatus').textContent = `Hotovo za ${((performance.now() - t0) / 1000).toFixed(1)} s (varianta ${md.seed}).`;
@@ -459,11 +459,8 @@ function renderStats(md, ds) {
   const plan = currentPlan();
   const fh = fairHistory();
   const rows = activeDoctors().map((doc) => {
-    let n = 0, we = 0, hours = 0;
-    md.grid.forEach((row, t) => row.forEach((id, pi) => {
-      if (id !== doc.id) return;
-      n++; if (ds[t].weekend || ds[t].holiday) we++; hours += shiftTimes(P[pi]).hours;
-    }));
+    let hours = 0;
+    md.grid.forEach((row) => row.forEach((id, pi) => { if (id === doc.id) hours += shiftTimes(P[pi]).hours; }));
     const req = md.requests[doc.id] || { off: [], want: [] };
     let oup = 0; md.grid.forEach((row) => row.forEach((id, pi) => { if (id === doc.id && OUP_LIMIT.positions.includes(P[pi].id)) oup++; }));
     const cnt = (cat) => md.grid.reduce((a, row) => a + row.filter((id, pi) => id === doc.id && CATEGORIES[cat].positions.includes(P[pi].id)).length, 0);
@@ -476,7 +473,7 @@ function renderStats(md, ds) {
     md.grid.forEach((row, t) => row.forEach((id, pi) => { if (id === doc.id && CATEGORIES.h24.positions.includes(P[pi].id)) { we24 += weekendWeight(ds[t]); if (ds[t].holiday) hol24++; } }));
     const h = fh[doc.id] || { we: 0, hol: 0, noWe: 0 };
     const exp24 = !!e24 && e24.hi > 0;
-    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, h24, tec, e24, eT, d24: d(h24, e24), dT: d(tec, eT),
+    return { doc, hours, oup, oupMax: req.oupMax, off: req.off.length, h24, tec, e24, eT, d24: d(h24, e24), dT: d(tec, eT),
       we24, hol24, weYear: h.we + we24, holYear: h.hol + hol24, noWe: exp24 && we24 < 1, noWeBefore: h.noWe };
   });
   const tbl = $('#statsTable');
@@ -531,12 +528,7 @@ function pmInfo() {
 /** Plán pro aktuální měsíc: kolik 24h služeb a teček má kdo mít (podle obvyklých počtů). */
 const currentPlan = () => planTargets({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup, positionMin: state.positionMin });
 /** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
-function fixedFor(doc) {
-  const fg = state.fixedGroup;
-  if (!fg || !(fg.count > 0) || !doc.positions.length) return null;
-  if (!doc.positions.every((id) => (fg.positions || []).includes(id))) return null;
-  return doc.max != null && doc.max !== '' ? Math.min(fg.count, +doc.max) : fg.count;
-}
+const fixedFor = (doc) => fixedCountOf(doc, state.fixedGroup);
 function renderDoctors() {
   const P = state.positions;
   const tbl = $('#docTable');
@@ -589,7 +581,7 @@ $('#addDoc').onclick = () => {
 };
 $('#newDocName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#addDoc').click(); });
 
-// Seznam lékařů ze souboru (sloupce podle záhlaví: ID, Jméno, Aktivní, Pozice, Cíl, Max)
+// Seznam lékařů ze souboru (sloupce podle záhlaví: ID, Jméno, Aktivní, Pozice, Obvykle 24h, Obvykle teček, Max)
 $('#importDocs').onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = '';
   try {
@@ -619,7 +611,7 @@ $('#importDocs').onchange = async (e) => {
       if (!doc) {
         let nid = id || norm(name).replace(/[^a-z0-9]+/g, '-');
         while (state.doctors.some((d) => d.id === nid)) nid += '-2';
-        doc = { id: nid, name, active: true, positions: [], target: 4, max: null, note: '' };
+        doc = { id: nid, name, active: true, positions: [], typical24: null, typicalT: null, max: null, note: '' };
         state.doctors.push(doc); added++;
       } else updated++;
       doc.name = name;
@@ -706,8 +698,13 @@ function renderSettings() {
         save(); renderAll();
       } }, '🗑')))),
   );
-  const labels = { unfilled: 'Neobsazená služba', target: 'Odchylka od cílového počtu', overTarget: 'Služba nad cíl (navíc)', weekend: 'Nerovnoměrné víkendy/svátky',
-    gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle', afterNight: 'Výjimka: služba den po noční/24h' };
+  const labels = {
+    unfilled: 'Neobsazená služba', target: 'JIP: odchylka od pevného počtu', even: '24h: odchylka od obvyklého počtu', evenRange: '24h: mimo rozmezí',
+    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby',
+    oupMin: 'OUP: pod minimem', weFair: 'Víkendy: spravedlnost za 12 měsíců', holFair: 'Svátky: spravedlnost za 12 měsíců', weMin: 'Měsíc bez víkendu',
+    weMulti: 'Víc víkendů než ostatní', gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle',
+    posMinMissing: 'Minimum na pozici (2A) nesplněno', fixedMissing: 'JIP: chybí služby do pevného počtu', afterNight: 'Výjimka: služba den po noční/24h',
+  };
   $('#weightsTable').replaceChildren(...Object.entries(DEFAULT_WEIGHTS).map(([k, v]) => el('tr', {},
     el('td', {}, labels[k] || k),
     el('td', {}, el('input', { type: 'number', min: 0, step: 'any', value: state.weights[k] ?? v, onchange: (e) => { state.weights[k] = +e.target.value; save(); } })))));
