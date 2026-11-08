@@ -94,6 +94,22 @@ clock.now = new Date('2026-11-13T00:30:00Z');
 const m0 = mails.length; call('denniKontrola');
 check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].subj) && typeof mails[m0].to === 'string', 'neschváleno → v noci připomínka jen správci');
 
+// pravidlo JIP: lékaři jen na l1/l2 mají v rozpisu přesně 4 služby
+{
+  const decS = book.getSheetByName('Rozpis 2026-12').getDataRange().getValues();
+  const jip = docRows.filter((r) => r[2] === true && String(r[3]).split(',').map((x) => x.trim()).every((p) => ['l1', 'l2'].includes(p)));
+  const cnt = jip.map((r) => decS.slice(1, 33).reduce((n, row) => n + row.slice(1, 10).filter((x) => x === r[1]).length, 0));
+  check(jip.length >= 2 && cnt.every((c) => c === 4), `lékaři jen na JIP mají přesně 4 služby (${cnt.join(', ')})`);
+  const setS = book.getSheetByName('Nastavení').getDataRange().getValues();
+  check(setS.length >= 9 && /JIP/.test(setS[7][0]) && setS[7][1] === 4 && setS[8][1] === 'l1, l2', 'list Nastavení obsahuje pravidlo JIP (4; l1, l2)');
+  book.getSheetByName('Nastavení').getRange(7, 2).setValue('NE');
+  check(call('reminderDays').length === 0, 'připomínky: „NE“ = vypnuto');
+  book.getSheetByName('Nastavení').getRange(7, 2).setValue('3, 0');
+  book.getSheetByName('Nastavení').getRange(8, 2).setValue(0);
+  check(call('fixedGroupSetting') === null, 'pravidlo JIP: 0 = vypnuto');
+  book.getSheetByName('Nastavení').getRange(8, 2).setValue(4);
+}
+
 // 4b) správce schválí → rozeslání verze 1
 const res1 = call('schvalit', '2026-12');
 const docMails = mails.filter((m) => typeof m.to === 'object');

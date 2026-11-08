@@ -101,6 +101,12 @@ Dvořáková – nemůže 24.12., 25.12.</pre>
         <p class="muted">Výjimka znamená např. 24h službu (do 7:30) a večer OUP noc (od 19:00) = 11,5 h odpočinku, nebo dvě OUP noci po sobě. Při volbě „výjimečně" ji program použije jen tehdy, když by jinak zůstala služba neobsazená, a každou výjimku vypíše. Po OUP den nebo tečce může lékař další den sloužit vždy.</p>
       </div>
       <div class="card">
+        <h3>Lékaři jen na JIP – pevný počet služeb</h3>
+        <p class="muted">Lékař, který má povolené <b>jen</b> tyto pozice, dostane přesně tolik služeb měsíčně (víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde – program to nahlásí). Prázdné = pravidlo vypnuto.</p>
+        <p><label>Počet služeb: <input id="fixedCount" type="number" min="1" max="31" style="width:64px"></label></p>
+        <p id="fixedPos"></p>
+      </div>
+      <div class="card">
         <h3>Svátky navíc v tomto měsíci</h3>
         <p class="muted">České státní svátky se počítají automaticky. Sem dopište další dny, které se mají brát jako svátek (např. 31 nebo 24, 31).</p>
         <input id="extraHol" placeholder="např. 31">

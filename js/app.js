@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { OUP_LIMIT, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
+import { OUP_LIMIT, FIXED_GROUP, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -45,6 +45,7 @@ for (const p of state.positions) {
 }
 if (state.minRestHours == null) state.minRestHours = DEFAULT_MIN_REST_HOURS;
 if (!state.afterNight) state.afterNight = DEFAULT_AFTER_NIGHT;
+if (state.fixedGroup === undefined) state.fixedGroup = structuredClone(FIXED_GROUP);
 delete state.nextDayOff;
 // v2: pracovní doba začíná v 7:30 (kromě OUP) – oprava časů uložených dřívější verzí
 if ((state.schema || 1) < 2) {
@@ -91,6 +92,14 @@ function renderMonth() {
   $('#monthLabel').textContent = `${MONTHS[state.current.month - 1]} ${state.current.year}`;
   $('#extraHol').value = (monthData().extraHolidays || []).join(', ');
   $('#minRest').value = state.minRestHours;
+  const fgr = state.fixedGroup || { ...FIXED_GROUP, count: null };
+  $('#fixedCount').value = fgr.count ?? '';
+  $('#fixedPos').replaceChildren(...state.positions.map((p) => el('label', { style: 'margin-right:10px' },
+    el('input', { type: 'checkbox', checked: (fgr.positions || []).includes(p.id), onchange: (e) => {
+      const ps = new Set(fgr.positions || []);
+      if (e.target.checked) ps.add(p.id); else ps.delete(p.id);
+      state.fixedGroup = { ...fgr, positions: [...ps] }; save(); renderSettings(); renderDoctors();
+    } }), ' ', p.label)));
   $('#afterNight').replaceChildren(...Object.entries(AFTER_NIGHT_LABELS).map(([k, v]) => el('option', { value: k, selected: k === state.afterNight }, v)));
   renderAll();
 }
@@ -301,7 +310,7 @@ function solverInput() {
   return {
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
-    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight,
+    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight, fixedGroup: state.fixedGroup,
   };
 }
 
@@ -345,7 +354,8 @@ function renderSchedule() {
   const input = solverInput();
   const allIssues = validate(input, md.grid);
   const issues = allIssues.filter((i) => i.level !== 'warn');
-  const exceptions = allIssues.filter((i) => i.level === 'warn');
+  const exceptions = allIssues.filter((i) => i.level === 'warn' && i.kind === 'afterNight');
+  const softWarn = allIssues.filter((i) => i.level === 'warn' && i.kind !== 'afterNight');
   const badCells = new Map();
   for (const i of issues) if (i.day) badCells.set(`${i.day}|${i.pos}`, i.msg);
   const excCells = new Map(exceptions.filter((i) => i.day).map((i) => [`${i.day}|${i.pos}`, i.msg]));
@@ -385,8 +395,9 @@ function renderSchedule() {
     if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chtěl(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
   }
   let html = '';
-  if (!empty.length && !issues.length && !unmet.length && !exceptions.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
+  if (!empty.length && !issues.length && !unmet.length && !exceptions.length && !softWarn.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
   if (empty.length) html += `<div class="msg err"><b>Neobsazené služby (${empty.length})</b> – nikdo volný nesplňuje pravidla, doplňte ručně:${list(empty)}</div>`;
+  if (softWarn.length) html += `<div class="msg warn"><b>Upozornění (${softWarn.length})</b>:${list(softWarn.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
   if (exceptions.length) html += `<div class="msg warn"><b>Výjimky – služba den po noční/24h službě (${exceptions.length})</b>, jinak by zůstala neobsazená. Zkontrolujte, zda je to přijatelné:${list(exceptions.map((i) => i.day + '. ' + i.msg))}</div>`;
   if (issues.length) html += `<div class="msg err"><b>Porušení pravidel (${issues.length})</b> – po ruční úpravě:${list(issues.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
   if (unmet.length) html += `<div class="msg warn"><b>Nesplněná přání (${unmet.length})</b>:${list(unmet)}</div>`;
@@ -414,7 +425,8 @@ function renderStats(md, ds) {
     }));
     const req = md.requests[doc.id] || { off: [], want: [] };
     let oup = 0; md.grid.forEach((row) => row.forEach((id, pi) => { if (id === doc.id && OUP_LIMIT.positions.includes(P[pi].id)) oup++; }));
-    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, diff: n - (+doc.target || 0) };
+    const tgt = fixedFor(doc) ?? (+doc.target || 0);
+    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, tgt, diff: n - tgt };
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
@@ -426,7 +438,7 @@ function renderStats(md, ds) {
     },
     el('td', {}, r.doc.name),
     el('td', { class: `num ${r.diff > 0 ? 'diff-pos' : r.diff < 0 ? 'diff-neg' : ''}` }, String(r.n)),
-    el('td', { class: 'num' }, String(r.doc.target ?? '')),
+    el('td', { class: 'num' }, String(r.tgt)),
     el('td', { class: 'num' }, String(r.we)),
     el('td', { class: 'num' }, String(Math.round(r.hours * 10) / 10)),
     el('td', { class: 'num' }, r.oupMax ? `${r.oup} (${r.oupMax})` : String(r.oup)),
@@ -456,6 +468,12 @@ $('#exportDocx').onclick = () => {
 $('#printBtn').onclick = () => window.print();
 
 // ---------------- Lekári ----------------
+/** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
+function fixedFor(doc) {
+  const fg = state.fixedGroup;
+  if (!fg || !(fg.count > 0) || !doc.positions.length) return null;
+  return doc.positions.every((id) => (fg.positions || []).includes(id)) ? fg.count : null;
+}
 function renderDoctors() {
   const P = state.positions;
   const tbl = $('#docTable');
@@ -463,7 +481,7 @@ function renderDoctors() {
   const head = el('tr', {}, el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
     el('th', {}, 'Cíl'), el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
-  const sumTarget = activeDoctors().reduce((s, d) => s + (+d.target || 0), 0);
+  const sumTarget = activeDoctors().reduce((s, d) => s + (fixedFor(d) ?? (+d.target || 0)), 0);
   const slotsCount = days().reduce((s, d) => s + P.filter((p) => !(p.workdaysOnly && !d.workday)).length, 0);
   const foot = el('tr', {}, el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
@@ -476,7 +494,9 @@ function renderDoctors() {
       type: 'checkbox', checked: doc.positions.includes(p.id),
       onchange: upd(doc, (e) => { doc.positions = e.target.checked ? [...doc.positions, p.id] : doc.positions.filter((x) => x !== p.id); }),
     }))),
-    el('td', {}, el('input', { type: 'number', min: 0, value: doc.target ?? '', onchange: upd(doc, (e) => { doc.target = e.target.value === '' ? 0 : +e.target.value; renderDoctors(); }) })),
+    el('td', {}, fixedFor(doc) != null
+      ? el('span', { title: `Slouží jen na ${(state.fixedGroup.positions || []).join(', ')} → pravidlo z Nastavení` }, `${fixedFor(doc)} (${state.fixedGroup.label || 'JIP'})`)
+      : el('input', { type: 'number', min: 0, value: doc.target ?? '', onchange: upd(doc, (e) => { doc.target = e.target.value === '' ? 0 : +e.target.value; renderDoctors(); }) })),
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
     el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
     el('td', {}, el('button', { class: 'danger', title: 'Odstranit lékaře', onclick: () => {
@@ -608,6 +628,11 @@ $('#addPos').onclick = () => {
 };
 $('#minRest').onchange = (e) => { state.minRestHours = Math.max(0, +e.target.value || 0); save(); };
 $('#afterNight').onchange = (e) => { state.afterNight = e.target.value; save(); };
+$('#fixedCount').onchange = (e) => {
+  const v = e.target.value === '' ? null : Math.max(1, Math.round(+e.target.value));
+  state.fixedGroup = { ...(state.fixedGroup || FIXED_GROUP), count: v };
+  save(); renderDoctors();
+};
 $('#extraHol').onchange = (e) => {
   monthData().extraHolidays = (e.target.value.match(/\d+/g) || []).map(Number);
   save(); renderAll();

@@ -31,6 +31,10 @@ export const AFTER_NIGHT_LABELS = {
 /** převod starého nastavení (true/false) na nový režim */
 export const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === false ? 'off' : input.nextDayOff === true ? 'hard' : DEFAULT_AFTER_NIGHT));
 
+// Lekári, ktorí slúžia LEN na týchto pozíciách (JIP = lékař1, lékař2), majú presne `count` služieb mesačne.
+// count = null → pravidlo vypnuté.
+export const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
+
 // Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
 export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
 

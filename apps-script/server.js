@@ -14,7 +14,9 @@ const SETTINGS_DEFAULT = [
   ['Minimální odpočinek mezi službami (hodiny)', 11],
   ['Den po službě přes noc (24h, OUP noc): VŽDY VOLNO / VÝJIMEČNĚ / NE', 'VÝJIMEČNĚ'],
   ['Při schválení rozeslat rozpis lékařům e-mailem (ANO/NE)', 'ANO'],
-  ['Připomenout lékařům bez požadavků – kolik dní před uzávěrkou (0 = v den uzávěrky, prázdné = nepřipomínat)', '3, 0'],
+  ['Připomenout lékařům bez požadavků – kolik dní před uzávěrkou (0 = v den uzávěrky; NE = nepřipomínat)', '3, 0'],
+  ['Lékaři jen na JIP mají přesně tolik služeb měsíčně (0 = pravidlo vypnuto)', 4],
+  ['Pozice JIP pro předchozí pravidlo (zkratky oddělené čárkou)', 'l1, l2'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -104,6 +106,13 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
+/** Pravidlo „jen JIP = přesně N služeb“ z Nastavení (null = vypnuto). */
+function fixedGroupSetting() {
+  const n = Number(getSetting(7));
+  if (!(n > 0)) return null;
+  const ps = String(getSetting(8)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
+  return { label: 'JIP', positions: ps.length ? ps : FIXED_GROUP.positions, count: n };
+}
 function afterNightSetting() {
   const v = String(getSetting(4)).trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   if (/^(vzdy|ano|true|1)/.test(v)) return 'hard';
@@ -212,10 +221,11 @@ function nastavit() {
   ensureSheet(SH.REQ, ['Měsíc', 'ID lékaře', 'Jméno', 'Požadavky (data)', 'Uloženo']);
   ensureSheet(SH.STATE, ['Měsíc', 'Stav', 'Změněno', 'Poznámka']);
   const setS = ensureSheet(SH.SET);
-  if (setS.getLastRow() < 1) {
-    setS.getRange(1, 1, SETTINGS_DEFAULT.length, 2).setValues(SETTINGS_DEFAULT);
-    setS.setColumnWidth(1, 420); setS.setColumnWidth(2, 420);
-  }
+  // doplní chybějící řádky nastavení (i do tabulky založené starší verzí), existující hodnoty nemění
+  SETTINGS_DEFAULT.forEach((row, i) => {
+    if (!setS.getRange(i + 1, 1).getValue()) setS.getRange(i + 1, 1, 1, 2).setValues([row]);
+  });
+  setS.setColumnWidth(1, 520); setS.setColumnWidth(2, 360);
   writeLinks(readDoctors());
   // denní kontrola uzávěrky
   ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'denniKontrola').forEach((t) => ScriptApp.deleteTrigger(t));
@@ -234,6 +244,7 @@ function doplnitOdkazy() {
 // ---------------------------------------------------------------- připomínka požadavků
 /** Dny před uzávěrkou, kdy se připomíná (z Nastavení, např. "3, 0"). */
 function reminderDays() {
+  if (/^\s*(ne|no|false)\b/i.test(String(getSetting(6)))) return [];
   return String(getSetting(6) ?? '').split(/[,;\s]+/).map((x) => x.trim()).filter((x) => x !== '').map(Number).filter((n) => Number.isInteger(n) && n >= 0);
 }
 /** Kolik dní zbývá do uzávěrky (0 = dnes je poslední den). */
@@ -314,7 +325,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting() });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
