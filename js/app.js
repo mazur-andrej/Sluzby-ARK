@@ -1,6 +1,6 @@
 import { buildMonth, prevMonthOf, MONTHS } from './calendar.js';
 import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
-import { solve, validate, planTargets, DEFAULT_WEIGHTS } from './solver.js';
+import { solve, validate, planTargets, buildFairHistory, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
 import { OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
@@ -316,9 +316,20 @@ $('#prevFile').onchange = async (e) => {
 
 // ---------------- Rozpis ----------------
 let highlightDoc = null;
+/** Víkendy a svátky (24h) za posledních 12 měsíců – z rozpisů uložených v aplikaci + výchozí stav z historie. */
+function fairHistory() {
+  const key = keyOf(state.current.year, state.current.month);
+  const past = Object.entries(state.months).filter(([k, m]) => k < key && m.grid).map(([k, m]) => {
+    const [y, mo] = k.split('-').map(Number);
+    return { key: k, days: buildMonth(y, mo, m.extraHolidays || []), header: state.positions.map((p) => p.label), rows: m.grid };
+  });
+  return buildFairHistory({ targetKey: key, past, doctors: state.doctors, positions: state.positions });
+}
+
 function solverInput() {
   const md = monthData();
   return {
+    fairHistory: fairHistory(),
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
     weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight, fixedGroup: state.fixedGroup, positionMin: state.positionMin,
@@ -412,6 +423,15 @@ function renderSchedule() {
   if (exceptions.length) html += `<div class="msg warn"><b>Výjimky – služba den po noční/24h službě (${exceptions.length})</b>, jinak by zůstala neobsazená. Zkontrolujte, zda je to přijatelné:${list(exceptions.map((i) => i.day + '. ' + i.msg))}</div>`;
   if (issues.length) html += `<div class="msg err"><b>Porušení pravidel (${issues.length})</b> – po ruční úpravě:${list(issues.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
   if (unmet.length) html += `<div class="msg warn"><b>Nesplněná přání (${unmet.length})</b>:${list(unmet)}</div>`;
+  {
+    // víkendy (24h): kolik lékařů je tento měsíc bez víkendu a proč
+    const plan = currentPlan();
+    const in24 = (pi) => CATEGORIES.h24.positions.includes(P[pi].id);
+    const weSlots = ds.reduce((n, d) => n + (d.weekend ? P.filter((p, pi) => in24(pi)).length : 0), 0);
+    const expected = activeDoctors().filter((d) => (fixedFor(d) ?? plan[d.id]?.h24?.hi ?? 0) > 0);
+    const noWe = expected.filter((d) => !md.grid.some((row, t) => ds[t].weekend && row.some((id, pi) => id === d.id && in24(pi))));
+    if (noWe.length) html += `<p class="muted">Víkendy (24h): ${weSlots} víkendových služeb pro ${expected.length} lékařů – bez víkendu tento měsíc ${noWe.length} (${esc(noWe.map((d) => d.name).join(', '))}); příští měsíc mají přednost.</p>`;
+  }
   html += '<p class="muted">Buňku změníte výběrem lékaře – změna se zamkne (modrá) a při dalším generování zůstane. Zelená = přání lékaře. ✗ u jména = lékař si den vyškrtl nebo tu pozici nechce.</p>';
   $('#schedMessages').innerHTML = html;
 
@@ -429,6 +449,7 @@ function setCell(t, pi, id) {
 function renderStats(md, ds) {
   const P = state.positions;
   const plan = currentPlan();
+  const fh = fairHistory();
   const rows = activeDoctors().map((doc) => {
     let n = 0, we = 0, hours = 0;
     md.grid.forEach((row, t) => row.forEach((id, pi) => {
@@ -443,11 +464,16 @@ function renderStats(md, ds) {
     const e24 = f != null ? { lo: f, hi: f, label: `${f} (JIP)` } : plan[doc.id]?.h24;
     const eT = plan[doc.id]?.tecky;
     const d = (v, e) => (!e ? 0 : v < e.lo ? -1 : v > e.hi ? 1 : 0);
-    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, h24, tec, e24, eT, d24: d(h24, e24), dT: d(tec, eT) };
+    let we24 = 0, hol24 = 0;
+    md.grid.forEach((row, t) => row.forEach((id, pi) => { if (id === doc.id && CATEGORIES.h24.positions.includes(P[pi].id)) { if (ds[t].weekend) we24++; if (ds[t].holiday) hol24++; } }));
+    const h = fh[doc.id] || { we: 0, hol: 0, noWe: 0 };
+    const exp24 = !!e24 && e24.hi > 0;
+    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, h24, tec, e24, eT, d24: d(h24, e24), dT: d(tec, eT),
+      we24, hol24, weYear: h.we + we24, holYear: h.hol + hol24, noWe: exp24 && we24 === 0, noWeBefore: h.noWe };
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend/sv.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
       title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
@@ -457,7 +483,9 @@ function renderStats(md, ds) {
     el('td', { class: `num ${r.d24 > 0 ? 'diff-pos' : r.d24 < 0 ? 'diff-neg' : ''}` }, r.e24 ? `${r.h24} (${r.e24.label})` : String(r.h24 || '')),
     el('td', { class: `num ${r.dT > 0 ? 'diff-pos' : r.dT < 0 ? 'diff-neg' : ''}` }, r.eT ? `${r.tec} (${r.eT.label})` : String(r.tec || '')),
     el('td', { class: `num ${r.doc.positions.some((id) => OUP_LIMIT.positions.includes(id)) && r.oup < OUP_LIMIT.min ? 'diff-neg' : ''}` }, r.oupMax ? `${r.oup} (${r.oupMax})` : String(r.oup)),
-    el('td', { class: 'num' }, String(r.we)),
+    el('td', { class: `num ${r.noWe ? 'diff-neg' : ''}`, title: r.noWe ? `Tento měsíc bez víkendu (dříve bez víkendu ${r.noWeBefore}× za 12 měsíců)` : '' }, String(r.we24)),
+    el('td', { class: 'num', title: 'Víkendové 24h služby za posledních 12 měsíců včetně tohoto' }, String(r.weYear)),
+    el('td', { class: 'num', title: 'Sváteční 24h služby za posledních 12 měsíců včetně tohoto' }, String(r.holYear)),
     el('td', { class: 'num' }, String(Math.round(r.hours * 10) / 10)),
     el('td', { class: 'num' }, String(r.off))))),
   );

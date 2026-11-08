@@ -337,7 +337,8 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
+    const fairHistory = fairHistoryFor(key, positions);
+    const res = solve({ days, positions, doctors, requests, prev, fairHistory, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
@@ -354,6 +355,32 @@ function generovat(key, notify) {
     }
     return res;
   } finally { lock.releaseLock(); }
+}
+
+/**
+ * Víkendy a svátky (24h) za posledních 12 měsíců: ze schválených verzí (jinak z listu Rozpis)
+ * + výchozí stav z historie (pole `fair` ve výchozím seznamu lékařů, podle ID).
+ */
+function fairHistoryFor(key, positions) {
+  const all = readDoctors();
+  const byName = new Map(all.map((d) => [d.name, d.id]));
+  const doctors = all.map((d) => ({ ...d, fair: (DEFAULT_DOCTORS.find((x) => x.id === d.id) || {}).fair }));
+  const past = [];
+  let k = key;
+  for (let i = 0; i < FAIRNESS.windowMonths; i++) {
+    const p = prevMonthOf(...k.split('-').map(Number));
+    k = monthKey(p.year, p.month);
+    const ls = lastSent(k);
+    const snap = ls ? JSON.parse(ls.json) : scheduleSnapshot(k);
+    if (!snap) continue;
+    const days = buildMonth(p.year, p.month);
+    const rows = days.map((d) => {
+      const r = snap.rows.find((x) => { const m = String(x[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[1] === d.day && +m[2] === p.month; });
+      return r ? r.slice(1).map((n) => byName.get(String(n).trim()) || null) : [];
+    });
+    past.push({ key: k, days, header: snap.header.slice(1), rows });
+  }
+  return buildFairHistory({ targetKey: key, past, doctors, positions });
 }
 
 /** Služby z konce minulého měsíce (z listu Rozpis), kvůli odpočinku po noční. */
@@ -405,9 +432,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.weekends, x.hours]));
-  s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.we24, x.weYear, x.holYear, x.hours]));
+  s.getRange(1, sc, stats.length, 8).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 8).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }

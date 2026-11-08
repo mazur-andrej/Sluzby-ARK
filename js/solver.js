@@ -14,7 +14,8 @@
 //  - 24 h služby a tečky zvlášť podľa obvyklého počtu lekára (typical24 / typicalT),
 //    prepočítané na mesiac; rozsah ⌊cieľ⌋–⌈cieľ⌉; lekár len na JIP má pevný počet
 //  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
-//  - férové rozdelenie víkendov/sviatkov
+//  - férové víkendy a sviatky (len 24 h): za 12 mesiacov pomerne k počtu 24 h služieb,
+//    mesačne aspoň 1 víkend pre každého, ak to počty dovolia (inak prednosť tí, čo dlho nemali)
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
 //  - ak si lekár zvolil počet OUP, dostane ich aspoň OUP_LIMIT.min
@@ -22,7 +23,7 @@
 //  - minimum na pozícii (positionMin, napr. 2A aspoň 2× pre lekárov bez 1A)
 //  - služba deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,
@@ -34,7 +35,11 @@ export const DEFAULT_WEIGHTS = {
   tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
-  weekend: 25,     // * (víkendy - očakávané)^2
+  weekend: 25,     // (nepoužíva sa – nahradené weFair)
+  weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
+  holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
+  weMin: 300,      // lekár bez víkendovej 24h služby v mesiaci
+  weMulti: 60,     // * (víkendy v mesiaci - 1)^2 – rozložiť víkendy na čo najviac ľudí
   gap1: 30,        // služba deň po dennej službe
   gap2: 6,         // služby ob deň
   gap3: 1.5,
@@ -62,6 +67,7 @@ function mulberry32(seed) {
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
+ *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
  *   positionMin: { position, min, except:[id] } – minimum služieb na pozícii (null = vypnuté),
  *   fixedGroup: { positions:[id], count } – lekári len na týchto pozíciách majú presne count služieb (null = vypnuté),
  *   doctors: [{id, name, positions:[posId], target, max}],
@@ -139,6 +145,24 @@ export function solve(input) {
   const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
+
+  // Spravodlivosť víkendov a sviatkov (24 h): história + tento mesiac
+  const fh = input.fairHistory || {};
+  const hist = docs.map((d) => ({ n24: +(fh[d.id]?.n24 || 0), we: +(fh[d.id]?.we || 0), hol: +(fh[d.id]?.hol || 0), noWe: +(fh[d.id]?.noWe || 0) }));
+  let slots24 = 0, we24 = 0, hol24 = 0;
+  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; if (days[t].weekend) we24++; if (days[t].holiday) hol24++; }
+  const sumH = hist.reduce((a, h) => ({ n24: a.n24 + h.n24, we: a.we + h.we, hol: a.hol + h.hol }), { n24: 0, we: 0, hol: 0 });
+  const gWe = (sumH.we + we24) / Math.max(1, sumH.n24 + slots24);
+  const gHol = (sumH.hol + hol24) / Math.max(1, sumH.n24 + slots24);
+  const in24 = docs.map((d) => (d.positions || []).some((id) => CATEGORIES.h24.positions.includes(id)));
+  // má mať tento mesiac aspoň 1 službu 24 h (pravidlo víkendu sa ho týka bez ohľadu na to, koľko ich nakoniec dostane)
+  const expects24 = docs.map((d, i) => in24[i] && ((fixedOf[i] ?? 0) > 0 || (tgt24[i]?.hi ?? 0) > 0) && maxOf[i] > 0);
+  /** víkendové a sviatočné 24 h služby lekára v tomto mesiaci */
+  const fairNow = (i) => {
+    let n = 0, we = 0, hol = 0;
+    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; if (days[d - 1].weekend) we++; if (days[d - 1].holiday) hol++; }
+    return { n, we, hol };
+  };
 
   // Služby z minulého mesiaca (len pre pravidlo odpočinku a rozostupy)
   const prevByDoc = docs.map(() => []);
@@ -222,6 +246,16 @@ export function solve(input) {
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
     }
+    // víkendy a sviatky (24 h) – za 12 mesiacov pomerne k počtu 24 h služieb
+    if (in24[i]) {
+      const f = fairNow(i), h = hist[i];
+      const nC = h.n24 + f.n;
+      const dWe = h.we + f.we - gWe * nC, dHol = h.hol + f.hol - gHol * nC;
+      c += W.weFair * dWe * dWe + W.holFair * dHol * dHol;
+      // bez víkendu: čím viac mesiacov už bez víkendu bol, tým väčšia prednosť (striedanie)
+      if (expects24[i] && f.we < FAIRNESS.weekendMin) c += W.weMin * (1 + 2 * h.noWe) * (FAIRNESS.weekendMin - f.we);
+      if (f.we > 1) c += W.weMulti * (f.we - 1) * (f.we - 1);
+    }
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
       for (const d of docDay[i].keys()) {
@@ -231,8 +265,7 @@ export function solve(input) {
     }
     let we = 0;
     for (const d of docDay[i].keys()) if (isWe[d - 1]) we++;
-    const exp = n * weRatio[i];
-    c += W.weekend * (we - exp) * (we - exp);
+
     for (let k = 1; k < ds.length; k++) {
       const g = ds[k] - ds[k - 1];
       if (g === 1) c += W.gap1; else if (g === 2) c += W.gap2; else if (g === 3) c += W.gap3;
@@ -396,13 +429,14 @@ export function solve(input) {
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
     return { id: doc.id, name: doc.name, count: docDay[i].size, h24: catCount(i, 'h24'), tecky: catCount(i, 'tecky'),
       exp24: fixedOf[i] != null ? `${fixedOf[i]} (JIP)` : tgt24[i]?.label || '', expT: tgtT[i]?.label || '',
-      weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
+      weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i],
+      we24: fairNow(i).we, hol24: fairNow(i).hol, weYear: hist[i].we + fairNow(i).we, holYear: hist[i].hol + fairNow(i).hol, n24Year: hist[i].n24 + fairNow(i).n };
   });
 
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, plan, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
 }
 
@@ -448,6 +482,42 @@ export function planTargets({ days, positions, doctors, fixedGroup, positionMin 
       }
       (out[m.id] ||= {})[key] = { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}` };
     }
+  }
+  return out;
+}
+
+/** Predchádzajúci mesiac ku kľúču 'RRRR-MM'. */
+function prevKey(key, n = 1) {
+  let [y, m] = key.split('-').map(Number);
+  for (let i = 0; i < n; i++) { m--; if (m < 1) { m = 12; y--; } }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+/**
+ * História víkendov/sviatkov (24 h) za posledných FAIRNESS.windowMonths mesiacov pred targetKey.
+ * past: [{ key, days, header: [label…], rows: [[id|null…]] }] – uložené rozpisy (stĺpce = pozície podľa header);
+ * mesiace z FAIR_BASE_MONTHS sa neberú z `past`, ale z poľa `fair` pri lekárovi (počiatočný stav).
+ */
+export function buildFairHistory({ targetKey, past, doctors, positions }) {
+  const win = new Set(Array.from({ length: FAIRNESS.windowMonths }, (_, i) => prevKey(targetKey, i + 1)));
+  const out = {};
+  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0 })[k] += v; };
+  if (FAIR_BASE_MONTHS.some((k) => win.has(k))) {
+    for (const d of doctors) if (d.fair) for (const k of ['n24', 'we', 'hol', 'noWe']) add(d.id, k, +d.fair[k] || 0);
+  }
+  const h24labels = new Set(positions.filter((p) => CATEGORIES.h24.positions.includes(p.id)).map((p) => p.label));
+  for (const pm of past || []) {
+    if (!win.has(pm.key) || FAIR_BASE_MONTHS.includes(pm.key)) continue;
+    const month = {};
+    pm.rows.forEach((row, t) => {
+      const day = pm.days[t];
+      if (!day) return;
+      row.forEach((id, c) => {
+        if (!id || !h24labels.has(pm.header[c])) return;
+        add(id, 'n24', 1); if (day.weekend) add(id, 'we', 1); if (day.holiday) add(id, 'hol', 1);
+        (month[id] ||= { n: 0, we: 0 }).n++; if (day.weekend) month[id].we++;
+      });
+    });
+    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we === 0) add(id, 'noWe', 1);
   }
   return out;
 }

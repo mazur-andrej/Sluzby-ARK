@@ -132,8 +132,15 @@ function shiftTimes(p) {
   return { start, end, hours, night: end > 1440 };
 }
 
+// SPRAVODLIVOSŤ VÍKENDOV A SVIATKOV (len 24 h služby, nie OUP ani tečky):
+// víkendy a sviatky sa vyrovnávajú za posledných `windowMonths` mesiacov, pomerne k počtu 24 h služieb;
+// každý lekár má mesačne aspoň 1 víkendovú 24 h službu, ak to počty dovolia (inak striedanie).
+// Počiatočný stav je pri lekárovi v poli `fair` (z rozpisov za mesiace FAIR_BASE_MONTHS).
+const FAIRNESS = { windowMonths: 12, weekendMin: 1 };
+const FAIR_BASE_MONTHS = ['2026-05', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
+
 // ----- js/default-doctors.js -----
-// Výchozí seznam lékařů (pozice a obvyklé počty z rozpisů květen–listopad 2026).
+// Výchozí seznam lékařů (pozice a obvyklé počty a víkendy/svátky (fair) z rozpisů květen–listopad 2026).
 // Upravuje se v aplikaci na kartě Lékaři; tento soubor slouží jen jako výchozí stav.
 const DEFAULT_DOCTORS = [
  {
@@ -147,7 +154,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-02",
@@ -159,7 +172,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-03",
@@ -172,7 +191,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 5,
+   "hol": 3,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-04",
@@ -186,7 +211,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 8,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-05",
@@ -199,7 +230,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 8,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-06",
@@ -213,7 +250,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-07",
@@ -228,7 +271,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-08",
@@ -243,7 +292,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 7,
+   "hol": 2,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-09",
@@ -256,7 +311,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-10",
@@ -269,7 +330,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 13,
+   "we": 3,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-11",
@@ -282,7 +349,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-12",
@@ -297,7 +370,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 9,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-13",
@@ -312,7 +391,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 6,
+   "we": 2,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-14",
@@ -328,7 +413,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 22,
+   "we": 5,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-15",
@@ -343,7 +434,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-16",
@@ -359,7 +456,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 6,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-17",
@@ -375,7 +478,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 3,
+   "hol": 2,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-18",
@@ -390,7 +499,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-19",
@@ -403,7 +518,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-20",
@@ -417,7 +538,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.5,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 21,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-21",
@@ -429,7 +556,13 @@ const DEFAULT_DOCTORS = [
   "max": 1,
   "note": "",
   "typical24": 1.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 0,
+   "hol": 0,
+   "noWe": 6
+  }
  },
  {
   "id": "lekar-22",
@@ -444,7 +577,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 2,
+   "hol": 2,
+   "noWe": 4
+  }
  },
  {
   "id": "lekar-23",
@@ -459,7 +598,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-24",
@@ -474,7 +619,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 18,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-25",
@@ -489,7 +640,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 6,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-26",
@@ -504,7 +661,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-27",
@@ -519,7 +682,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-28",
@@ -534,7 +703,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 16,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-29",
@@ -549,7 +724,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 16,
+   "we": 5,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-30",
@@ -561,7 +742,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.5,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 21,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-31",
@@ -573,7 +760,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 6,
+   "hol": 2,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-32",
@@ -585,7 +778,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 9,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-33",
@@ -601,7 +800,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": 1.8
+  "typicalT": 1.8,
+  "fair": {
+   "n24": 17,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-34",
@@ -617,7 +822,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": 1.3
+  "typicalT": 1.3,
+  "fair": {
+   "n24": 18,
+   "we": 4,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-35",
@@ -633,7 +844,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": 1.8
+  "typicalT": 1.8,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-36",
@@ -647,7 +864,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 8,
+   "we": 2,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-37",
@@ -661,7 +884,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 3,
+   "hol": 3,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-38",
@@ -673,7 +902,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-39",
@@ -689,7 +924,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": 2.8
+  "typicalT": 2.8,
+  "fair": {
+   "n24": 16,
+   "we": 4,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-40",
@@ -704,7 +945,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 15,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-41",
@@ -718,7 +965,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 0.8,
-  "typicalT": 3.6
+  "typicalT": 3.6,
+  "fair": {
+   "n24": 4,
+   "we": 0,
+   "hol": 0,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-42",
@@ -732,7 +985,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 3.5
+  "typicalT": 3.5,
+  "fair": {
+   "n24": 12,
+   "we": 4,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-43",
@@ -746,7 +1005,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-44",
@@ -760,7 +1025,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 3.3
+  "typicalT": 3.3,
+  "fair": {
+   "n24": 12,
+   "we": 1,
+   "hol": 0,
+   "noWe": 5
+  }
  },
  {
   "id": "lekar-45",
@@ -773,7 +1044,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 4
+  "typicalT": 4,
+  "fair": {
+   "n24": 2,
+   "we": 0,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-46",
@@ -788,7 +1065,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-47",
@@ -802,7 +1085,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 2.8
+  "typicalT": 2.8,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-48",
@@ -816,7 +1105,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-49",
@@ -830,7 +1125,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 15,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-50",
@@ -844,7 +1145,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 2.7
+  "typicalT": 2.7,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-51",
@@ -857,7 +1164,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 1,
-  "typicalT": 3.2
+  "typicalT": 3.2,
+  "fair": {
+   "n24": 5,
+   "we": 1,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-52",
@@ -872,7 +1185,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 5,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-53",
@@ -886,7 +1205,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 3,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-54",
@@ -901,7 +1226,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 5,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-55",
@@ -915,7 +1246,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 11,
+   "we": 0,
+   "hol": 0,
+   "noWe": 4
+  }
  },
  {
   "id": "lekar-56",
@@ -930,7 +1267,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 9,
+   "we": 2,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-57",
@@ -942,7 +1285,13 @@ const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 0,
+   "hol": 0,
+   "noWe": 4
+  }
  }
 ];
 
@@ -963,7 +1312,8 @@ const DEFAULT_DOCTORS = [
 //  - 24 h služby a tečky zvlášť podľa obvyklého počtu lekára (typical24 / typicalT),
 //    prepočítané na mesiac; rozsah ⌊cieľ⌋–⌈cieľ⌉; lekár len na JIP má pevný počet
 //  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
-//  - férové rozdelenie víkendov/sviatkov
+//  - férové víkendy a sviatky (len 24 h): za 12 mesiacov pomerne k počtu 24 h služieb,
+//    mesačne aspoň 1 víkend pre každého, ak to počty dovolia (inak prednosť tí, čo dlho nemali)
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
 //  - ak si lekár zvolil počet OUP, dostane ich aspoň OUP_LIMIT.min
@@ -983,7 +1333,11 @@ const DEFAULT_WEIGHTS = {
   tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
-  weekend: 25,     // * (víkendy - očakávané)^2
+  weekend: 25,     // (nepoužíva sa – nahradené weFair)
+  weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
+  holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
+  weMin: 300,      // lekár bez víkendovej 24h služby v mesiaci
+  weMulti: 60,     // * (víkendy v mesiaci - 1)^2 – rozložiť víkendy na čo najviac ľudí
   gap1: 30,        // služba deň po dennej službe
   gap2: 6,         // služby ob deň
   gap3: 1.5,
@@ -1011,6 +1365,7 @@ function mulberry32(seed) {
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
+ *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
  *   positionMin: { position, min, except:[id] } – minimum služieb na pozícii (null = vypnuté),
  *   fixedGroup: { positions:[id], count } – lekári len na týchto pozíciách majú presne count služieb (null = vypnuté),
  *   doctors: [{id, name, positions:[posId], target, max}],
@@ -1088,6 +1443,24 @@ function solve(input) {
   const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
+
+  // Spravodlivosť víkendov a sviatkov (24 h): história + tento mesiac
+  const fh = input.fairHistory || {};
+  const hist = docs.map((d) => ({ n24: +(fh[d.id]?.n24 || 0), we: +(fh[d.id]?.we || 0), hol: +(fh[d.id]?.hol || 0), noWe: +(fh[d.id]?.noWe || 0) }));
+  let slots24 = 0, we24 = 0, hol24 = 0;
+  for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; if (days[t].weekend) we24++; if (days[t].holiday) hol24++; }
+  const sumH = hist.reduce((a, h) => ({ n24: a.n24 + h.n24, we: a.we + h.we, hol: a.hol + h.hol }), { n24: 0, we: 0, hol: 0 });
+  const gWe = (sumH.we + we24) / Math.max(1, sumH.n24 + slots24);
+  const gHol = (sumH.hol + hol24) / Math.max(1, sumH.n24 + slots24);
+  const in24 = docs.map((d) => (d.positions || []).some((id) => CATEGORIES.h24.positions.includes(id)));
+  // má mať tento mesiac aspoň 1 službu 24 h (pravidlo víkendu sa ho týka bez ohľadu na to, koľko ich nakoniec dostane)
+  const expects24 = docs.map((d, i) => in24[i] && ((fixedOf[i] ?? 0) > 0 || (tgt24[i]?.hi ?? 0) > 0) && maxOf[i] > 0);
+  /** víkendové a sviatočné 24 h služby lekára v tomto mesiaci */
+  const fairNow = (i) => {
+    let n = 0, we = 0, hol = 0;
+    for (const [d, p] of docDay[i]) if (catSet.h24.has(p)) { n++; if (days[d - 1].weekend) we++; if (days[d - 1].holiday) hol++; }
+    return { n, we, hol };
+  };
 
   // Služby z minulého mesiaca (len pre pravidlo odpočinku a rozostupy)
   const prevByDoc = docs.map(() => []);
@@ -1171,6 +1544,16 @@ function solve(input) {
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
     }
+    // víkendy a sviatky (24 h) – za 12 mesiacov pomerne k počtu 24 h služieb
+    if (in24[i]) {
+      const f = fairNow(i), h = hist[i];
+      const nC = h.n24 + f.n;
+      const dWe = h.we + f.we - gWe * nC, dHol = h.hol + f.hol - gHol * nC;
+      c += W.weFair * dWe * dWe + W.holFair * dHol * dHol;
+      // bez víkendu: čím viac mesiacov už bez víkendu bol, tým väčšia prednosť (striedanie)
+      if (expects24[i] && f.we < FAIRNESS.weekendMin) c += W.weMin * (1 + 2 * h.noWe) * (FAIRNESS.weekendMin - f.we);
+      if (f.we > 1) c += W.weMulti * (f.we - 1) * (f.we - 1);
+    }
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
       for (const d of docDay[i].keys()) {
@@ -1180,8 +1563,7 @@ function solve(input) {
     }
     let we = 0;
     for (const d of docDay[i].keys()) if (isWe[d - 1]) we++;
-    const exp = n * weRatio[i];
-    c += W.weekend * (we - exp) * (we - exp);
+
     for (let k = 1; k < ds.length; k++) {
       const g = ds[k] - ds[k - 1];
       if (g === 1) c += W.gap1; else if (g === 2) c += W.gap2; else if (g === 3) c += W.gap3;
@@ -1345,13 +1727,14 @@ function solve(input) {
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
     return { id: doc.id, name: doc.name, count: docDay[i].size, h24: catCount(i, 'h24'), tecky: catCount(i, 'tecky'),
       exp24: fixedOf[i] != null ? `${fixedOf[i]} (JIP)` : tgt24[i]?.label || '', expT: tgtT[i]?.label || '',
-      weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
+      weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i],
+      we24: fairNow(i).we, hol24: fairNow(i).hol, weYear: hist[i].we + fairNow(i).we, holYear: hist[i].hol + fairNow(i).hol, n24Year: hist[i].n24 + fairNow(i).n };
   });
 
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, plan, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
 }
 
@@ -1397,6 +1780,42 @@ function planTargets({ days, positions, doctors, fixedGroup, positionMin }) {
       }
       (out[m.id] ||= {})[key] = { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}` };
     }
+  }
+  return out;
+}
+
+/** Predchádzajúci mesiac ku kľúču 'RRRR-MM'. */
+function prevKey(key, n = 1) {
+  let [y, m] = key.split('-').map(Number);
+  for (let i = 0; i < n; i++) { m--; if (m < 1) { m = 12; y--; } }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+/**
+ * História víkendov/sviatkov (24 h) za posledných FAIRNESS.windowMonths mesiacov pred targetKey.
+ * past: [{ key, days, header: [label…], rows: [[id|null…]] }] – uložené rozpisy (stĺpce = pozície podľa header);
+ * mesiace z FAIR_BASE_MONTHS sa neberú z `past`, ale z poľa `fair` pri lekárovi (počiatočný stav).
+ */
+function buildFairHistory({ targetKey, past, doctors, positions }) {
+  const win = new Set(Array.from({ length: FAIRNESS.windowMonths }, (_, i) => prevKey(targetKey, i + 1)));
+  const out = {};
+  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0 })[k] += v; };
+  if (FAIR_BASE_MONTHS.some((k) => win.has(k))) {
+    for (const d of doctors) if (d.fair) for (const k of ['n24', 'we', 'hol', 'noWe']) add(d.id, k, +d.fair[k] || 0);
+  }
+  const h24labels = new Set(positions.filter((p) => CATEGORIES.h24.positions.includes(p.id)).map((p) => p.label));
+  for (const pm of past || []) {
+    if (!win.has(pm.key) || FAIR_BASE_MONTHS.includes(pm.key)) continue;
+    const month = {};
+    pm.rows.forEach((row, t) => {
+      const day = pm.days[t];
+      if (!day) return;
+      row.forEach((id, c) => {
+        if (!id || !h24labels.has(pm.header[c])) return;
+        add(id, 'n24', 1); if (day.weekend) add(id, 'we', 1); if (day.holiday) add(id, 'hol', 1);
+        (month[id] ||= { n: 0, we: 0 }).n++; if (day.weekend) month[id].we++;
+      });
+    });
+    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we === 0) add(id, 'noWe', 1);
   }
   return out;
 }
@@ -1904,7 +2323,8 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
+    const fairHistory = fairHistoryFor(key, positions);
+    const res = solve({ days, positions, doctors, requests, prev, fairHistory, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
@@ -1921,6 +2341,32 @@ function generovat(key, notify) {
     }
     return res;
   } finally { lock.releaseLock(); }
+}
+
+/**
+ * Víkendy a svátky (24h) za posledních 12 měsíců: ze schválených verzí (jinak z listu Rozpis)
+ * + výchozí stav z historie (pole `fair` ve výchozím seznamu lékařů, podle ID).
+ */
+function fairHistoryFor(key, positions) {
+  const all = readDoctors();
+  const byName = new Map(all.map((d) => [d.name, d.id]));
+  const doctors = all.map((d) => ({ ...d, fair: (DEFAULT_DOCTORS.find((x) => x.id === d.id) || {}).fair }));
+  const past = [];
+  let k = key;
+  for (let i = 0; i < FAIRNESS.windowMonths; i++) {
+    const p = prevMonthOf(...k.split('-').map(Number));
+    k = monthKey(p.year, p.month);
+    const ls = lastSent(k);
+    const snap = ls ? JSON.parse(ls.json) : scheduleSnapshot(k);
+    if (!snap) continue;
+    const days = buildMonth(p.year, p.month);
+    const rows = days.map((d) => {
+      const r = snap.rows.find((x) => { const m = String(x[0]).match(/(\d{1,2})\.\s*(\d{1,2})\./); return m && +m[1] === d.day && +m[2] === p.month; });
+      return r ? r.slice(1).map((n) => byName.get(String(n).trim()) || null) : [];
+    });
+    past.push({ key: k, days, header: snap.header.slice(1), rows });
+  }
+  return buildFairHistory({ targetKey: key, past, doctors, positions });
 }
 
 /** Služby z konce minulého měsíce (z listu Rozpis), kvůli odpočinku po noční. */
@@ -1972,9 +2418,9 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.weekends, x.hours]));
-  s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
-  s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
+  const stats = [['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.we24, x.weYear, x.holYear, x.hours]));
+  s.getRange(1, sc, stats.length, 8).setValues(stats).setFontSize(9);
+  s.getRange(1, sc, 1, 8).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {
     s.getRange(rows.length + 2, 1, res.warnings.length, 1).setValues(res.warnings.map((w) => [w])).setFontColor('#b91c1c');
   }

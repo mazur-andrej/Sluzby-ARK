@@ -1,4 +1,4 @@
-// Výchozí seznam lékařů (pozice a obvyklé počty z rozpisů květen–listopad 2026).
+// Výchozí seznam lékařů (pozice a obvyklé počty a víkendy/svátky (fair) z rozpisů květen–listopad 2026).
 // Upravuje se v aplikaci na kartě Lékaři; tento soubor slouží jen jako výchozí stav.
 export const DEFAULT_DOCTORS = [
  {
@@ -12,7 +12,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-02",
@@ -24,7 +30,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-03",
@@ -37,7 +49,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 5,
+   "hol": 3,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-04",
@@ -51,7 +69,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 8,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-05",
@@ -64,7 +88,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 8,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-06",
@@ -78,7 +108,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-07",
@@ -93,7 +129,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-08",
@@ -108,7 +150,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 7,
+   "hol": 2,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-09",
@@ -121,7 +169,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-10",
@@ -134,7 +188,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 13,
+   "we": 3,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-11",
@@ -147,7 +207,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-12",
@@ -162,7 +228,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 9,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-13",
@@ -177,7 +249,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 6,
+   "we": 2,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-14",
@@ -193,7 +271,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 22,
+   "we": 5,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-15",
@@ -208,7 +292,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-16",
@@ -224,7 +314,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 6,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-17",
@@ -240,7 +336,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 3,
+   "hol": 2,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-18",
@@ -255,7 +357,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-19",
@@ -268,7 +376,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 4,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 24,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-20",
@@ -282,7 +396,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.5,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 21,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-21",
@@ -294,7 +414,13 @@ export const DEFAULT_DOCTORS = [
   "max": 1,
   "note": "",
   "typical24": 1.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 0,
+   "hol": 0,
+   "noWe": 6
+  }
  },
  {
   "id": "lekar-22",
@@ -309,7 +435,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 2,
+   "hol": 2,
+   "noWe": 4
+  }
  },
  {
   "id": "lekar-23",
@@ -324,7 +456,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-24",
@@ -339,7 +477,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 18,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-25",
@@ -354,7 +498,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 17,
+   "we": 6,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-26",
@@ -369,7 +519,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 7,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-27",
@@ -384,7 +540,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.3,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 20,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-28",
@@ -399,7 +561,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 16,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-29",
@@ -414,7 +582,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 16,
+   "we": 5,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-30",
@@ -426,7 +600,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.5,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 21,
+   "we": 7,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-31",
@@ -438,7 +618,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 6,
+   "hol": 2,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-32",
@@ -450,7 +636,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 9,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-33",
@@ -466,7 +658,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.8,
-  "typicalT": 1.8
+  "typicalT": 1.8,
+  "fair": {
+   "n24": 17,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-34",
@@ -482,7 +680,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": 1.3
+  "typicalT": 1.3,
+  "fair": {
+   "n24": 18,
+   "we": 4,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-35",
@@ -498,7 +702,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3,
-  "typicalT": 1.8
+  "typicalT": 1.8,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-36",
@@ -512,7 +722,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 8,
+   "we": 2,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-37",
@@ -526,7 +742,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 3,
+   "hol": 3,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-38",
@@ -538,7 +760,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 3.2,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 19,
+   "we": 6,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-39",
@@ -554,7 +782,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.7,
-  "typicalT": 2.8
+  "typicalT": 2.8,
+  "fair": {
+   "n24": 16,
+   "we": 4,
+   "hol": 2,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-40",
@@ -569,7 +803,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 15,
+   "we": 4,
+   "hol": 1,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-41",
@@ -583,7 +823,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 0.8,
-  "typicalT": 3.6
+  "typicalT": 3.6,
+  "fair": {
+   "n24": 4,
+   "we": 0,
+   "hol": 0,
+   "noWe": 3
+  }
  },
  {
   "id": "lekar-42",
@@ -597,7 +843,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 3.5
+  "typicalT": 3.5,
+  "fair": {
+   "n24": 12,
+   "we": 4,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-43",
@@ -611,7 +863,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-44",
@@ -625,7 +883,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 3.3
+  "typicalT": 3.3,
+  "fair": {
+   "n24": 12,
+   "we": 1,
+   "hol": 0,
+   "noWe": 5
+  }
  },
  {
   "id": "lekar-45",
@@ -638,7 +902,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2,
-  "typicalT": 4
+  "typicalT": 4,
+  "fair": {
+   "n24": 2,
+   "we": 0,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-46",
@@ -653,7 +923,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 1.7
+  "typicalT": 1.7,
+  "fair": {
+   "n24": 15,
+   "we": 5,
+   "hol": 1,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-47",
@@ -667,7 +943,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 2.8
+  "typicalT": 2.8,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-48",
@@ -681,7 +963,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-49",
@@ -695,7 +983,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.5,
-  "typicalT": 3
+  "typicalT": 3,
+  "fair": {
+   "n24": 15,
+   "we": 7,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-50",
@@ -709,7 +1003,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 2.3,
-  "typicalT": 2.7
+  "typicalT": 2.7,
+  "fair": {
+   "n24": 14,
+   "we": 5,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-51",
@@ -722,7 +1022,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": 1,
-  "typicalT": 3.2
+  "typicalT": 3.2,
+  "fair": {
+   "n24": 5,
+   "we": 1,
+   "hol": 0,
+   "noWe": 2
+  }
  },
  {
   "id": "lekar-52",
@@ -737,7 +1043,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 5,
+   "hol": 1,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-53",
@@ -751,7 +1063,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 12,
+   "we": 3,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-54",
@@ -766,7 +1084,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 5,
+   "hol": 0,
+   "noWe": 0
+  }
  },
  {
   "id": "lekar-55",
@@ -780,7 +1104,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 11,
+   "we": 0,
+   "hol": 0,
+   "noWe": 4
+  }
  },
  {
   "id": "lekar-56",
@@ -795,7 +1125,13 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 9,
+   "we": 2,
+   "hol": 0,
+   "noWe": 1
+  }
  },
  {
   "id": "lekar-57",
@@ -807,6 +1143,12 @@ export const DEFAULT_DOCTORS = [
   "max": null,
   "note": "",
   "typical24": null,
-  "typicalT": null
+  "typicalT": null,
+  "fair": {
+   "n24": 7,
+   "we": 0,
+   "hol": 0,
+   "noWe": 4
+  }
  }
 ];
