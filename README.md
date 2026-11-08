@@ -138,14 +138,18 @@ Vždy dodržena:
   po službě přes noc (24h služby, OUP noc) má lékař celý další den volno – výjimku (např. 24h a večer OUP noc) program použije jen tehdy, když by jinak zůstala služba neobsazená, a vypíše ji; po OUP den nebo tečce lze další den sloužit,
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
+**Rovnoměrné rozdělení:** všechny služby kromě OUP (24h služby + tečky) se sčítají a každý lékař má zhruba stejně – podíl se počítá
+každý měsíc z počtu služeb (např. 3–4). Kdo má víc nebo méně, je v přehledu vyznačen. *Individuální počet* u lékaře vyplňte jen výjimečně (částečný úvazek).
+Pozor: 2A a tečky umí jen část lékařů – v měsících s mnoha pracovními dny proto někteří z nich vyjdou na 5 (program to vypíše).
+**OUP** (12 h) se počítá zvlášť: každý, kdo OUP slouží, má aspoň 2; kdo chce víc, zvolí si počet v požadavcích.
+
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
 Počet a pozice JIP se mění v Nastavení (offline nástroj) nebo v listu *Nastavení* (Google, 0 = vypnuto). Ručně zadané nižší *Max* u lékaře má přednost.
 
 **Minimum na pozici:** každý lékař, který slouží 2A a neslouží 1A, má měsíčně aspoň **2 služby na 2A** (když to kvůli vyškrtnutým dnům nejde, program to nahlásí).
 Pozice, počet i výjimka se mění v Nastavení / listu *Nastavení* (0 = vypnuto).
 
-Počet OUP služeb (OUP den + OUP noc dohromady) si může každý lékař zvolit v požadavcích – program mu jich nedá víc a snaží se dát aspoň 2.
-Kdo nevyplní, rozhodne program. V přehledu požadavků je součet zvolených OUP oproti potřebě měsíce (cca 62).
+Počet OUP (OUP den + noc dohromady): každý aspoň 2; kdo chce víc, zadá počet v požadavcích (víc nedostane). V přehledu požadavků je součet zvolených OUP oproti potřebě měsíce (cca 62).
 
 Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víkendy/svátky, rozestup mezi službami, přání „chci".
 

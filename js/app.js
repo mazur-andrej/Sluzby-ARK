@@ -1,6 +1,6 @@
 import { buildMonth, prevMonthOf, MONTHS } from './calendar.js';
 import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
-import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
+import { solve, validate, evenShare, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
 import { OUP_LIMIT, FIXED_GROUP, POSITION_MIN, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
@@ -56,6 +56,8 @@ if ((state.schema || 1) < 2) {
   }
   state.schema = 2;
 }
+// v3: rovnoměrné rozdělení – dřívější „cíle“ z historie se ruší (individuální počet jen výjimečně)
+if (state.schema < 3) { for (const d of state.doctors) d.target = null; state.schema = 3; }
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -408,6 +410,7 @@ function setCell(t, pi, id) {
 
 function renderStats(md, ds) {
   const P = state.positions;
+  const share = currentShare();
   const rows = activeDoctors().map((doc) => {
     let n = 0, we = 0, hours = 0;
     md.grid.forEach((row, t) => row.forEach((id, pi) => {
@@ -416,23 +419,24 @@ function renderStats(md, ds) {
     }));
     const req = md.requests[doc.id] || { off: [], want: [] };
     let oup = 0; md.grid.forEach((row) => row.forEach((id, pi) => { if (id === doc.id && OUP_LIMIT.positions.includes(P[pi].id)) oup++; }));
-    const tgt = fixedFor(doc) ?? (+doc.target || 0);
-    return { doc, n, we, hours, oup, oupMax: req.oupMax, off: req.off.length, tgt, diff: n - tgt };
+    const exp = expectedOf(doc, share);
+    const main = n - oup;
+    return { doc, n, main, we, hours, oup, oupMax: req.oupMax, off: req.off.length, exp, diff: main < exp.lo ? -1 : main > exp.hi ? 1 : 0 };
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lékař', 'Služby', 'Cíl', 'Víkend/sv.', 'Hodiny', `${OUP_LIMIT.label} (max)`, 'Vyškrtl'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', 'Bez OUP', 'Má mít', `${OUP_LIMIT.label} (max)`, 'Víkend/sv.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
       title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
       onclick: () => { highlightDoc = highlightDoc === r.doc.id ? null : r.doc.id; renderSchedule(); },
     },
     el('td', {}, r.doc.name),
-    el('td', { class: `num ${r.diff > 0 ? 'diff-pos' : r.diff < 0 ? 'diff-neg' : ''}` }, String(r.n)),
-    el('td', { class: 'num' }, String(r.tgt)),
+    el('td', { class: `num ${r.diff > 0 ? 'diff-pos' : r.diff < 0 ? 'diff-neg' : ''}` }, String(r.main)),
+    el('td', { class: 'num' }, r.exp.label),
+    el('td', { class: `num ${r.doc.positions.some((id) => OUP_LIMIT.positions.includes(id)) && r.oup < OUP_LIMIT.min ? 'diff-neg' : ''}` }, r.oupMax ? `${r.oup} (${r.oupMax})` : String(r.oup)),
     el('td', { class: 'num' }, String(r.we)),
     el('td', { class: 'num' }, String(Math.round(r.hours * 10) / 10)),
-    el('td', { class: 'num' }, r.oupMax ? `${r.oup} (${r.oupMax})` : String(r.oup)),
     el('td', { class: 'num' }, String(r.off))))),
   );
 }
@@ -466,6 +470,15 @@ function pmInfo() {
 }
 
 // ---------------- Lekári ----------------
+const currentShare = () => evenShare({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup });
+/** Co má lékař mít (služby bez OUP): pevný JIP / individuální / férový podíl. */
+function expectedOf(doc, share = currentShare()) {
+  const f = fixedFor(doc);
+  if (f != null) return { lo: f, hi: f, label: `${f} (${state.fixedGroup.label || 'JIP'})` };
+  if (Number(doc.target) > 0) return { lo: +doc.target, hi: +doc.target, label: `${doc.target} (indiv.)` };
+  if (doc.positions.some((id) => !OUP_LIMIT.positions.includes(id))) return { lo: share.lo, hi: share.hi, label: share.label };
+  return { lo: 0, hi: 0, label: '–' };
+}
 /** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
 function fixedFor(doc) {
   const fg = state.fixedGroup;
@@ -477,13 +490,12 @@ function renderDoctors() {
   const tbl = $('#docTable');
   const sorted = [...state.doctors].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
   const head = el('tr', {}, el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
-    el('th', {}, 'Cíl'), el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
+    el('th', { title: 'Služby bez OUP za měsíc. Prázdné = rovnoměrně jako ostatní. Vyplňte jen výjimečně (např. částečný úvazek).' }, 'Individuální počet'), el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
-  const sumTarget = activeDoctors().reduce((s, d) => s + (fixedFor(d) ?? (+d.target || 0)), 0);
-  const slotsCount = days().reduce((s, d) => s + P.filter((p) => !(p.workdaysOnly && !d.workday)).length, 0);
+  const share = currentShare();
   const foot = el('tr', {}, el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
-    el('td', { title: `Služeb v měsíci: ${slotsCount}` }, el('b', { style: sumTarget < slotsCount ? 'color:#dc2626' : '' }, `${sumTarget}/${slotsCount}`)), el('td'), el('td'), el('td'));
+    el('td', { title: `Služeb bez OUP v měsíci: ${share.slots}, průměr ${share.avg.toFixed(2)}` }, el('b', {}, `ostatní ${share.label}`)), el('td'), el('td'), el('td'));
   const upd = (doc, fn) => (e) => { fn(e); save(); };
   const body = sorted.map((doc) => el('tr', { class: doc.active ? '' : 'inactive' },
     el('td', { class: 'name' }, el('input', { value: doc.name, onchange: upd(doc, (e) => { doc.name = e.target.value.trim(); }) })),
@@ -494,7 +506,7 @@ function renderDoctors() {
     }))),
     el('td', {}, fixedFor(doc) != null
       ? el('span', { title: `Slouží jen na ${(state.fixedGroup.positions || []).join(', ')} → pravidlo z Nastavení` }, `${fixedFor(doc)} (${state.fixedGroup.label || 'JIP'})`)
-      : el('input', { type: 'number', min: 0, value: doc.target ?? '', onchange: upd(doc, (e) => { doc.target = e.target.value === '' ? 0 : +e.target.value; renderDoctors(); }) })),
+      : el('input', { type: 'number', min: 1, value: Number(doc.target) > 0 ? doc.target : '', placeholder: share.label, title: 'Prázdné = rovnoměrně', onchange: upd(doc, (e) => { doc.target = +e.target.value > 0 ? +e.target.value : null; renderDoctors(); }) })),
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
     el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
     el('td', {}, el('button', { class: 'danger', title: 'Odstranit lékaře', onclick: () => {
@@ -510,7 +522,7 @@ $('#addDoc').onclick = () => {
   if (state.doctors.some((d) => norm(d.name) === norm(name))) { alert('Lékař s tímto jménem už existuje.'); return; }
   let id = norm(name).replace(/[^a-z0-9]+/g, '-');
   while (state.doctors.some((d) => d.id === id)) id += '-2';
-  state.doctors.push({ id, name, active: true, positions: [], target: 4, max: null, note: '' });
+  state.doctors.push({ id, name, active: true, positions: [], target: null, max: null, note: '' });
   $('#newDocName').value = '';
   save(); renderDoctors();
   alert(`Lékař ${name} přidán. Nezapomeňte zaškrtnout pozice, na kterých může sloužit.`);
@@ -535,7 +547,7 @@ $('#importDocs').onchange = async (e) => {
     if (hi < 0) throw new Error('V souboru chybí sloupec „Jméno".');
     const h = rows[hi].map((c) => norm(c));
     const col = (re) => h.findIndex((c) => re.test(c));
-    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), cTgt = col(/^cil/), cMax = col(/^max/);
+    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), cTgt = col(/^(cil|individ)/), cMax = col(/^max/);
     const yes = (v) => /^(true|ano|áno|1|x|yes|pravda)$/i.test(String(v).trim());
     let updated = 0, added = 0;
     for (const r of rows.slice(hi + 1)) {
@@ -553,7 +565,7 @@ $('#importDocs').onchange = async (e) => {
       doc.name = name;
       if (cAct >= 0 && String(r[cAct]).trim() !== '') doc.active = yes(r[cAct]);
       if (cPos >= 0 && String(r[cPos]).trim() !== '') doc.positions = String(r[cPos]).split(/[,\s]+/).map((x) => x.trim()).filter((x) => state.positions.some((p) => p.id === x));
-      if (cTgt >= 0 && String(r[cTgt]).trim() !== '') doc.target = +String(r[cTgt]).replace(',', '.') || 0;
+      if (cTgt >= 0) doc.target = +String(r[cTgt] ?? '').replace(',', '.') > 0 ? +String(r[cTgt]).replace(',', '.') : null;
       if (cMax >= 0) doc.max = String(r[cMax] ?? '').trim() === '' ? null : +r[cMax];
     }
     save(); renderAll();
@@ -562,7 +574,7 @@ $('#importDocs').onchange = async (e) => {
 };
 $('#exportDocs').onclick = () => {
   const q = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Cíl', 'Max'].join(';')]
+  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Individuální počet', 'Max'].join(';')]
     .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.target ?? '', d.max ?? ''].map(q).join(';')));
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = el('a', { href: URL.createObjectURL(blob), download: 'lekari-SOUKROME.csv' });

@@ -40,7 +40,11 @@ export const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
 // min = 0 / null → pravidlo vypnuté.
 export const POSITION_MIN = { position: '2A', min: 2, except: ['1A'] };
 
-// Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
+// ROVNOMERNÉ ROZDELENIE: všetky služby okrem OUP (24 h služby + tečky) sa sčítajú.
+// Lekár bez pevného počtu (JIP) a bez individuálneho počtu dostane férový podiel,
+// t. j. ⌊priemer⌋ až ⌈priemer⌉ (napr. 3–4). OUP sa rieši zvlášť (OUP_LIMIT).
+
+// OUP: každý lekár s OUP pozíciou má aspoň `min` OUP služieb; kto chce viac, zvolí si počet v požiadavkách (= maximum).
 export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.

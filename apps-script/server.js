@@ -146,7 +146,7 @@ function readDoctors() {
     out.push({
       row: i + 1, id, name, active: r[2] === true || String(r[2]).toUpperCase() === 'ANO',
       positions: String(r[3] || '').split(',').map((x) => x.trim()).filter(Boolean),
-      target: r[4] === '' ? 0 : Number(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
+      target: Number(r[4]) > 0 ? Number(r[4]) : null, max: r[5] === '' ? null : Number(r[5]), token,
       email: String(r[8] || '').trim(),
     });
   }
@@ -211,9 +211,9 @@ function writeRequest(key, doc, req) {
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
   // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
-  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Cíl služeb/měsíc', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)']);
+  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Individuální počet (prázdné = rovnoměrně)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)']);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target, d.max == null ? '' : d.max, newToken(), '', '']);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target > 0 ? d.target : '', d.max == null ? '' : d.max, newToken(), '', '']);
     docS.getRange(2, 1, rows.length, 9).setValues(rows);
   }
   if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue('E-mail (pro rozeslání rozpisu)');
@@ -402,7 +402,7 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny', `${OUP_LIMIT.label} (max)`]].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours, x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup]));
+  const stats = [['Lékař', 'Bez OUP', 'Má mít', `${OUP_LIMIT.label} (max)`, 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.main, String(x.target ?? ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.weekends, x.hours]));
   s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
   s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {

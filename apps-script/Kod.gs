@@ -102,7 +102,11 @@ const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
 // min = 0 / null → pravidlo vypnuté.
 const POSITION_MIN = { position: '2A', min: 2, except: ['1A'] };
 
-// Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
+// ROVNOMERNÉ ROZDELENIE: všetky služby okrem OUP (24 h služby + tečky) sa sčítajú.
+// Lekár bez pevného počtu (JIP) a bez individuálneho počtu dostane férový podiel,
+// t. j. ⌊priemer⌋ až ⌈priemer⌉ (napr. 3–4). OUP sa rieši zvlášť (OUP_LIMIT).
+
+// OUP: každý lekár s OUP pozíciou má aspoň `min` OUP služieb; kto chce viac, zvolí si počet v požiadavkách (= maximum).
 const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
@@ -137,7 +141,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -149,7 +153,7 @@ const DEFAULT_DOCTORS = [
    "l1",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -162,7 +166,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -175,7 +179,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -187,7 +191,7 @@ const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -200,7 +204,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -214,7 +218,7 @@ const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -228,7 +232,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -240,7 +244,7 @@ const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -252,7 +256,7 @@ const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -264,7 +268,7 @@ const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -278,7 +282,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -292,7 +296,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -307,7 +311,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -321,7 +325,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -336,7 +340,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -351,7 +355,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -365,7 +369,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -377,7 +381,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "1A"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -390,7 +394,7 @@ const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -402,7 +406,7 @@ const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 1,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -416,7 +420,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -430,7 +434,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -444,7 +448,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -458,7 +462,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -472,7 +476,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -486,7 +490,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -500,7 +504,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -514,7 +518,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -525,7 +529,7 @@ const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -536,7 +540,7 @@ const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -547,7 +551,7 @@ const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -562,7 +566,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -577,7 +581,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -592,7 +596,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -605,7 +609,7 @@ const DEFAULT_DOCTORS = [
    "2A",
    "t1"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -618,7 +622,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -629,7 +633,7 @@ const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -644,7 +648,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 8,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -658,7 +662,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 7,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -671,7 +675,7 @@ const DEFAULT_DOCTORS = [
    "t2",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -684,7 +688,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -697,7 +701,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -710,7 +714,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -722,7 +726,7 @@ const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -736,7 +740,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -749,7 +753,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -762,7 +766,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -775,7 +779,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -788,7 +792,7 @@ const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -800,7 +804,7 @@ const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -814,7 +818,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -827,7 +831,7 @@ const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -841,7 +845,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 7,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -854,7 +858,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -868,7 +872,7 @@ const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 9,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -879,7 +883,7 @@ const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": 2,
+  "target": null,
   "max": null,
   "note": ""
  }
@@ -899,7 +903,9 @@ const DEFAULT_DOCTORS = [
 //  - neprekročí sa počet OUP služieb, ktorý si lekár zvolil (oupMax)
 //  - lekár, ktorý slúži len na JIP (fixedGroup), nemá viac než fixedGroup.count služieb
 // Mäkké pravidlá (optimalizujú sa):
-//  - počet služieb čo najbližšie k cieľu lekára
+//  - rovnomerne: služby okrem OUP (24 h + tečky) má každý lekár ⌊priemer⌋–⌈priemer⌉ (napr. 3–4);
+//    výnimky: lekár len na JIP (pevný počet), lekár s individuálnym počtom (target)
+//  - OUP: každý aspoň OUP_LIMIT.min, kto si zvolil viac, dostane prednostne ďalšie OUP
 //  - férové rozdelenie víkendov/sviatkov
 //  - služby rozložené v čase (nie 2 dni po sebe, ideálne aspoň 3 dni rozostup)
 //  - vyplnené všetky pozície
@@ -912,8 +918,12 @@ const DEFAULT_DOCTORS = [
 
 const DEFAULT_WEIGHTS = {
   unfilled: 1000,
-  target: 40,      // * (počet - cieľ)^2
-  overTarget: 60,  // navyše za každú službu nad cieľ
+  target: 40,      // * (počet - individuálny počet)^2 (len lekári s individuálnym počtom)
+  overTarget: 60,  // navyše za každú službu nad individuálny počet
+  even: 60,        // * (služby bez OUP - priemer)^2
+  evenRange: 250,  // za každú službu mimo rozsahu ⌊priemer⌋–⌈priemer⌉
+  oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
+  oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
   weekend: 25,     // * (víkendy - očakávané)^2
   gap1: 30,        // služba deň po dennej službe
   gap2: 6,         // služby ob deň
@@ -1002,7 +1012,11 @@ function solve(input) {
     return Number.isFinite(v) && v > 0 ? Math.max(OUP_LIMIT.min, Math.round(v)) : null;
   });
   const oupCount = (i) => { let c = 0; for (const p of docDay[i].values()) if (oupSet.has(p)) c++; return c; };
-  const targetOf = docs.map((d, i) => fixedOf[i] ?? (d.target != null && d.target !== '' ? +d.target : 0));
+  const mainCount = (i) => docDay[i].size - oupCount(i);
+  const oupEligible = docs.map((d) => (d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)));
+  // Individuálny počet (služby bez OUP) – len ak je zadaný (> 0); inak rovnomerne
+  const personalOf = docs.map((d, i) => (fixedOf[i] == null && Number(d.target) > 0 ? Number(d.target) : null));
+  const targetOf = docs.map((d, i) => fixedOf[i] ?? personalOf[i]);
 
   // Očakávaný podiel víkendových slotov pre každého lekára (podľa jeho pozícií)
   const weRatio = docs.map((_, i) => {
@@ -1010,6 +1024,11 @@ function solve(input) {
     for (let t = 0; t < D; t++) for (const p of eligible[i]) if (slotActive[t][p]) { all++; if (isWe[t]) we++; }
     return all ? we / all : 0;
   });
+
+  // Férový podiel služieb bez OUP
+  const share = evenShare({ days, positions: P, doctors: docs, fixedGroup: fg });
+  const evenDoc = share.evenIds.map((id) => docIndex.get(id));
+  const isEven = docs.map((_, i) => evenDoc.includes(i));
 
   // Služby z minulého mesiaca (len pre pravidlo odpočinku a rozostupy)
   const prevByDoc = docs.map(() => []);
@@ -1068,16 +1087,28 @@ function solve(input) {
   // Cena jedného lekára
   function docCost(i) {
     const n = docDay[i].size;
-    const tgt = targetOf[i];
-    let c = W.target * (n - tgt) * (n - tgt);
-    if (fixedOf[i] != null && n < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - n);
-    if (pmOf[i] != null) { const k = pmCount(i); if (k < pmOf[i]) c += W.posMinMissing * (pmOf[i] - k); }
-    if (oupMax[i] != null) {
-      const minO = Math.min(OUP_LIMIT.min, oupMax[i]);
-      const o = oupCount(i);
-      if (o < minO) c += W.oupMin * (minO - o);
+    const m = mainCount(i);
+    let c = 0;
+    // služby bez OUP
+    if (fixedOf[i] != null) {
+      c += W.target * (m - fixedOf[i]) * (m - fixedOf[i]);
+      if (m < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - m);
+    } else if (personalOf[i] != null) {
+      c += W.target * (m - personalOf[i]) * (m - personalOf[i]);
+      if (m > personalOf[i]) c += W.overTarget * (m - personalOf[i]);
+    } else if (isEven[i]) {
+      c += W.even * (m - share.avg) * (m - share.avg);
+      c += W.evenRange * (Math.max(0, share.lo - m) + Math.max(0, m - share.hi));
     }
-    if (n > tgt) c += W.overTarget * (n - tgt);
+    if (pmOf[i] != null) { const k = pmCount(i); if (k < pmOf[i]) c += W.posMinMissing * (pmOf[i] - k); }
+    // OUP: minimum pre každého, kto OUP slúži; zvolený počet = maximum (tvrdo) a prednosť pri ďalších OUP
+    if (oupEligible[i]) {
+      const o = oupCount(i);
+      const minO = oupMax[i] != null ? Math.min(OUP_LIMIT.min, oupMax[i]) : OUP_LIMIT.min;
+      if (o < minO) c += W.oupMin * (minO - o);
+      if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
+      else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
+    }
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
       for (const d of docDay[i].keys()) {
@@ -1240,7 +1271,9 @@ function solve(input) {
   for (let i = 0; i < N; i++) {
     if (pmOf[i] != null && pmCount(i) < pmOf[i]) warnings.push(`${docs[i].name} má jen ${pmCount(i)}× ${P[pmIdx].label} (minimum ${pmOf[i]}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (fixedOf[i] != null && docDay[i].size < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${docDay[i].size} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
-    if (oupMax[i] != null && oupCount(i) < Math.min(OUP_LIMIT.min, oupMax[i])) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (chtěl/a ${OUP_LIMIT.min}–${oupMax[i]}) – jinak to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (oupEligible[i] && oupCount(i) < OUP_LIMIT.min) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (minimum ${OUP_LIMIT.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (isEven[i] && mainCount(i) < share.lo) warnings.push(`${docs[i].name} má jen ${mainCount(i)} služeb bez OUP (ostatní ${share.label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (isEven[i] && mainCount(i) > share.hi) warnings.push(`${docs[i].name} má ${mainCount(i)} služeb bez OUP, víc než ostatní (${share.label}) – jinak by zůstala služba neobsazená`);
   }
   for (const w of wantResults) if (!w.ok) warnings.push(`Nesplněné přání: ${docs[w.doc].name} chtěl(a) ${w.day}.${w.pos ? ' (' + w.pos.join('/') + ')' : ''}${w.reason ? ' – ' + w.reason : ''}`);
 
@@ -1248,14 +1281,38 @@ function solve(input) {
     let we = 0;
     let hours = 0;
     for (const [d, p] of docDay[i]) { if (isWe[d - 1]) we++; hours += times[p].hours; }
-    return { id: doc.id, name: doc.name, count: docDay[i].size, target: targetOf[i], weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
+    return { id: doc.id, name: doc.name, count: docDay[i].size, main: mainCount(i), target: targetOf[i] ?? (isEven[i] ? share.label : ''), weekends: we, hours, oup: oupCount(i), oupMax: oupMax[i], fixed: fixedOf[i] };
   });
 
   return {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
-    warnings, stats, unfilled, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+    warnings, stats, unfilled, share: { lo: share.lo, hi: share.hi, avg: share.avg, label: share.label }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
   };
+}
+
+/**
+ * Férový podiel služieb bez OUP pre lekárov bez pevného/individuálneho počtu.
+ * Vráti { avg, lo, hi, label: '3–4', evenIds }.
+ */
+function evenShare({ days, positions, doctors, fixedGroup }) {
+  const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
+  const isMain = (id) => !OUP_LIMIT.positions.includes(id);
+  let slots = 0;
+  for (const d of days) for (const p of positions) if (isMain(p.id) && !(p.workdaysOnly && !d.workday)) slots++;
+  let reserved = 0;
+  const evenIds = [];
+  for (const d of doctors) {
+    const ps = (d.positions || []).filter(isMain);
+    if (!ps.length) continue;
+    const fixed = fgx && fgx.count > 0 && (d.positions || []).every((id) => fgx.positions.includes(id)) ? +fgx.count : null;
+    if (fixed != null) { reserved += fixed; continue; }
+    if (Number(d.target) > 0) { reserved += Number(d.target); continue; }
+    evenIds.push(d.id);
+  }
+  const avg = evenIds.length ? Math.max(0, slots - reserved) / evenIds.length : 0;
+  const lo = Math.floor(avg + 1e-9), hi = Math.ceil(avg - 1e-9);
+  return { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}`, evenIds, slots };
 }
 
 /** Kontrola ručne upraveného rozpisu – vráti zoznam porušení pravidiel. */
@@ -1305,6 +1362,17 @@ function validate(input, grid) {
       if (o > Math.max(OUP_LIMIT.min, om)) issues.push({ day: null, pos: null, msg: `${name} má ${o} ${OUP_LIMIT.label}, chtěl/a nejvýš ${Math.max(OUP_LIMIT.min, om)}` });
     }
     if (doc && doc.max != null && doc.max !== '' && n > +doc.max) issues.push({ day: null, pos: null, msg: `${name} má ${n} služeb (max ${doc.max})` });
+  }
+  // rovnomerné rozdelenie (služby bez OUP) a OUP minimum
+  {
+    const sh = evenShare({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup });
+    for (const d of input.doctors) {
+      const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
+      const oup = mine.filter((x) => OUP_LIMIT.positions.includes(P[x.p]?.id)).length;
+      const main = mine.length - oup;
+      if (sh.evenIds.includes(d.id) && (main < sh.lo || main > sh.hi)) issues.push({ day: null, pos: null, kind: 'even', level: 'warn', msg: `${d.name} má ${main} služeb bez OUP, ostatní ${sh.label}` });
+      if ((d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)) && oup < OUP_LIMIT.min) issues.push({ day: null, pos: null, kind: 'oup', level: 'warn', msg: `${d.name} má ${oup} ${OUP_LIMIT.label}, minimum je ${OUP_LIMIT.min}` });
+    }
   }
   // minimum na pozícii
   const pmv = input.positionMin === undefined ? POSITION_MIN : input.positionMin;
@@ -1556,7 +1624,7 @@ function readDoctors() {
     out.push({
       row: i + 1, id, name, active: r[2] === true || String(r[2]).toUpperCase() === 'ANO',
       positions: String(r[3] || '').split(',').map((x) => x.trim()).filter(Boolean),
-      target: r[4] === '' ? 0 : Number(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
+      target: Number(r[4]) > 0 ? Number(r[4]) : null, max: r[5] === '' ? null : Number(r[5]), token,
       email: String(r[8] || '').trim(),
     });
   }
@@ -1621,9 +1689,9 @@ function writeRequest(key, doc, req) {
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
   // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
-  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Cíl služeb/měsíc', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)']);
+  const docS = ensureSheet(SH.DOC, ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Individuální počet (prázdné = rovnoměrně)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)']);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target, d.max == null ? '' : d.max, newToken(), '', '']);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.target > 0 ? d.target : '', d.max == null ? '' : d.max, newToken(), '', '']);
     docS.getRange(2, 1, rows.length, 9).setValues(rows);
   }
   if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue('E-mail (pro rozeslání rozpisu)');
@@ -1812,7 +1880,7 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', 'Služby', 'Cíl', 'Víkendy/svátky', 'Hodiny', `${OUP_LIMIT.label} (max)`]].concat(res.stats.map((x) => [x.name, x.count, x.target, x.weekends, x.hours, x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup]));
+  const stats = [['Lékař', 'Bez OUP', 'Má mít', `${OUP_LIMIT.label} (max)`, 'Víkendy/svátky', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.main, String(x.target ?? ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.weekends, x.hours]));
   s.getRange(1, sc, stats.length, 6).setValues(stats).setFontSize(9);
   s.getRange(1, sc, 1, 6).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {

@@ -22,7 +22,7 @@ for (const [y, m] of [[2026, 12], [2027, 2], [2027, 7]]) {
   const counts = group.map((d) => n2A(r.grid, d.id));
   check(counts.every((c) => c >= 2) && r.unfilled.length === 0,
     `${m}/${y}: bez pravidla ${before} lékařů pod 2×; s pravidlem všichni ≥ 2× 2A (${counts.join(',')})`);
-  check(validate({ days, positions: P, doctors, requests: {} }, r.grid).length === 0, `${m}/${y}: žádné porušení`);
+  check(validate({ days, positions: P, doctors, requests: {} }, r.grid).filter((i) => i.level !== 'warn').length === 0, `${m}/${y}: žádné porušení`);
 }
 
 // lékař, který může jen 1 den → 1× a upozornění

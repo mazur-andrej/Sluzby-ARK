@@ -26,12 +26,12 @@ check(run([{ day: 1, pos: ['l1'] }], 11, [{ doctorId: 'a', day: 0, posId: 'OUPd'
 // validace ručně upraveného rozpisu
 const grid = days.map(() => P.map(() => null));
 grid[0][0] = 'a'; grid[1][7] = 'a'; // 1. 12. lékař1, 2. 12. OUP den
-const issues = validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'hard' }, grid);
+const issues = validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'hard' }, grid).filter((i) => !['even', 'oup'].includes(i.kind));
 check(issues.map((i) => i.msg), ['A má jen 0 h odpočinku po předchozí službě'], 'kontrola ruční úpravy hlásí chybějící odpočinek (24h do 7:30 → OUP den v 7:00)');
 const grid2 = days.map(() => P.map(() => null));
 grid2[0][0] = 'a'; grid2[1][8] = 'a'; // 1. 12. lékař1, 2. 12. OUP noc
-check(validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'hard' }, grid2).map((i) => i.level + ': ' + i.msg), ['error: A slouží den po noční/24h službě'], '[vždy volno] ruční úprava: služba den po 24h = chyba');
-check(validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'soft' }, grid2).map((i) => i.level + ': ' + i.msg), ['warn: A slouží den po noční/24h službě (výjimka)'], '[výjimečně] ruční úprava: služba den po 24h = jen upozornění');
+check(validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'hard' }, grid2).filter((i) => !['even', 'oup'].includes(i.kind)).map((i) => i.level + ': ' + i.msg), ['error: A slouží den po noční/24h službě'], '[vždy volno] ruční úprava: služba den po 24h = chyba');
+check(validate({ days, positions: P, doctors: [doc], requests: {}, afterNight: 'soft' }, grid2).filter((i) => !['even', 'oup'].includes(i.kind)).map((i) => i.level + ': ' + i.msg), ['warn: A slouží den po noční/24h službě (výjimka)'], '[výjimečně] ruční úprava: služba den po 24h = jen upozornění');
 
 // [výjimečně] výjimka jen když není jiná možnost:
 // 2 dny, pozice lékař1 (24h) a OUP noc; A umí obojí, B a C jen OUP noc, C 2. den nemůže.

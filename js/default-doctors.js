@@ -10,7 +10,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -22,7 +22,7 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -35,7 +35,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -48,7 +48,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -60,7 +60,7 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -73,7 +73,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -87,7 +87,7 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -101,7 +101,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -113,7 +113,7 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -125,7 +125,7 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -137,7 +137,7 @@ export const DEFAULT_DOCTORS = [
    "l1",
    "l2"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -151,7 +151,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -165,7 +165,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -180,7 +180,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -194,7 +194,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -209,7 +209,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -224,7 +224,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -238,7 +238,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -250,7 +250,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "1A"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -263,7 +263,7 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -275,7 +275,7 @@ export const DEFAULT_DOCTORS = [
    "l2",
    "OUPd"
   ],
-  "target": 1,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -289,7 +289,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -303,7 +303,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -317,7 +317,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -331,7 +331,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -345,7 +345,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -359,7 +359,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -373,7 +373,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -387,7 +387,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -398,7 +398,7 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -409,7 +409,7 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -420,7 +420,7 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -435,7 +435,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -450,7 +450,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -465,7 +465,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -478,7 +478,7 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t1"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -491,7 +491,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 4,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -502,7 +502,7 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -517,7 +517,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 8,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -531,7 +531,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 7,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -544,7 +544,7 @@ export const DEFAULT_DOCTORS = [
    "t2",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -557,7 +557,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -570,7 +570,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -583,7 +583,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -595,7 +595,7 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -609,7 +609,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -622,7 +622,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -635,7 +635,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -648,7 +648,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -661,7 +661,7 @@ export const DEFAULT_DOCTORS = [
    "t1",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -673,7 +673,7 @@ export const DEFAULT_DOCTORS = [
    "2A",
    "t2"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -687,7 +687,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 6,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -700,7 +700,7 @@ export const DEFAULT_DOCTORS = [
    "1A",
    "plast"
   ],
-  "target": 3,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -714,7 +714,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 7,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -727,7 +727,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 5,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -741,7 +741,7 @@ export const DEFAULT_DOCTORS = [
    "OUPd",
    "OUPn"
   ],
-  "target": 9,
+  "target": null,
   "max": null,
   "note": ""
  },
@@ -752,7 +752,7 @@ export const DEFAULT_DOCTORS = [
   "positions": [
    "1A"
   ],
-  "target": 2,
+  "target": null,
   "max": null,
   "note": ""
  }

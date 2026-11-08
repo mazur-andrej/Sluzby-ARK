@@ -10,19 +10,19 @@ const days = buildMonth(2026, 12);
 const doctors = DEFAULT_DOCTORS.filter((d) => d.active);
 const jipOnly = doctors.filter((d) => d.positions.length && d.positions.every((p) => FIXED_GROUP.positions.includes(p)));
 const count = (grid, id) => grid.reduce((n, r) => n + r.filter((x) => x === id).length, 0);
-console.log('  lékaři jen na JIP:', jipOnly.map((d) => `${d.name} (cíl v seznamu ${d.target})`).join(', '));
+console.log('  lékaři jen na JIP:', jipOnly.map((d) => d.name).join(', '));
 check(jipOnly.length >= 2, 've výchozím seznamu jsou lékaři jen na JIP');
 
 const r = solve({ days, positions: P, doctors, requests: {}, seed: 1 });
 check(jipOnly.every((d) => count(r.grid, d.id) === 4), `bez požadavků: všichni přesně 4 (${jipOnly.map((d) => count(r.grid, d.id)).join(', ')})`);
-check(r.unfilled.length === 0 && validate({ days, positions: P, doctors, requests: {} }, r.grid).length === 0, 'vše obsazeno, žádné porušení');
+check(r.unfilled.length === 0 && validate({ days, positions: P, doctors, requests: {} }, r.grid).filter((i) => i.level !== 'warn').length === 0, 'vše obsazeno, žádné porušení');
 
 // lékař s cílem 3 v seznamu stejně dostane 4; lékař s max 3 dostane max 3 (ruční strop má přednost)
-const low = jipOnly.find((d) => d.target === 3) || jipOnly[0];
+const low = jipOnly[2] || jipOnly[0];
 const capped = { ...jipOnly[1], max: 3 };
 const docs2 = doctors.map((d) => (d.id === capped.id ? capped : d));
 const r2 = solve({ days, positions: P, doctors: docs2, requests: {}, seed: 2 });
-check(count(r2.grid, low.id) === 4, `${low.name}: cíl v seznamu ${low.target}, pravidlo JIP → 4`);
+check(count(r2.grid, low.id) === 4, `${low.name}: pravidlo JIP → 4`);
 check(count(r2.grid, capped.id) === 3, `${capped.name}: ručně Max 3 → 3 (menší strop vyhrává)`);
 
 // hodně vyškrtnutých dní → méně než 4, s hlášením
@@ -33,7 +33,7 @@ check(count(r3.grid, blocked.id) === 3 && r3.warnings.some((w) => w.includes(`${
 
 // pravidlo vypnuté
 const r4 = solve({ days, positions: P, doctors, requests: {}, seed: 1, fixedGroup: null });
-check(count(r4.grid, low.id) === low.target, `pravidlo vypnuté → ${low.name} má svůj cíl ${low.target}`);
+check(count(r4.grid, low.id) >= r4.share.lo && count(r4.grid, low.id) <= r4.share.hi, `pravidlo vypnuté → ${low.name} rovnoměrně jako ostatní (${count(r4.grid, low.id)}, podíl ${r4.share.label})`);
 
 // ruční úprava: 5 služeb = chyba
 const g = r.grid.map((row) => row.slice());
