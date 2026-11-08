@@ -490,7 +490,8 @@ const currentPlan = () => planTargets({ days: days(), positions: state.positions
 function fixedFor(doc) {
   const fg = state.fixedGroup;
   if (!fg || !(fg.count > 0) || !doc.positions.length) return null;
-  return doc.positions.every((id) => (fg.positions || []).includes(id)) ? fg.count : null;
+  if (!doc.positions.every((id) => (fg.positions || []).includes(id))) return null;
+  return doc.max != null && doc.max !== '' ? Math.min(fg.count, +doc.max) : fg.count;
 }
 function renderDoctors() {
   const P = state.positions;

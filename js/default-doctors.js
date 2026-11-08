@@ -7,8 +7,7 @@ export const DEFAULT_DOCTORS = [
   "active": true,
   "positions": [
    "l1",
-   "l2",
-   "OUPd"
+   "l2"
   ],
   "max": null,
   "note": "",
@@ -20,8 +19,7 @@ export const DEFAULT_DOCTORS = [
   "name": "Dr. 02",
   "active": true,
   "positions": [
-   "l1",
-   "OUPd"
+   "l1"
   ],
   "max": null,
   "note": "",
@@ -34,8 +32,7 @@ export const DEFAULT_DOCTORS = [
   "active": true,
   "positions": [
    "l1",
-   "l2",
-   "OUPd"
+   "l2"
   ],
   "max": null,
   "note": "",
@@ -292,10 +289,9 @@ export const DEFAULT_DOCTORS = [
   "name": "Dr. 21",
   "active": true,
   "positions": [
-   "l2",
-   "OUPd"
+   "l2"
   ],
-  "max": null,
+  "max": 1,
   "note": "",
   "typical24": 1.2,
   "typicalT": null

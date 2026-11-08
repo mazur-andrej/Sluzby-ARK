@@ -99,7 +99,8 @@ check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].sub
   const decS = book.getSheetByName('Rozpis 2026-12').getDataRange().getValues();
   const jip = docRows.filter((r) => r[2] === true && String(r[3]).split(',').map((x) => x.trim()).every((p) => ['l1', 'l2'].includes(p)));
   const cnt = jip.map((r) => decS.slice(1, 33).reduce((n, row) => n + row.slice(1, 10).filter((x) => x === r[1]).length, 0));
-  check(jip.length >= 2 && cnt.every((c) => c === 4), `lékaři jen na JIP mají přesně 4 služby (${cnt.join(', ')})`);
+  const want = jip.map((r) => (r[5] !== '' && r[5] != null ? Math.min(4, +r[5]) : 4));
+  check(jip.length >= 2 && cnt.every((c, i) => c === want[i]), `lékaři jen na JIP mají přesně 4 (nižší Max podle Max) (${cnt.join(', ')})`);
   const setS = book.getSheetByName('Nastavení').getDataRange().getValues();
   check(setS.length >= 9 && /JIP/.test(setS[7][0]) && setS[7][1] === 4 && setS[8][1] === 'l1, l2', 'list Nastavení obsahuje pravidlo JIP (4; l1, l2)');
   book.getSheetByName('Nastavení').getRange(7, 2).setValue('NE');

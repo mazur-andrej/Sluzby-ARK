@@ -142,8 +142,7 @@ const DEFAULT_DOCTORS = [
   "active": true,
   "positions": [
    "l1",
-   "l2",
-   "OUPd"
+   "l2"
   ],
   "max": null,
   "note": "",
@@ -155,8 +154,7 @@ const DEFAULT_DOCTORS = [
   "name": "Dr. 02",
   "active": true,
   "positions": [
-   "l1",
-   "OUPd"
+   "l1"
   ],
   "max": null,
   "note": "",
@@ -169,8 +167,7 @@ const DEFAULT_DOCTORS = [
   "active": true,
   "positions": [
    "l1",
-   "l2",
-   "OUPd"
+   "l2"
   ],
   "max": null,
   "note": "",
@@ -427,10 +424,9 @@ const DEFAULT_DOCTORS = [
   "name": "Dr. 21",
   "active": true,
   "positions": [
-   "l2",
-   "OUPd"
+   "l2"
   ],
-  "max": null,
+  "max": 1,
   "note": "",
   "typical24": 1.2,
   "typicalT": null
@@ -1056,7 +1052,8 @@ function solve(input) {
   const fixedOf = docs.map((d) => {
     if (!fg || !(fg.count > 0)) return null;
     const ps = d.positions || [];
-    return ps.length && ps.every((id) => fg.positions.includes(id)) ? +fg.count : null;
+    if (!ps.length || !ps.every((id) => fg.positions.includes(id))) return null;
+    return d.max != null && d.max !== '' ? Math.min(+fg.count, +d.max) : +fg.count; // nižší Max lékaře má přednost
   });
   // Minimum na pozícii (napr. 2A aspoň 2× pre lekárov, ktorí nemajú 1A)
   const pm = input.positionMin === undefined ? POSITION_MIN : input.positionMin;
@@ -1376,7 +1373,8 @@ function planTargets({ days, positions, doctors, fixedGroup, positionMin }) {
     const members = [];
     for (const d of doctors) {
       if (!(d.positions || []).some(inCat)) continue;
-      const fixed = fgx && fgx.count > 0 && (d.positions || []).every((id) => fgx.positions.includes(id)) ? +fgx.count : null;
+      let fixed = fgx && fgx.count > 0 && (d.positions || []).every((id) => fgx.positions.includes(id)) ? +fgx.count : null;
+      if (fixed != null && d.max != null && d.max !== '') fixed = Math.min(fixed, +d.max);
       if (fixed != null && key === 'h24') { reserved += fixed; continue; }
       const v = Number(d[cat.field]);
       members.push({ id: d.id, w: v > 0 ? v : null, zero: d[cat.field] === 0 });
@@ -1482,7 +1480,8 @@ function validate(input, grid) {
       const ps = d.positions || [];
       if (!ps.length || !ps.every((id) => fg.positions.includes(id))) continue;
       const n = (perDoc.get(d.id) || []).filter((x) => !x.prev).length;
-      if (n !== +fg.count) issues.push({ day: null, pos: null, kind: 'fixed', level: n > fg.count ? 'error' : 'warn', msg: `${d.name} (jen ${fg.label || 'JIP'}) má ${n} služeb, má mít ${fg.count}` });
+      const want = d.max != null && d.max !== '' ? Math.min(+fg.count, +d.max) : +fg.count;
+      if (n !== want) issues.push({ day: null, pos: null, kind: 'fixed', level: n > want ? 'error' : 'warn', msg: `${d.name} (jen ${fg.label || 'JIP'}) má ${n} služeb, má mít ${want}` });
     }
   }
   return issues;
