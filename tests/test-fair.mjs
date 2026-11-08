@@ -18,7 +18,10 @@ for (const [y, m] of [[2026, 12], [2027, 1], [2027, 2], [2027, 3], [2027, 4], [2
   const expected = r.stats.filter((s) => (s.fixed ?? 0) > 0 || (r.plan[s.id]?.h24?.hi ?? 0) > 0).length;
   const weSlots = days.filter((d) => d.weekend).length * 5;
   const none = r.fair.noWeekend.length, fri = r.fair.onlyFriday.length;
-  check(r.unfilled.length === 0 && none <= 4 && none + fri <= Math.max(0, expected - weSlots),
+  // 2A-only lékaři se dělí jen o víkendové služby na 2A (8–10 měsíčně)
+  const only2A = docs.filter((d) => d.positions.filter((p) => ['l1', 'l2', '1A', '2A', 'plast'].includes(p)).join() === '2A').length;
+  const limit = Math.max(0, expected - weSlots, only2A - days.filter((d) => d.weekend).length);
+  check(r.unfilled.length === 0 && none <= 4 && none + fri <= limit,
     `${key}: ${weSlots} so/ne služeb pro ${expected} lékařů → bez víkendu i pátku ${none}, jen pátek ${fri}`);
   r.fair.noWeekend.forEach((id) => missing.set(id, missing.get(id) + 1));
   r.fair.onlyFriday.forEach((id) => missing.set(id, missing.get(id) + 0.5));

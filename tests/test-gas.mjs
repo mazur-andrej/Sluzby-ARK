@@ -126,7 +126,7 @@ check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].sub
   const rows = decS.slice(1).filter((r) => r[cWe] !== '' && r[cWe] != null && typeof r[cWe] === 'number');
   const noWe = rows.filter((r) => r[cWe] === 0 && Number(String(r[cWe - 3]).split(' ')[0]) > 0).length;
   check(cWe > 0 && cHol > 0 && rows.length > 40, `list rozpisu má sloupce víkendů a svátků (${rows.length} lékařů)`);
-  check(noWe >= 5 && noWe <= 11, `prosinec: bez víkendu (24h) nejvýš 11 lékařů (${noWe})`);
+  check(noWe <= 4, `prosinec: bez víkendu i pátku (24h) nejvýš 4 lékaři (${noWe})`);
 }
 
 // 4b) správce schválí → rozeslání verze 1
