@@ -68,6 +68,14 @@ if (state.schema < 4) {
   }
   state.schema = 4;
 }
+// v5: jména zpět ve výchozím seznamu – anonymní „Dr. 01“ nahradit skutečným jménem podle ID
+if (state.schema < 5) {
+  for (const d of state.doctors) {
+    const def = DEFAULT_DOCTORS.find((x) => x.id === d.id);
+    if (def && /^Dr\. \d\d$/.test(d.name)) d.name = def.name;
+  }
+  state.schema = 5;
+}
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;

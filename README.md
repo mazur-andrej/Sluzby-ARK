@@ -5,16 +5,11 @@ Běží celá v prohlížeči – nic se neinstaluje a data neopouštějí poč�
 
 **Aplikace:** https://mazur-andrej.github.io/Sluzby-ARK/
 
-## Ochrana osobních údajů
+## Osobní údaje
 
-Tento repozitář je veřejný, proto v něm **nejsou jména lékařů** – výchozí seznam obsahuje jen anonymní „Dr. 01 …" se strukturou pozic a cílů.
-Skutečná jména má správce v soukromém souboru (`lekari-SOUKROME.xlsx`, ID `lekar-01 …` odpovídá „Dr. 01 …") a načítá je:
-
-- do **offline nástroje**: karta *Lékaři* → *Načíst seznam lékařů (Excel/CSV)* – uloží se jen v prohlížeči správce,
-- do **Google tabulky**: *Soubor → Importovat → Vložit nové listy* (list *Lékaři*) ještě před *Počátečním nastavením*.
-
-Lékaři vidí jména jen přes svůj osobní odkaz (data jdou z Google tabulky správce) a v e-mailu s rozpisem.
-Soubory se jmény, požadavky ani vygenerované rozpisy do repozitáře nepatří.
+Výchozí seznam lékařů (jména, pozice, obvyklé počty služeb) je součástí veřejného repozitáře – na přání správce.
+Požadavky lékařů, e-maily, osobní odkazy (tokeny) a vygenerované rozpisy v repozitáři nejsou: jsou jen v Google tabulce správce
+a v prohlížeči, kde se rozpis dělá. Lékaři vidí rozpis přes svůj osobní odkaz a v e-mailu.
 
 ## Online režim – lékaři zadávají požadavky sami
 
@@ -43,7 +38,7 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 ### Jednorázové nastavení (správce, cca 10 minut)
 
 1. Založte novou Google tabulku (https://sheets.new), pojmenujte ji např. *Rozpis služeb*.
-   Importujte do ní soukromý seznam lékařů: *Soubor → Importovat → Nahrát → lekari-SOUKROME.xlsx → Vložit nové listy*. Doplňte e-maily.
+   (Volitelně můžete před nastavením importovat vlastní seznam lékařů jako list *Lékaři*; jinak se použije výchozí seznam.) Doplňte e-maily.
 2. **Rozšíření → Apps Script**. Smažte obsah souboru `Kód.gs` a vložte celý obsah souboru
    [`apps-script/Kod.gs`](apps-script/Kod.gs) (tlačítko *Copy raw file*). Uložte (Ctrl+S).
 3. Vraťte se do tabulky a obnovte stránku (F5). Objeví se menu **Rozpis služeb** → **Počáteční nastavení**.

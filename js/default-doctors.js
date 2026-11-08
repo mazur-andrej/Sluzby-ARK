@@ -1,9 +1,9 @@
-// Výchozí seznam lékařů – ANONYMIZOVANÝ (struktura pozic a obvyklých počtů služeb z rozpisů 2026, bez jmen).
-// Skutečná jména jsou jen v Google tabulce správce a v prohlížeči správce (karta Lékaři → Načíst seznam).
+// Výchozí seznam lékařů (pozice a obvyklé počty z rozpisů květen–listopad 2026).
+// Upravuje se v aplikaci na kartě Lékaři; tento soubor slouží jen jako výchozí stav.
 export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-01",
-  "name": "Dr. 01",
+  "name": "Hruda",
   "active": true,
   "positions": [
    "l1",
@@ -16,7 +16,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-02",
-  "name": "Dr. 02",
+  "name": "Štětka",
   "active": true,
   "positions": [
    "l1"
@@ -28,7 +28,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-03",
-  "name": "Dr. 03",
+  "name": "Volčík",
   "active": true,
   "positions": [
    "l1",
@@ -41,7 +41,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-04",
-  "name": "Dr. 04",
+  "name": "Chobola",
   "active": true,
   "positions": [
    "l1",
@@ -55,7 +55,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-05",
-  "name": "Dr. 05",
+  "name": "Čundrle",
   "active": true,
   "positions": [
    "l1",
@@ -68,7 +68,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-06",
-  "name": "Dr. 06",
+  "name": "Jelínek",
   "active": true,
   "positions": [
    "l1",
@@ -82,7 +82,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-07",
-  "name": "Dr. 07",
+  "name": "Niedobová",
   "active": true,
   "positions": [
    "l1",
@@ -97,7 +97,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-08",
-  "name": "Dr. 08",
+  "name": "Růžek",
   "active": true,
   "positions": [
    "l1",
@@ -112,7 +112,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-09",
-  "name": "Dr. 09",
+  "name": "Suk",
   "active": true,
   "positions": [
    "l1",
@@ -125,7 +125,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-10",
-  "name": "Dr. 10",
+  "name": "Bartošík",
   "active": true,
   "positions": [
    "l1",
@@ -138,7 +138,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-11",
-  "name": "Dr. 11",
+  "name": "Fencl",
   "active": true,
   "positions": [
    "l1",
@@ -151,7 +151,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-12",
-  "name": "Dr. 12",
+  "name": "Kříž",
   "active": true,
   "positions": [
    "l2",
@@ -166,7 +166,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-13",
-  "name": "Dr. 13",
+  "name": "Pavlunová",
   "active": true,
   "positions": [
    "l2",
@@ -181,7 +181,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-14",
-  "name": "Dr. 14",
+  "name": "Pokorný",
   "active": true,
   "positions": [
    "l2",
@@ -197,7 +197,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-15",
-  "name": "Dr. 15",
+  "name": "Svoboda",
   "active": true,
   "positions": [
    "l2",
@@ -212,7 +212,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-16",
-  "name": "Dr. 16",
+  "name": "Mazúr",
   "active": true,
   "positions": [
    "l2",
@@ -228,7 +228,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-17",
-  "name": "Dr. 17",
+  "name": "Predáč",
   "active": true,
   "positions": [
    "l2",
@@ -244,7 +244,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-18",
-  "name": "Dr. 18",
+  "name": "Zimmer",
   "active": true,
   "positions": [
    "l2",
@@ -259,7 +259,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-19",
-  "name": "Dr. 19",
+  "name": "Zvoníčková",
   "active": true,
   "positions": [
    "l2",
@@ -272,7 +272,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-20",
-  "name": "Dr. 20",
+  "name": "Hasara",
   "active": true,
   "positions": [
    "l2",
@@ -286,7 +286,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-21",
-  "name": "Dr. 21",
+  "name": "Helán",
   "active": true,
   "positions": [
    "l2"
@@ -298,7 +298,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-22",
-  "name": "Dr. 22",
+  "name": "Bartoš",
   "active": true,
   "positions": [
    "1A",
@@ -313,7 +313,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-23",
-  "name": "Dr. 23",
+  "name": "Fabián",
   "active": true,
   "positions": [
    "1A",
@@ -328,7 +328,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-24",
-  "name": "Dr. 24",
+  "name": "Fischer",
   "active": true,
   "positions": [
    "1A",
@@ -343,7 +343,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-25",
-  "name": "Dr. 25",
+  "name": "Grác",
   "active": true,
   "positions": [
    "1A",
@@ -358,7 +358,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-26",
-  "name": "Dr. 26",
+  "name": "Mareček",
   "active": true,
   "positions": [
    "1A",
@@ -373,7 +373,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-27",
-  "name": "Dr. 27",
+  "name": "Křemečková",
   "active": true,
   "positions": [
    "1A",
@@ -388,7 +388,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-28",
-  "name": "Dr. 28",
+  "name": "Řezníčková",
   "active": true,
   "positions": [
    "1A",
@@ -403,7 +403,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-29",
-  "name": "Dr. 29",
+  "name": "Valachová",
   "active": true,
   "positions": [
    "1A",
@@ -418,7 +418,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-30",
-  "name": "Dr. 30",
+  "name": "Schröderová",
   "active": true,
   "positions": [
    "plast"
@@ -430,7 +430,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-31",
-  "name": "Dr. 31",
+  "name": "Dadák",
   "active": true,
   "positions": [
    "plast"
@@ -442,7 +442,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-32",
-  "name": "Dr. 32",
+  "name": "Valouchová",
   "active": true,
   "positions": [
    "plast"
@@ -454,7 +454,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-33",
-  "name": "Dr. 33",
+  "name": "Michnáčová",
   "active": true,
   "positions": [
    "1A",
@@ -470,7 +470,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-34",
-  "name": "Dr. 34",
+  "name": "Pitrová",
   "active": true,
   "positions": [
    "1A",
@@ -486,7 +486,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-35",
-  "name": "Dr. 35",
+  "name": "Paulovičová",
   "active": true,
   "positions": [
    "1A",
@@ -502,7 +502,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-36",
-  "name": "Dr. 36",
+  "name": "Šimová",
   "active": true,
   "positions": [
    "1A",
@@ -516,7 +516,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-37",
-  "name": "Dr. 37",
+  "name": "Tomášková",
   "active": true,
   "positions": [
    "1A",
@@ -530,7 +530,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-38",
-  "name": "Dr. 38",
+  "name": "Pavlíková",
   "active": true,
   "positions": [
    "1A"
@@ -542,7 +542,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-39",
-  "name": "Dr. 39",
+  "name": "Tomancová",
   "active": true,
   "positions": [
    "2A",
@@ -558,7 +558,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-40",
-  "name": "Dr. 40",
+  "name": "Žabková",
   "active": true,
   "positions": [
    "2A",
@@ -573,7 +573,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-41",
-  "name": "Dr. 41",
+  "name": "Benčat",
   "active": true,
   "positions": [
    "2A",
@@ -587,7 +587,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-42",
-  "name": "Dr. 42",
+  "name": "Hric",
   "active": true,
   "positions": [
    "2A",
@@ -601,7 +601,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-43",
-  "name": "Dr. 43",
+  "name": "Kiššová",
   "active": true,
   "positions": [
    "2A",
@@ -615,7 +615,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-44",
-  "name": "Dr. 44",
+  "name": "Molčanová",
   "active": true,
   "positions": [
    "2A",
@@ -629,7 +629,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-45",
-  "name": "Dr. 45",
+  "name": "Mrázek",
   "active": true,
   "positions": [
    "2A",
@@ -642,7 +642,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-46",
-  "name": "Dr. 46",
+  "name": "Skotálek",
   "active": true,
   "positions": [
    "2A",
@@ -657,7 +657,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-47",
-  "name": "Dr. 47",
+  "name": "Škuligová",
   "active": true,
   "positions": [
    "2A",
@@ -671,7 +671,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-48",
-  "name": "Dr. 48",
+  "name": "Trnkócyová",
   "active": true,
   "positions": [
    "2A",
@@ -685,7 +685,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-49",
-  "name": "Dr. 49",
+  "name": "Vilhan",
   "active": true,
   "positions": [
    "2A",
@@ -699,7 +699,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-50",
-  "name": "Dr. 50",
+  "name": "Volavá",
   "active": true,
   "positions": [
    "2A",
@@ -713,7 +713,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-51",
-  "name": "Dr. 51",
+  "name": "Zubíková",
   "active": true,
   "positions": [
    "2A",
@@ -726,7 +726,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-52",
-  "name": "Dr. 52",
+  "name": "Halmová",
   "active": false,
   "positions": [
    "l2",
@@ -741,7 +741,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-53",
-  "name": "Dr. 53",
+  "name": "Kolodějová",
   "active": false,
   "positions": [
    "l2",
@@ -755,7 +755,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-54",
-  "name": "Dr. 54",
+  "name": "Třebová",
   "active": false,
   "positions": [
    "1A",
@@ -770,7 +770,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-55",
-  "name": "Dr. 55",
+  "name": "Hereta",
   "active": false,
   "positions": [
    "plast",
@@ -784,7 +784,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-56",
-  "name": "Dr. 56",
+  "name": "Pokrivčák",
   "active": false,
   "positions": [
    "1A",
@@ -799,7 +799,7 @@ export const DEFAULT_DOCTORS = [
  },
  {
   "id": "lekar-57",
-  "name": "Dr. 57",
+  "name": "Procházková",
   "active": false,
   "positions": [
    "1A"

@@ -24,7 +24,7 @@ book.deleteSheet(book.getSheetByName('Lékaři'));
 // 1) nastavení
 call('nastavit');
 check(['Lékaři', 'Pozice', 'Požadavky', 'Stav', 'Nastavení'].every((n) => sheets.some((x) => x.name === n)), 'listy vytvořeny: ' + sheets.map((s) => s.name).join(', '));
-check(docRowsAll().every((r) => /^Dr\. \d\d$/.test(r[1])), 'výchozí seznam je anonymní (Dr. 01…)');
+check(docRowsAll().every((r) => r[1] && !/^Dr\. \d\d$/.test(r[1])), 'výchozí seznam obsahuje jména lékařů');
 check(triggers.length === 1, 'denní spouštěč vytvořen');
 // e-maily dvěma lékařům (sloupec I)
 function docRowsAll() { return book.getSheetByName('Lékaři').getDataRange().getValues().slice(1); }
