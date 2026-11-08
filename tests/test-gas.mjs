@@ -109,6 +109,14 @@ check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].sub
   check(call('fixedGroupSetting') === null, 'pravidlo JIP: 0 = vypnuto');
   book.getSheetByName('Nastavení').getRange(8, 2).setValue(4);
 }
+{
+  const decS = book.getSheetByName('Rozpis 2026-12').getDataRange().getValues();
+  const c2A = decS[0].indexOf('lékař4=2A');
+  const grp = docRows.filter((r) => r[2] === true && String(r[3]).includes('2A') && !String(r[3]).includes('1A'));
+  const cnt = grp.map((r) => decS.slice(1, 33).filter((row) => row[c2A] === r[1]).length);
+  check(grp.length === 13 && cnt.every((c) => c >= 2), `Google: 13 lékařů s 2A bez 1A má každý ≥ 2× 2A (${cnt.join(',')})`);
+  check(JSON.stringify(call('positionMinSetting')) === JSON.stringify({ position: '2A', min: 2, except: ['1A'] }), 'list Nastavení: minimum 2A = 2, kromě 1A');
+}
 
 // 4b) správce schválí → rozeslání verze 1
 const res1 = call('schvalit', '2026-12');

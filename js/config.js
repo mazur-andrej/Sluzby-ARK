@@ -35,6 +35,11 @@ export const afterNightMode = (input) => (input.afterNight || (input.nextDayOff 
 // count = null → pravidlo vypnuté.
 export const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
 
+// Minimum služieb na pozícii: každý lekár s pozíciou `position`, ktorý NEMÁ žiadnu z `except`,
+// má mesačne aspoň `min` služieb na tejto pozícii (napr. 2A aspoň 2×, okrem tých, čo slúžia aj 1A).
+// min = 0 / null → pravidlo vypnuté.
+export const POSITION_MIN = { position: '2A', min: 2, except: ['1A'] };
+
 // Počet OUP služieb, ktorý si lekár sám volí v požiadavkách (ako maximum; najmenej `min`).
 export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
 

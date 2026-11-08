@@ -101,6 +101,14 @@ Dvořáková – nemůže 24.12., 25.12.</pre>
         <p class="muted">Výjimka znamená např. 24h službu (do 7:30) a večer OUP noc (od 19:00) = 11,5 h odpočinku, nebo dvě OUP noci po sobě. Při volbě „výjimečně" ji program použije jen tehdy, když by jinak zůstala služba neobsazená, a každou výjimku vypíše. Po OUP den nebo tečce může lékař další den sloužit vždy.</p>
       </div>
       <div class="card">
+        <h3>Minimum služeb na pozici</h3>
+        <p class="muted">Každý lékař s touto pozicí (kromě těch, kteří mají i vybranou výjimku) dostane měsíčně aspoň tolik služeb právě na ní. Když to kvůli vyškrtnutým dnům nejde, program to nahlásí. 0 = vypnuto.</p>
+        <p><label>Pozice: <select id="pmPos"></select></label>
+           <label style="margin-left:12px">aspoň <input id="pmMin" type="number" min="0" max="31" style="width:56px">×</label>
+           <label style="margin-left:12px">neplatí pro lékaře s pozicí: <select id="pmExcept"></select></label></p>
+        <p id="pmWho" class="muted"></p>
+      </div>
+      <div class="card">
         <h3>Lékaři jen na JIP – pevný počet služeb</h3>
         <p class="muted">Lékař, který má povolené <b>jen</b> tyto pozice, dostane přesně tolik služeb měsíčně (víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde – program to nahlásí). Prázdné = pravidlo vypnuto.</p>
         <p><label>Počet služeb: <input id="fixedCount" type="number" min="1" max="31" style="width:64px"></label></p>

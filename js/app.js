@@ -3,7 +3,7 @@ import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
 import { readXlsx } from './xlsx.js';
-import { OUP_LIMIT, FIXED_GROUP, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
+import { OUP_LIMIT, FIXED_GROUP, POSITION_MIN, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
@@ -46,6 +46,7 @@ for (const p of state.positions) {
 if (state.minRestHours == null) state.minRestHours = DEFAULT_MIN_REST_HOURS;
 if (!state.afterNight) state.afterNight = DEFAULT_AFTER_NIGHT;
 if (state.fixedGroup === undefined) state.fixedGroup = structuredClone(FIXED_GROUP);
+if (state.positionMin === undefined) state.positionMin = structuredClone(POSITION_MIN);
 delete state.nextDayOff;
 // v2: pracovní doba začíná v 7:30 (kromě OUP) – oprava časů uložených dřívější verzí
 if ((state.schema || 1) < 2) {
@@ -91,16 +92,6 @@ const list = (items) => `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}<
 function renderMonth() {
   $('#monthLabel').textContent = `${MONTHS[state.current.month - 1]} ${state.current.year}`;
   $('#extraHol').value = (monthData().extraHolidays || []).join(', ');
-  $('#minRest').value = state.minRestHours;
-  const fgr = state.fixedGroup || { ...FIXED_GROUP, count: null };
-  $('#fixedCount').value = fgr.count ?? '';
-  $('#fixedPos').replaceChildren(...state.positions.map((p) => el('label', { style: 'margin-right:10px' },
-    el('input', { type: 'checkbox', checked: (fgr.positions || []).includes(p.id), onchange: (e) => {
-      const ps = new Set(fgr.positions || []);
-      if (e.target.checked) ps.add(p.id); else ps.delete(p.id);
-      state.fixedGroup = { ...fgr, positions: [...ps] }; save(); renderSettings(); renderDoctors();
-    } }), ' ', p.label)));
-  $('#afterNight').replaceChildren(...Object.entries(AFTER_NIGHT_LABELS).map(([k, v]) => el('option', { value: k, selected: k === state.afterNight }, v)));
   renderAll();
 }
 function shiftMonth(delta) {
@@ -310,7 +301,7 @@ function solverInput() {
   return {
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
-    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight, fixedGroup: state.fixedGroup,
+    weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight, fixedGroup: state.fixedGroup, positionMin: state.positionMin,
   };
 }
 
@@ -467,6 +458,13 @@ $('#exportDocx').onclick = () => {
 };
 $('#printBtn').onclick = () => window.print();
 
+function pmInfo() {
+  const pm = state.positionMin;
+  if (!pm || !(pm.min > 0)) { $('#pmWho').textContent = 'Pravidlo je vypnuté.'; return; }
+  const who = activeDoctors().filter((d) => d.positions.includes(pm.position) && !(pm.except || []).some((x) => d.positions.includes(x)));
+  $('#pmWho').textContent = `Týká se ${who.length} lékařů: ${who.map((d) => d.name).join(', ')}`;
+}
+
 // ---------------- Lekári ----------------
 /** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
 function fixedFor(doc) {
@@ -587,12 +585,35 @@ $('#importData').onchange = async (e) => {
 };
 
 // ---------------- Nastavenia ----------------
+/** Pravidla (odpočinek, minimum na pozici, JIP, den po noční) – vždy z aktuálního stavu. */
+function renderRuleSettings() {
+  $('#minRest').value = state.minRestHours;
+  const pmS = state.positionMin || { ...POSITION_MIN, min: 0 };
+  const posOpts = (sel) => state.positions.map((p) => el('option', { value: p.id, selected: p.id === sel }, p.label));
+  $('#pmPos').replaceChildren(...posOpts(pmS.position));
+  $('#pmMin').value = pmS.min || '';
+  $('#pmExcept').replaceChildren(el('option', { value: '' }, '— nikdo —'), ...posOpts((pmS.except || [])[0]));
+  const pmSet = () => { state.positionMin = { position: $('#pmPos').value, min: +$('#pmMin').value || 0, except: $('#pmExcept').value ? [$('#pmExcept').value] : [] }; save(); pmInfo(); };
+  $('#pmPos').onchange = pmSet; $('#pmMin').onchange = pmSet; $('#pmExcept').onchange = pmSet;
+  pmInfo();
+  const fgr = state.fixedGroup || { ...FIXED_GROUP, count: null };
+  $('#fixedCount').value = fgr.count ?? '';
+  $('#fixedPos').replaceChildren(...state.positions.map((p) => el('label', { style: 'margin-right:10px' },
+    el('input', { type: 'checkbox', checked: (fgr.positions || []).includes(p.id), onchange: (e) => {
+      const ps = new Set(fgr.positions || []);
+      if (e.target.checked) ps.add(p.id); else ps.delete(p.id);
+      state.fixedGroup = { ...fgr, positions: [...ps] }; save(); renderSettings(); renderDoctors();
+    } }), ' ', p.label)));
+  $('#afterNight').replaceChildren(...Object.entries(AFTER_NIGHT_LABELS).map(([k, v]) => el('option', { value: k, selected: k === state.afterNight }, v)));
+}
+
 function endLabel(p) {
   const t = shiftTimes(p);
   const e = t.end % 1440;
   return `${String(Math.floor(e / 60)).padStart(2, '0')}:${String(e % 60).padStart(2, '0')}${t.end > 1440 ? ' (další den)' : ''}`;
 }
 function renderSettings() {
+  renderRuleSettings();
   const tbl = $('#posTable');
   tbl.replaceChildren(
     el('tr', {}, ['Název sloupce', 'Zkratka (id)', 'Jak to lékaři píšou v požadavcích', 'Začátek', 'Délka (h)', 'Konec', 'Jen pracovní dny', ''].map((h) => el('th', {}, h))),

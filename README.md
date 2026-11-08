@@ -141,6 +141,9 @@ Vždy dodržena:
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
 Počet a pozice JIP se mění v Nastavení (offline nástroj) nebo v listu *Nastavení* (Google, 0 = vypnuto). Ručně zadané nižší *Max* u lékaře má přednost.
 
+**Minimum na pozici:** každý lékař, který slouží 2A a neslouží 1A, má měsíčně aspoň **2 služby na 2A** (když to kvůli vyškrtnutým dnům nejde, program to nahlásí).
+Pozice, počet i výjimka se mění v Nastavení / listu *Nastavení* (0 = vypnuto).
+
 Počet OUP služeb (OUP den + OUP noc dohromady) si může každý lékař zvolit v požadavcích – program mu jich nedá víc a snaží se dát aspoň 2.
 Kdo nevyplní, rozhodne program. V přehledu požadavků je součet zvolených OUP oproti potřebě měsíce (cca 62).
 
@@ -148,7 +151,7 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css

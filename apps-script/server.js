@@ -17,6 +17,9 @@ const SETTINGS_DEFAULT = [
   ['Připomenout lékařům bez požadavků – kolik dní před uzávěrkou (0 = v den uzávěrky; NE = nepřipomínat)', '3, 0'],
   ['Lékaři jen na JIP mají přesně tolik služeb měsíčně (0 = pravidlo vypnuto)', 4],
   ['Pozice JIP pro předchozí pravidlo (zkratky oddělené čárkou)', 'l1, l2'],
+  ['Minimum služeb na pozici – pozice (zkratka)', '2A'],
+  ['Minimum služeb na pozici – kolikrát aspoň (0 = vypnuto)', 2],
+  ['Minimum služeb na pozici – neplatí pro lékaře, kteří mají i pozici (zkratky)', '1A'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -106,6 +109,12 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
+/** Pravidlo „minimum na pozici“ z Nastavení (null = vypnuto). */
+function positionMinSetting() {
+  const min = Number(getSetting(10));
+  if (!(min > 0)) return null;
+  return { position: String(getSetting(9)).trim(), min, except: String(getSetting(11)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean) };
+}
 /** Pravidlo „jen JIP = přesně N služeb“ z Nastavení (null = vypnuto). */
 function fixedGroupSetting() {
   const n = Number(getSetting(7));
@@ -325,7 +334,7 @@ function generovat(key, notify) {
     const doctors = readDoctors().filter((d) => d.active);
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
-    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting() });
+    const res = solve({ days, positions, doctors, requests, prev, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
