@@ -127,6 +127,11 @@ Data se ukládají v prohlížeči; *Záloha (JSON)* je uloží do souboru (dopo
 
 ## Pravidla
 
+**Pořadí důležitosti:** 1) odpočinek mezi službami (bezpečnost/zákon), 2) **požadavky lékařů** – vyškrtnuté dny a „ne na pozici" vždy,
+„chci sloužit" přednostně před všemi ostatními pravidly (víkendy, svátky, minima…), **kromě počtu služeb**: přání nad počet služeb
+lékaře (24h, tečky, OUP zvlášť) se nesplní a program to vypíše s důvodem, 3) ostatní pravidla.
+
+
 Vždy dodržena:
 - lékař slouží jen na povolených pozicích a ne ve dny, které si vyškrtl, ani na pozicích, které ten den nechce,
 - nejvýše 1 služba denně a mezi koncem jedné a začátkem další služby aspoň 11 h odpočinku (nastavitelné);
@@ -159,7 +164,7 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-fair.mjs` (víkendy a svátky za 6 měsíců), `node tests/test-plan.mjs` (rozdělení podle zvyklostí), `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-wants.mjs` (přednost přání), `node tests/test-fair.mjs` (víkendy a svátky za 6 měsíců), `node tests/test-plan.mjs` (rozdělení podle zvyklostí), `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css

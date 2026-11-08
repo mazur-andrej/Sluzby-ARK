@@ -345,6 +345,7 @@ function generate(newSeed) {
     const res = solve(solverInput());
     md.grid = res.grid;
     md.lastWarnings = res.warnings;
+    md.lastWants = res.wants;
     save();
     $('#genStatus').textContent = `Hotovo za ${((performance.now() - t0) / 1000).toFixed(1)} s (varianta ${md.seed}).`;
     renderSchedule();
@@ -414,7 +415,8 @@ function renderSchedule() {
     if (!row) continue;
     const pi = row.indexOf(id);
     const wp = w.pos == null ? null : [].concat(w.pos);
-    if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chtěl(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}`);
+    const why = (md.lastWants || []).find((x) => x.doctorId === id && x.day === +w.day && !x.ok)?.reason;
+    if (pi < 0 || (wp && !wp.includes(P[pi].id))) unmet.push(`${docById(id)?.name || id} chtěl(a) ${w.day}.${wp ? ' (' + wp.map(posShort).join('/') + ')' : ''}${why ? ' – ' + why : ''}`);
   }
   let html = '';
   if (!empty.length && !issues.length && !unmet.length && !exceptions.length && !softWarn.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';

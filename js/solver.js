@@ -285,13 +285,25 @@ export function solve(input) {
     place(i, day, p); locked[day - 1][p] = true;
   }
 
-  // 2) Priania "chce slúžiť"
+  // 2) Priania "chce slúžiť" – majú prednosť pred ostatnými pravidlami (víkendy, sviatky, minimá…),
+  //    s výnimkou počtu služieb: priania sa splnia najviac do počtu služieb lekára v danej kategórii.
+  // OUP nemá kategóriu: jej maximum (zvolené lekárom) stráži canAssign
+  const catOfPos = (p) => (catSet.h24.has(p) ? 'h24' : catSet.tecky.has(p) ? 'tecky' : null);
+  const capOf = (i, cat) => (cat === 'h24' ? (fixedOf[i] ?? tgt24[i]?.hi ?? Infinity) : (tgtT[i]?.hi ?? Infinity));
+  const capLabel = (i, cat) => (cat === 'h24' ? `${capOf(i, cat)}× 24h` : `${capOf(i, cat)}× tečka`);
   const wantResults = [];
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
     if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); continue; }
     let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...eligible[w.doc]];
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
+    const beforeCap = cands.slice();
+    cands = cands.filter((p) => { const cat = catOfPos(p); return !cat || catCount(w.doc, cat) < capOf(w.doc, cat); });
+    if (!cands.length && beforeCap.length) {
+      const cat = catOfPos(beforeCap[0]);
+      wantResults.push({ ...w, ok: false, reason: `už má plný počet služeb (${capLabel(w.doc, cat)}) – přání nad počet se nesplní` });
+      continue;
+    }
     // uprednostni pozíciu s najmenej kandidátmi
     cands.sort((a, b) => countCands(w.day, a) - countCands(w.day, b));
     if (cands.length) {
@@ -438,7 +450,7 @@ export function solve(input) {
     grid: assign.map((row) => row.map((i) => (i >= 0 ? docs[i].id : null))),
     cost: Math.round(bestCost),
     warnings, stats, unfilled, plan, fair: { gWe, gHol, weekendSlots: we24, noWeekend: docs.filter((_, i) => expects24[i] && fairNow(i).we === 0).map((d) => d.id),
-      onlyFriday: docs.filter((_, i) => expects24[i] && fairNow(i).we > 0 && fairNow(i).we < FAIRNESS.weekendMin).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos })),
+      onlyFriday: docs.filter((_, i) => expects24[i] && fairNow(i).we > 0 && fairNow(i).we < FAIRNESS.weekendMin).map((d) => d.id) }, wants: wantResults.map((w) => ({ doctorId: docs[w.doc].id, day: w.day, ok: w.ok, pos: w.pos, reason: w.reason || '' })),
   };
 }
 
