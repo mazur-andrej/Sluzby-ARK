@@ -233,12 +233,20 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
   for (let i = header.length; i < header.length + 2; i++) { const m = String(header[i - shift] ?? '').match(DATE_RE); dayCols[i] = m && +m[2] === month ? +m[1] : null; }
   const requests = {}, unknown = [], unclear = [], inactive = [];
   const order = []; // ID lékařů v pořadí řádků = podle zkušenosti
+  // kopie tabulky tak, jak ji lékaři vyplnili (texty buněk podle dne) – k zobrazení v aplikaci
+  const dayLabel = {};
+  header.forEach((h, i) => { const m = String(h ?? '').match(DATE_RE); if (m && +m[2] === month) dayLabel[+m[1]] = String(h).trim(); });
+  const table = { days: Object.keys(dayLabel).map(Number).sort((a, b) => a - b), labels: dayLabel, rows: [] };
   for (const r of rows.slice(hi + 1)) {
     if (!r || !r.some((c) => String(c).trim())) continue;
     const nc = nameCol(r);
     const nameCell = nc >= 0 && dayCols[nc] == null ? String(r[nc]) : '';
+    const trow = { name: nameCell.trim(), cells: {} };
+    r.forEach((c, i) => { const day = dayCols[i]; if (day != null && String(c).trim()) trow.cells[day] = String(c).trim(); });
+    if (trow.name || Object.keys(trow.cells).length) table.rows.push(trow);
     if (!nameCell) continue; // riadok bez mena (napr. pomocné značky)
     const doc = findDoctor(nameCell, doctors);
+    if (doc) trow.id = doc.id;
     if (!doc) { unknown.push(nameCell); continue; }
     if (!order.includes(doc.id)) order.push(doc.id);
     if (!doc.active) { inactive.push(doc.name); continue; }
@@ -259,5 +267,5 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
     });
     requests[doc.id] = req;
   }
-  return { requests, unknown, unclear, inactive, shift, order };
+  return { requests, unknown, unclear, inactive, shift, order, table };
 }

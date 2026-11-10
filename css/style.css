@@ -98,3 +98,13 @@ th.we, td.we { background: var(--we); }
   td.bad { outline: none !important; }
   main { padding: 0; }
 }
+
+/* kopie tabulky požadavků z Excelu: celé texty, zalamované */
+.grid.src td.src { min-width: 64px; max-width: 120px; white-space: normal; word-break: break-word; font-size: 12px; vertical-align: top; padding: 3px 4px; }
+.grid.src th { font-size: 11px; white-space: nowrap; }
+.grid.src td.src.off { background: var(--off); color: var(--offt); }
+.grid.src td.src.want { background: var(--want); color: var(--wantt); font-weight: 600; }
+.grid.src td.src.ban { background: #ffedd5; color: #c2410c; }
+.grid.src td.src.unk { background: #fef9c3; }
+.tag.unk { background: #fef9c3; }
+#srcBox h3 { margin: 18px 0 4px; font-size: 15px; }

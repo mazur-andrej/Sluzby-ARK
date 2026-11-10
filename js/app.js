@@ -165,7 +165,31 @@ function renderAll() {
 }
 
 // ---------------- Požiadavky ----------------
+/** Kopie tabulky z Excelu s požadavky – celé texty lékařů, barevně podle toho, jak je program pochopil. */
+function renderSourceTable() {
+  const box = $('#srcTable');
+  const t = monthData().sourceTable;
+  $('#srcBox').classList.toggle('hidden', !t);
+  if (!t) { box.replaceChildren(); return; }
+  $('#srcTitle').textContent = `Tabulka z Excelu – ${t.file}, list „${t.sheet}“ (tak, jak ji lékaři vyplnili)`;
+  const req = monthData().requests;
+  const cls = (row, d) => {
+    const q = row.id && req[row.id];
+    if (!q) return '';
+    if ((q.off || []).map(Number).includes(d)) return 'off';
+    if ((q.want || []).some((w) => +w.day === d)) return 'want';
+    if ((q.ban || []).some((b) => +b.day === d)) return 'ban';
+    return 'unk';
+  };
+  const head = el('tr', {}, el('th', { class: 'name' }, ''), t.days.map((d) => el('th', {}, t.labels[d] || `${d}.`)));
+  const body = t.rows.map((row) => el('tr', { class: row.id ? '' : 'muted' },
+    el('td', { class: 'name' }, row.name || ''),
+    t.days.map((d) => { const v = row.cells[d]; return el('td', { class: v ? `src ${cls(row, d)}` : 'src' }, v || ''); })));
+  box.replaceChildren(el('thead', {}, head), el('tbody', {}, body));
+}
+
 function renderRequests() {
+  renderSourceTable();
   const md = monthData();
   const ds = days();
   const tbl = $('#reqTable');
@@ -293,6 +317,7 @@ $('#reqFile').onchange = async (e) => {
         parsed = parseRequestsSheet(sh.rows, state.doctors, state.positions, state.current.month, GROUP_ALIASES);
         if (!parsed) throw new Error('V listu jsem nenašel řádek s daty.');
         parsed.sheet = sh.name;
+        monthData().sourceTable = { file: f.name, sheet: sh.name, ...parsed.table };
         // pořadí lékařů v Excelu = podle zkušenosti → převzít do seznamu lékařů
         if (parsed.order?.length) {
           const before = state.doctors.map((d) => d.id).join();
@@ -321,7 +346,7 @@ $('#reqFile').onchange = async (e) => {
 };
 $('#reqClear').onclick = () => {
   if (!confirm('Opravdu smazat všechny požadavky pro tento měsíc?')) return;
-  monthData().requests = {}; save(); renderRequests();
+  monthData().requests = {}; delete monthData().sourceTable; save(); renderRequests();
 };
 $('#prevFile').onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = '';
