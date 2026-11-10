@@ -139,8 +139,14 @@ Vždy dodržena:
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
 **Rozdělení podle zvyklostí:** 24h služby (JIP, anestezie, KPECH) a tečky se dělí každé zvlášť podle toho, kolik jich lékař **obvykle** má
-(sloupce *Obvykle 24h* a *Obvykle teček*, předvyplněno z rozpisů květen–listopad 2026), přepočteno na počet služeb v daném měsíci.
+(sloupec *Obvykle 24h*, předvyplněno z rozpisů květen–listopad 2026), přepočteno na počet služeb v daném měsíci.
 Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze svého rozsahu, je v přehledu vyznačen.
+
+**Tečky** se dělí rovnoměrně mezi všechny lékaře s tečkou: počítá se 24h služby + tečky dohromady, takže kdo má víc 24h služeb,
+má méně teček (a naopak). Za 12 měsíců se to vyrovnává – kdo měl dosud víc, dostane méně (počítá se od prvního rozpisu z programu).
+
+**Střídání:** kdo může obě pozice dvojice, dostane je pokud možno napůl – JIP 1 / JIP 2, tečka 1 / tečka 2, OUP den / OUP noc
+(2 služby = 1 + 1, 3 = 2 + 1). Program také střídá složení: titíž dva lékaři nemají být na 24h službách v jeden den opakovaně.
 Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, lékaři s 2A bez 1A aspoň 2× 2A.
 **Víkendy a svátky (příplatky)** – počítají se jen 24h služby (ne OUP ani tečky):
 - každý lékař má měsíčně aspoň 1 víkendovou 24h službu, pokud to počty dovolí. Víkendových 24h služeb je měsíčně 40–50 a lékařů 51,
@@ -151,7 +157,6 @@ Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, léka
 - přehled ukazuje u každého víkendy tento měsíc a víkendy i svátky za 12 měsíců.
 
 **OUP** (12 h) se počítá zvlášť: každý, kdo OUP slouží, má aspoň 2; kdo chce víc, zvolí si počet v požadavcích.
-Kdo může OUP den i OUP noc, dostane je pokud možno rovnoměrně (2 OUP = 1× den + 1× noc, 3 OUP = 2 + 1).
 
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
 Počet a pozice JIP se mění v Nastavení (offline nástroj) nebo v listu *Nastavení* (Google, 0 = vypnuto). Ručně zadané nižší *Max* u lékaře má přednost.

@@ -63,7 +63,6 @@ if (state.schema < 4) {
   for (const d of state.doctors) {
     const def = DEFAULT_DOCTORS.find((x) => x.id === d.id);
     if (d.typical24 === undefined) d.typical24 = def ? def.typical24 : null;
-    if (d.typicalT === undefined) d.typicalT = def ? def.typicalT : null;
     delete d.target;
   }
   state.schema = 4;
@@ -76,6 +75,8 @@ if (state.schema < 5) {
   }
   state.schema = 5;
 }
+// v6: tečky se dělí rovnoměrně v poolu – obvyklý počet teček se už nepoužívá
+if (state.schema < 6) { for (const d of state.doctors) delete d.typicalT; state.schema = 6; }
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -478,7 +479,7 @@ function renderStats(md, ds) {
   });
   const tbl = $('#statsTable');
   tbl.replaceChildren(
-    el('thead', {}, el('tr', {}, ['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
+    el('thead', {}, el('tr', {}, ['Lékař', '24h (obvykle)', 'Tečky (cíl)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny', 'Vyškrtl'].map((h) => el('th', {}, h)))),
     el('tbody', {}, rows.map((r) => el('tr', {
       class: highlightDoc === r.doc.id ? 'sel' : '',
       title: 'Kliknutím zvýrazníte služby lékaře v rozpisu',
@@ -526,7 +527,7 @@ function pmInfo() {
 
 // ---------------- Lekári ----------------
 /** Plán pro aktuální měsíc: kolik 24h služeb a teček má kdo mít (podle obvyklých počtů). */
-const currentPlan = () => planTargets({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup, positionMin: state.positionMin });
+const currentPlan = () => planTargets({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup, positionMin: state.positionMin, fairHistory: fairHistory() });
 /** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
 const fixedFor = (doc) => fixedCountOf(doc, state.fixedGroup);
 function renderDoctors() {
@@ -535,14 +536,14 @@ function renderDoctors() {
   const sorted = [...state.doctors].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
   const head = el('tr', {}, el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
     el('th', { title: 'Kolik 24h služeb měsíčně lékař obvykle má (z rozpisů květen–listopad). Program podle toho dělí 24h služby, přepočteno na měsíc. Prázdné = průměr.' }, 'Obvykle 24h'),
-    el('th', { title: 'Kolik teček měsíčně lékař obvykle má. Prázdné = průměr.' }, 'Obvykle teček'),
+    el('th', { title: 'Tečky se dělí rovnoměrně mezi lékaře s tečkou: kdo má víc 24h služeb, má méně teček, za 12 měsíců vyrovnaně.' }, 'Teček tento měsíc'),
     el('th', {}, 'Max'), el('th', {}, 'Poznámka'), el('th', {}, ''));
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
   const plan = currentPlan();
   const sumOf = (f) => Math.round(activeDoctors().reduce((a, d) => a + (Number(d[f]) || 0), 0));
   const foot = el('tr', {}, el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
-    el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td', {}, String(sumOf('typicalT'))), el('td'), el('td'), el('td'));
+    el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td'), el('td'), el('td'), el('td'));
   const upd = (doc, fn) => (e) => { fn(e); save(); };
   const body = sorted.map((doc) => el('tr', { class: doc.active ? '' : 'inactive' },
     el('td', { class: 'name' }, el('input', { value: doc.name, onchange: upd(doc, (e) => { doc.name = e.target.value.trim(); }) })),
@@ -557,7 +558,7 @@ function renderDoctors() {
         ? el('input', { type: 'number', min: 0, step: 0.1, value: doc.typical24 ?? '', placeholder: 'průměr', title: plan[doc.id]?.h24 ? `Tento měsíc: ${plan[doc.id].h24.label}` : '', onchange: upd(doc, (e) => { doc.typical24 = e.target.value === '' ? null : +e.target.value; renderDoctors(); }) })
         : ''),
     el('td', {}, doc.positions.some((id) => CATEGORIES.tecky.positions.includes(id))
-      ? el('input', { type: 'number', min: 0, step: 0.1, value: doc.typicalT ?? '', placeholder: 'průměr', title: plan[doc.id]?.tecky ? `Tento měsíc: ${plan[doc.id].tecky.label}` : '', onchange: upd(doc, (e) => { doc.typicalT = e.target.value === '' ? null : +e.target.value; renderDoctors(); }) })
+      ? el('span', { class: 'muted', title: 'Rovnoměrně: 24h + tečky dohromady stejně v poolu' }, plan[doc.id]?.tecky?.label ?? '')
       : ''),
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
     el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
@@ -574,14 +575,14 @@ $('#addDoc').onclick = () => {
   if (state.doctors.some((d) => norm(d.name) === norm(name))) { alert('Lékař s tímto jménem už existuje.'); return; }
   let id = norm(name).replace(/[^a-z0-9]+/g, '-');
   while (state.doctors.some((d) => d.id === id)) id += '-2';
-  state.doctors.push({ id, name, active: true, positions: [], typical24: null, typicalT: null, max: null, note: '' });
+  state.doctors.push({ id, name, active: true, positions: [], typical24: null, max: null, note: '' });
   $('#newDocName').value = '';
   save(); renderDoctors();
   alert(`Lékař ${name} přidán. Nezapomeňte zaškrtnout pozice, na kterých může sloužit.`);
 };
 $('#newDocName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#addDoc').click(); });
 
-// Seznam lékařů ze souboru (sloupce podle záhlaví: ID, Jméno, Aktivní, Pozice, Obvykle 24h, Obvykle teček, Max)
+// Seznam lékařů ze souboru (sloupce podle záhlaví: ID, Jméno, Aktivní, Pozice, Obvykle 24h, Max)
 $('#importDocs').onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = '';
   try {
@@ -599,7 +600,7 @@ $('#importDocs').onchange = async (e) => {
     if (hi < 0) throw new Error('V souboru chybí sloupec „Jméno".');
     const h = rows[hi].map((c) => norm(c));
     const col = (re) => h.findIndex((c) => re.test(c));
-    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), c24 = col(/^obvykle 24/), cT = col(/^obvykle te/), cMax = col(/^max/);
+    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), c24 = col(/^obvykle 24/), cMax = col(/^max/);
     const yes = (v) => /^(true|ano|áno|1|x|yes|pravda)$/i.test(String(v).trim());
     let updated = 0, added = 0;
     for (const r of rows.slice(hi + 1)) {
@@ -611,7 +612,7 @@ $('#importDocs').onchange = async (e) => {
       if (!doc) {
         let nid = id || norm(name).replace(/[^a-z0-9]+/g, '-');
         while (state.doctors.some((d) => d.id === nid)) nid += '-2';
-        doc = { id: nid, name, active: true, positions: [], typical24: null, typicalT: null, max: null, note: '' };
+        doc = { id: nid, name, active: true, positions: [], typical24: null, max: null, note: '' };
         state.doctors.push(doc); added++;
       } else updated++;
       doc.name = name;
@@ -619,7 +620,6 @@ $('#importDocs').onchange = async (e) => {
       if (cPos >= 0 && String(r[cPos]).trim() !== '') doc.positions = String(r[cPos]).split(/[,\s]+/).map((x) => x.trim()).filter((x) => state.positions.some((p) => p.id === x));
       const num = (v) => (String(v ?? '').trim() === '' ? null : +String(v).replace(',', '.'));
       if (c24 >= 0) doc.typical24 = num(r[c24]);
-      if (cT >= 0) doc.typicalT = num(r[cT]);
       if (cMax >= 0) doc.max = String(r[cMax] ?? '').trim() === '' ? null : +r[cMax];
     }
     save(); renderAll();
@@ -628,8 +628,8 @@ $('#importDocs').onchange = async (e) => {
 };
 $('#exportDocs').onclick = () => {
   const q = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Obvykle 24h', 'Max', 'Obvykle teček'].join(';')]
-    .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.typical24 ?? '', d.max ?? '', d.typicalT ?? ''].map(q).join(';')));
+  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Obvykle 24h', 'Max'].join(';')]
+    .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.typical24 ?? '', d.max ?? ''].map(q).join(';')));
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = el('a', { href: URL.createObjectURL(blob), download: 'lekari-SOUKROME.csv' });
   document.body.append(a); a.click(); a.remove();
@@ -700,7 +700,7 @@ function renderSettings() {
   );
   const labels = {
     unfilled: 'Neobsazená služba', target: 'JIP: odchylka od pevného počtu', even: '24h: odchylka od obvyklého počtu', evenRange: '24h: mimo rozmezí',
-    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby', oupMix: 'OUP: nevyvážený den/noc',
+    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)',
     oupMin: 'OUP: pod minimem', weFair: 'Víkendy: spravedlnost za 12 měsíců', holFair: 'Svátky: spravedlnost za 12 měsíců', weMin: 'Měsíc bez víkendu',
     weMulti: 'Víc víkendů než ostatní', gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle',
     posMinMissing: 'Minimum na pozici (2A) nesplněno', fixedMissing: 'JIP: chybí služby do pevného počtu', afterNight: 'Výjimka: služba den po noční/24h',

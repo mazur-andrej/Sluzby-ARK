@@ -152,7 +152,7 @@ function readDoctors() {
     out.push({
       row: i + 1, id, name, active: r[2] === true || String(r[2]).toUpperCase() === 'ANO',
       positions: String(r[3] || '').split(',').map((x) => x.trim()).filter(Boolean),
-      typical24: num(r[4]), typicalT: num(r[9]), max: r[5] === '' ? null : Number(r[5]), token,
+      typical24: num(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
       email: String(r[8] || '').trim(),
     });
   }
@@ -217,14 +217,13 @@ function writeRequest(key, doc, req) {
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
   // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
-  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)', 'Obvykle teček/měs (prázdné = průměr)'];
+  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)'];
   const docS = ensureSheet(SH.DOC, DOC_HEADER);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '', d.typicalT ?? '']);
-    docS.getRange(2, 1, rows.length, 10).setValues(rows);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '']);
+    docS.getRange(2, 1, rows.length, 9).setValues(rows);
   }
   if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue(DOC_HEADER[8]);
-  if (!docS.getRange(1, 10).getValue()) docS.getRange(1, 10).setValue(DOC_HEADER[9]);
   docS.getRange(2, 3, Math.max(docS.getLastRow() - 1, 200), 1).insertCheckboxes();
   docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420); docS.setColumnWidth(9, 220);
   const posS = ensureSheet(SH.POS, ['Zkratka', 'Název sloupce', 'Začátek (HH:MM)', 'Délka (h)', 'Jen pracovní dny', 'Jak to lékaři píšou']);
@@ -437,7 +436,7 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
   s.setFrozenRows(1);
   // přehled vpravo
   const sc = rows[0].length + 2;
-  const stats = [['Lékař', '24h (obvykle)', 'Tečky (obvykle)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.we24, x.weYear, x.holYear, x.hours]));
+  const stats = [['Lékař', '24h (obvykle)', 'Tečky (cíl)', `${OUP_LIMIT.label} (max)`, 'Víkend 24h', 'Víkendy 12 m.', 'Svátky 12 m.', 'Hodiny']].concat(res.stats.map((x) => [x.name, x.exp24 ? `${x.h24} (${x.exp24})` : String(x.h24 || ''), x.expT ? `${x.tecky} (${x.expT})` : String(x.tecky || ''), x.oupMax ? `${x.oup} (${x.oupMax})` : x.oup, x.we24, x.weYear, x.holYear, x.hours]));
   s.getRange(1, sc, stats.length, 8).setValues(stats).setFontSize(9);
   s.getRange(1, sc, 1, 8).setFontWeight('bold').setBackground('#eeeeee');
   if (res.warnings.length) {

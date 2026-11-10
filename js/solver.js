@@ -15,18 +15,19 @@
 //     - víkendy a sviatky (len 24 h, piatok = ½ víkendu): aspoň 1 víkend mesačne, vyrovnanie za 12 mesiacov
 //     - služby rozložené v čase; deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS, weekendWeight } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, MIX_PAIRS, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS, weekendWeight } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,  // neobsadená služba
   target: 40,      // lekár len na JIP: * (počet - pevný počet)^2
   even: 60,        // * (24h služby - cieľ)^2
   evenRange: 250,  // za každú 24h službu mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
-  tEven: 30,       // * (tečky - cieľ)^2
+  tEven: 30,       // * (tečky - cieľ)^2; cieľ = rovnaká záťaž (24h + tečky) v poole, mínus 24h služby lekára
   tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
-  oupMix: 20,      // OUP deň vs. noc nerovnomerne (napr. 2× deň namiesto deň + noc), * (rozdiel/2)^2
+  mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
+  together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
   weMin: 300,      // lekár bez víkendovej 24h služby v mesiaci
@@ -126,12 +127,12 @@ export function solve(input) {
   const catSet = Object.fromEntries(Object.entries(CATEGORIES).map(([k, c]) => [k, new Set(c.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined))]));
   const catCount = (i, k) => { let c = 0; for (const p of docDay[i].values()) if (catSet[k].has(p)) c++; return c; };
   const oupEligible = docs.map((d) => (d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)));
-  // OUP deň/noc: kto môže obe, má ich mať čo najrovnomernejšie (2 OUP = deň + noc)
-  const [oupD, oupN] = OUP_LIMIT.positions.map((id) => posIndex.get(id));
-  const oupBoth = docs.map((d) => oupD !== undefined && oupN !== undefined && OUP_LIMIT.positions.every((id) => (d.positions || []).includes(id)));
+  // Dvojice pozícií (JIP1/2, tečka 1/2, OUP deň/noc): kto môže obe, má ich mať čo najrovnomernejšie
+  const mixPairs = MIX_PAIRS.map((pair) => pair.map((id) => posIndex.get(id))).filter(([a, b]) => a !== undefined && b !== undefined);
+  const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => eligible[i].has(a) && eligible[i].has(b)));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
-  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm });
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, fairHistory: input.fairHistory });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
@@ -204,8 +205,23 @@ export function solve(input) {
     if (oupMax[i] != null && oupSet.has(p) && oupCount(i) >= oupMax[i]) return false;
     return true;
   }
-  function place(i, day, p) { assign[day - 1][p] = i; docDay[i].set(day, p); }
-  function unplace(day, p) { const i = assign[day - 1][p]; if (i >= 0) { docDay[i].delete(day); assign[day - 1][p] = -1; } return i; }
+  // Spoločné 24h služby dvojíc lekárov (aby nesložili stále tí istí spolu) – počíta sa priebežne pri place/unplace
+  const together = new Uint8Array(N * N);
+  let pairCost = 0;
+  const tf = (k) => (k > 1 ? W.together * (k - 1) * (k - 1) : 0);
+  function pairs(i, day, p, dir) {
+    if (!catSet.h24.has(p) || !W.together) return;
+    const row = assign[day - 1];
+    for (const q of catSet.h24) {
+      const j = row[q];
+      if (q === p || j < 0 || j === i) continue;
+      const k = together[i * N + j];
+      pairCost += tf(k + dir) - tf(k);
+      together[i * N + j] = together[j * N + i] = k + dir;
+    }
+  }
+  function place(i, day, p) { pairs(i, day, p, 1); assign[day - 1][p] = i; docDay[i].set(day, p); }
+  function unplace(day, p) { const i = assign[day - 1][p]; if (i >= 0) { assign[day - 1][p] = -1; pairs(i, day, p, -1); docDay[i].delete(day); } return i; }
 
   // Cena jedného lekára
   function docCost(i) {
@@ -223,7 +239,9 @@ export function solve(input) {
     // tečky
     if (tgtT[i]) {
       const k = catCount(i, 'tecky'), t = tgtT[i];
-      c += W.tEven * (k - t.avg) * (k - t.avg) + W.tRange * (Math.max(0, t.lo - k) + Math.max(0, k - t.hi));
+      // cieľ tečiek podľa skutočného počtu 24h služieb: kto má o 24h viac, má o tečku menej
+      const goal = t.load != null ? Math.max(0, t.load - m) : t.avg;
+      c += W.tEven * (k - goal) * (k - goal) + W.tRange * (Math.max(0, t.lo - k) + Math.max(0, k - t.hi));
     }
     if (pmOf[i] != null) { const k = pmCount(i); if (k < pmOf[i]) c += W.posMinMissing * (pmOf[i] - k); }
     // OUP: minimum pre každého, kto OUP slúži; zvolený počet = maximum (tvrdo) a prednosť pri ďalších OUP
@@ -233,11 +251,12 @@ export function solve(input) {
       if (o < minO) c += W.oupMin * (minO - o);
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
-      if (oupBoth[i] && o > 1) {
-        let dd = 0; for (const p of docDay[i].values()) if (p === oupD) dd++;
-        const ex = Math.abs(2 * dd - o) - (o % 2); // 0 = vyrovnané (deň + noc)
-        if (ex > 0) c += W.oupMix * (ex / 2) * (ex / 2);
-      }
+    }
+    for (const [a, b] of mixOf[i]) {
+      let na = 0, nb = 0;
+      for (const p of docDay[i].values()) { if (p === a) na++; else if (p === b) nb++; }
+      const ex = Math.abs(na - nb) - ((na + nb) % 2); // 0 = vyrovnané (1+1, 2+1, …)
+      if (ex > 0) c += W.mix * (ex / 2) * (ex / 2);
     }
     // víkendy a sviatky (24 h) – za 12 mesiacov pomerne k počtu 24 h služieb
     if (in24[i]) {
@@ -317,10 +336,9 @@ export function solve(input) {
 
   function resetToBase() {
     for (let i = 0; i < N; i++) docDay[i].clear();
-    for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) {
-      assign[t - 1][p] = -1;
-      if (baseAssign[t - 1][p] >= 0) place(baseAssign[t - 1][p], t, p);
-    }
+    together.fill(0); pairCost = 0;
+    for (const row of assign) row.fill(-1);
+    for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) if (baseAssign[t - 1][p] >= 0) place(baseAssign[t - 1][p], t, p);
   }
 
   // 3) Greedy: vždy najťažší slot (najmenej kandidátov)
@@ -339,9 +357,9 @@ export function solve(input) {
       if (!bestCands.length) continue;
       let bi = -1, bc = Infinity;
       for (const i of bestCands) {
-        const before = docCost(i);
+        const before = docCost(i), pc = pairCost;
         place(i, t, p);
-        const delta = docCost(i) - before + rand() * 8;
+        const delta = docCost(i) - before + pairCost - pc + rand() * 8;
         unplace(t, p);
         if (delta < bc) { bc = delta; bi = i; }
       }
@@ -350,7 +368,7 @@ export function solve(input) {
   }
 
   function totalCost() {
-    let c = 0;
+    let c = pairCost;
     for (let i = 0; i < N; i++) c += docCost(i);
     for (const [t, p] of slots) if (assign[t - 1][p] < 0) c += W.unfilled;
     return c;
@@ -365,6 +383,7 @@ export function solve(input) {
       const directed = weSlots.length && wdSlots.length && rand() < 0.15;
       const [t, p] = directed ? weSlots[(rand() * weSlots.length) | 0] : slots[(rand() * slots.length) | 0];
       const cur = assign[t - 1][p];
+      const pc0 = pairCost;
       if (!directed && rand() < 0.5) {
         // presun: slot dostane iného lekára
         const i = (rand() * N) | 0;
@@ -373,12 +392,15 @@ export function solve(input) {
         if (!canAssign(i, t, p)) { if (cur >= 0) place(cur, t, p); continue; }
         place(i, t, p);
         const ci = docCost(i), cc = cur >= 0 ? docCost(cur) : 0;
-        const delta = (ci - costs[i]) + (cur >= 0 ? cc - costs[cur] : -W.unfilled);
+        const delta = (ci - costs[i]) + (cur >= 0 ? cc - costs[cur] : -W.unfilled) + pairCost - pc0;
         if (delta <= 0 || rand() < Math.exp(-delta / T)) { costs[i] = ci; if (cur >= 0) costs[cur] = cc; }
         else { unplace(t, p); if (cur >= 0) place(cur, t, p); }
       } else {
         // výmena dvoch slotov
-        const [t2, p2] = directed ? wdSlots[(rand() * wdSlots.length) | 0] : slots[(rand() * slots.length) | 0];
+        // cielene: víkend ↔ všedný deň (rozdelenie víkendov), alebo výmena v ten istý deň (JIP1↔JIP2, tečka 1↔2 …)
+        const same = !directed && rand() < 0.3;
+        const [t2, p2] = directed ? wdSlots[(rand() * wdSlots.length) | 0] : same ? [t, (rand() * P.length) | 0] : slots[(rand() * slots.length) | 0];
+        if (same && (p2 === p || !slotActive[t - 1][p2] || locked[t - 1][p2])) continue;
         const other = assign[t2 - 1][p2];
         if (cur < 0 || other < 0 || cur === other) continue;
         unplace(t, p); unplace(t2, p2);
@@ -388,7 +410,7 @@ export function solve(input) {
         if (!ok2) { if (ok1) unplace(t, p); place(cur, t, p); place(other, t2, p2); continue; }
         place(cur, t2, p2);
         const c1 = docCost(cur), c2 = docCost(other);
-        const delta = c1 - costs[cur] + c2 - costs[other];
+        const delta = c1 - costs[cur] + c2 - costs[other] + pairCost - pc0;
         if (delta <= 0 || rand() < Math.exp(-delta / T)) { costs[cur] = c1; costs[other] = c2; }
         else { unplace(t, p); unplace(t2, p2); place(cur, t, p); place(other, t2, p2); }
       }
@@ -396,7 +418,7 @@ export function solve(input) {
   }
 
   const restarts = input.restarts ?? 4;
-  const iterations = input.iterations ?? 400000;
+  const iterations = input.iterations ?? 150000;
   let best = null, bestCost = Infinity;
   for (let r = 0; r < restarts; r++) {
     resetToBase();
@@ -407,10 +429,9 @@ export function solve(input) {
   }
   // obnov najlepší stav
   for (let i = 0; i < N; i++) docDay[i].clear();
-  for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) {
-    assign[t - 1][p] = -1;
-    if (best[t - 1][p] >= 0) place(best[t - 1][p], t, p);
-  }
+  together.fill(0); pairCost = 0;
+  for (const row of assign) row.fill(-1);
+  for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) if (best[t - 1][p] >= 0) place(best[t - 1][p], t, p);
 
   // Výsledok
   const unfilled = [];
@@ -450,12 +471,12 @@ export function solve(input) {
 }
 
 /**
- * Cieľové počty pre každého lekára: 24h služby a tečky zvlášť, podľa obvyklého počtu
- * (typical24 / typicalT) prepočítaného tak, aby súčet sedel s počtom služieb v mesiaci.
+ * Cieľové počty pre každého lekára: 24h služby podľa obvyklého počtu, tečky rovnomerne v poole (balancePlan);
+ * (typical24) prepočítaného tak, aby súčet sedel s počtom služieb v mesiaci.
  * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
  * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
-export function planTargets({ days, positions, doctors, fixedGroup, positionMin }) {
+export function planTargets({ days, positions, doctors, fixedGroup, positionMin, fairHistory }) {
   const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
   const pmx = positionMin === undefined ? POSITION_MIN : positionMin;
   const out = {};
@@ -469,9 +490,10 @@ export function planTargets({ days, positions, doctors, fixedGroup, positionMin 
       if (!(d.positions || []).some(inCat)) continue;
       const fixed = fixedCountOf(d, fgx);
       if (fixed != null && key === 'h24') { reserved += fixed; continue; }
-      const v = Number(d[cat.field]);
-      members.push({ id: d.id, doc: d, w: v > 0 ? v : null, zero: d[cat.field] === 0 });
+      const v = cat.field ? Number(d[cat.field]) : NaN;
+      members.push({ id: d.id, doc: d, w: v > 0 ? v : null, zero: cat.field ? d[cat.field] === 0 : false });
     }
+    if (cat.balance) { balancePlan(key, members, slots, out, fairHistory || {}); continue; }
     const known = members.filter((m) => m.w != null);
     const avgW = known.length ? known.reduce((a, m) => a + m.w, 0) / known.length : 1;
     for (const m of members) if (m.w == null) m.w = m.zero ? 0 : avgW;
@@ -491,6 +513,32 @@ export function planTargets({ days, positions, doctors, fixedGroup, positionMin 
   return out;
 }
 
+/**
+ * Tečky rovnomerne v poole: všetci majú rovnakú záťaž L (24h + tečky), takže kto má viac 24h, má menej tečiek.
+ * Za 12 mesiacov sa vyrovnáva: kto mal doteraz záťaž nad priemerom poolu, má cieľ nižší (a naopak, polovicu rozdielu).
+ * Vráti pri každom lekárovi aj `load` – cieľ 24h + tečky (solver podľa neho dopočíta tečky zo skutočných 24h).
+ */
+function balancePlan(key, members, slots, out, fh) {
+  if (!members.length) return;
+  const e24 = (m) => out[m.id]?.h24?.avg ?? fixedCountOf(m.doc) ?? 0;
+  // ročné vyrovnanie: priemerná mesačná záťaž lekára oproti poolu
+  const rate = (m) => { const h = fh[m.id]; return h && h.tm > 0 ? h.tl / h.tm : null; };
+  const known = members.filter((m) => rate(m) != null);
+  const mean = known.length ? known.reduce((a, m) => a + rate(m), 0) / known.length : 0;
+  const corr = (m) => (rate(m) == null ? 0 : Math.max(-2, Math.min(2, 0.5 * (rate(m) - mean) * fh[m.id].tm)));
+  const base = members.map((m) => e24(m) + corr(m));
+  // úroveň L tak, aby súčet max(0, L - base) = počet tečiek
+  let lo = 0, hi = Math.max(...base) + slots + 1;
+  for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (base.reduce((a, b) => a + Math.max(0, mid - b), 0) < slots) lo = mid; else hi = mid; }
+  const L = (lo + hi) / 2;
+  members.forEach((m, j) => {
+    const avg = Math.max(0, L - base[j]);
+    let a = Math.floor(avg + 0.2), b = Math.ceil(avg - 0.2);
+    if (b < a) b = a;
+    (out[m.id] ||= {})[key] = { avg, lo: a, hi: b, label: a === b ? String(a) : `${a}–${b}`, load: L - corr(m) };
+  });
+}
+
 /** Predchádzajúci mesiac ku kľúču 'RRRR-MM'. */
 function prevKey(key, n = 1) {
   let [y, m] = key.split('-').map(Number);
@@ -505,11 +553,13 @@ function prevKey(key, n = 1) {
 export function buildFairHistory({ targetKey, past, doctors, positions }) {
   const win = new Set(Array.from({ length: FAIRNESS.windowMonths }, (_, i) => prevKey(targetKey, i + 1)));
   const out = {};
-  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0 })[k] += v; };
+  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0, tl: 0, tm: 0 })[k] += v; };
   if (FAIR_BASE_MONTHS.some((k) => win.has(k))) {
     for (const d of doctors) if (d.fair) for (const k of ['n24', 'we', 'hol', 'noWe']) add(d.id, k, +d.fair[k] || 0);
   }
   const h24labels = new Set(positions.filter((p) => CATEGORIES.h24.positions.includes(p.id)).map((p) => p.label));
+  const pool = new Set(doctors.filter((d) => (d.positions || []).some((id) => CATEGORIES.tecky.positions.includes(id))).map((d) => d.id));
+  const tLabels = new Set(positions.filter((p) => CATEGORIES.tecky.positions.includes(p.id)).map((p) => p.label));
   for (const pm of past || []) {
     if (!win.has(pm.key) || FAIR_BASE_MONTHS.includes(pm.key)) continue;
     const month = {};
@@ -517,13 +567,18 @@ export function buildFairHistory({ targetKey, past, doctors, positions }) {
       const day = pm.days[t];
       if (!day) return;
       row.forEach((id, c) => {
+        if (id && tLabels.has(pm.header[c])) { (month[id] ||= { n: 0, we: 0, t: 0 }).t++; return; }
         if (!id || !h24labels.has(pm.header[c])) return;
         const w = weekendWeight(day);
         add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) add(id, 'hol', 1);
-        (month[id] ||= { n: 0, we: 0 }).n++; month[id].we += w;
+        (month[id] ||= { n: 0, we: 0, t: 0 }).n++; month[id].we += w;
       });
     });
-    for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we < FAIRNESS.weekendMin) add(id, 'noWe', FAIRNESS.weekendMin - x.we);
+    for (const [id, x] of Object.entries(month)) {
+      if (x.n > 0 && x.we < FAIRNESS.weekendMin) add(id, 'noWe', FAIRNESS.weekendMin - x.we);
+      // záťaž 24h + tečky (pre ročné vyrovnanie tečiek) u lekárov z poolu tečiek
+      if (pool.has(id)) { add(id, 'tl', x.n + x.t); add(id, 'tm', 1); }
+    }
   }
   return out;
 }
@@ -578,7 +633,7 @@ export function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin, fairHistory: input.fairHistory });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
