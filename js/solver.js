@@ -506,6 +506,9 @@ export function solve(input) {
  * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
  * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
+/** Strop 24h služieb za mesiac pri prepočte navyše (kto mal obvykle viac, ten svoj počet). */
+const CAP_24 = 4;
+
 export function planTargets({ days, positions, doctors, fixedGroup, positionMin, fairHistory }) {
   const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
   const pmx = positionMin === undefined ? POSITION_MIN : positionMin;
@@ -527,12 +530,25 @@ export function planTargets({ days, positions, doctors, fixedGroup, positionMin,
     const known = members.filter((m) => m.w != null);
     const avgW = known.length ? known.reduce((a, m) => a + m.w, 0) / known.length : 1;
     for (const m of members) if (m.w == null) m.w = m.zero ? 0 : avgW;
-    const sumW = members.reduce((a, m) => a + m.w, 0);
-    const scale = sumW > 0 ? Math.max(0, slots - reserved) / sumW : 0;
+    // prepočet na počet služieb v mesiaci; keď je služieb viac ako obvykle, nikto nemá ísť nad 4
+    // (alebo nad svoj obvyklý počet, ak je vyšší) – navyše dostanú tí, čo majú menej
+    const need = Math.max(0, slots - reserved);
+    const cap = (m) => (key === 'h24' ? Math.max(CAP_24, m.w) : Infinity);
+    const capped = new Set();
+    let scale = 0;
+    for (let k = 0; k < members.length + 1; k++) {
+      const free = members.filter((m) => !capped.has(m));
+      const sumFree = free.reduce((a, m) => a + m.w, 0);
+      const fixedSum = [...capped].reduce((a, m) => a + cap(m), 0);
+      scale = sumFree > 0 ? Math.max(0, need - fixedSum) / sumFree : 0;
+      const over = free.filter((m) => m.w * scale > cap(m) + 1e-9);
+      if (!over.length || scale <= 1) break;
+      over.forEach((m) => capped.add(m));
+    }
     for (const m of members) {
-      let avg = m.w * scale;
+      let avg = capped.has(m) ? cap(m) : m.w * scale;
       // blízko celého čísla (napr. 4,08) → presne to číslo
-      let lo = Math.floor(avg + 0.2), hi = Math.ceil(avg - 0.2);
+      let lo = Math.floor(avg + 0.1), hi = Math.ceil(avg - 0.1);
       if (hi < lo) hi = lo;
       // výslovné pravidlo „minimum na pozícii“ má prednosť pred zvyklosťou
       const pmin = key !== 'h24' ? null : positionMinRules(pmx).filter((r) => cat.positions.includes(r.position))
