@@ -89,6 +89,13 @@ if (state.schema < 8) {
   for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def) { d.fair = structuredClone(def.fair); d.typical24 = def.typical24; } }
   state.schema = 8;
 }
+// v9: pořadí lékařů = podle zkušenosti (jako v Excelu požadavků)
+if (state.schema < 9) {
+  const rank = new Map(DEFAULT_DOCTORS.map((d, i) => [d.id, i]));
+  state.doctors = [...state.doctors].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
+  for (const d of state.doctors) if (DEFAULT_DOCTORS.find((x) => x.id === d.id)?.active === false) d.active = false; // Chobola
+  state.schema = 9;
+}
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -281,6 +288,13 @@ $('#reqFile').onchange = async (e) => {
         parsed = parseRequestsSheet(sh.rows, state.doctors, state.positions, state.current.month, GROUP_ALIASES);
         if (!parsed) throw new Error('V listu jsem nenašel řádek s daty.');
         parsed.sheet = sh.name;
+        // pořadí lékařů v Excelu = podle zkušenosti → převzít do seznamu lékařů
+        if (parsed.order?.length) {
+          const before = state.doctors.map((d) => d.id).join();
+          const rank = new Map(parsed.order.map((id, i) => [id, i]));
+          state.doctors = [...state.doctors].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
+          if (state.doctors.map((d) => d.id).join() !== before) { save(); message('#reqMessages', 'ok', 'Pořadí lékařů (zkušenost) převzato z Excelu – viz karta Lékaři.'); }
+        }
         // tabulka obsahuje všechny lékaře -> nahradí předchozí požadavky (zvolený počet OUP zůstane)
         const md = monthData();
         md.requests = Object.fromEntries(Object.entries(md.requests).filter(([, r]) => r.oupMax).map(([id, r]) => [id, { off: [], want: [], oupMax: r.oupMax }]));
@@ -544,9 +558,11 @@ const fixedFor = (doc) => fixedCountOf(doc, state.fixedGroup);
 function renderDoctors() {
   const P = state.positions;
   const tbl = $('#docTable');
-  const sorted = [...state.doctors].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name, 'cs'));
-  const head = el('tr', {}, el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
-    el('th', { title: 'Kolik 24h služeb měsíčně lékař obvykle má (z rozpisů květen–listopad). Program podle toho dělí 24h služby, přepočteno na měsíc. Prázdné = průměr.' }, 'Obvykle 24h'),
+  // pořadí = podle zkušenosti (nahoře nejzkušenější): přání sloužit mají přednost, tečky / 2A navíc dostanou méně zkušení
+  const sorted = state.doctors;
+  const move = (doc, dir) => { const a = state.doctors, i = a.indexOf(doc), j = i + dir; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; save(); renderDoctors(); };
+  const head = el('tr', {}, el('th', { title: 'Pořadí podle zkušenosti (nahoře nejzkušenější). Převezme se i z pořadí v Excelu s požadavky.' }, 'Zkušenost'), el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
+    el('th', { title: 'Kolik 24h služeb měsíčně lékař obvykle má (z rozpisů za poslední rok). Program podle toho dělí 24h služby, přepočteno na měsíc. Prázdné = průměr.' }, 'Obvykle 24h'),
     el('th', { title: 'Tečky se dělí rovnoměrně mezi lékaře s tečkou: kdo má víc 24h služeb, má méně teček, za 12 měsíců vyrovnaně.' }, 'Teček tento měsíc'),
     el('th', {}, 'Max'),
     el('th', { title: 'OUP je domovské pracoviště: „OUP“ v tabulce požadavků znamená, že je ten den na OUP a službu nechce.' }, 'OUP = pracoviště'),
@@ -554,11 +570,13 @@ function renderDoctors() {
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
   const plan = currentPlan();
   const sumOf = (f) => Math.round(activeDoctors().reduce((a, d) => a + (Number(d[f]) || 0), 0));
-  const foot = el('tr', {}, el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
+  const foot = el('tr', {}, el('td'), el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
     el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td'), el('td'), el('td'), el('td'), el('td'));
   const upd = (doc, fn) => (e) => { fn(e); save(); };
-  const body = sorted.map((doc) => el('tr', { class: doc.active ? '' : 'inactive' },
+  const body = sorted.map((doc, i) => el('tr', { class: doc.active ? '' : 'inactive' },
+    el('td', { class: 'muted', style: 'white-space:nowrap' }, `${i + 1}. `,
+      el('button', { title: 'Zkušenější (výš)', onclick: () => move(doc, -1) }, '↑'), el('button', { title: 'Méně zkušený (níž)', onclick: () => move(doc, 1) }, '↓')),
     el('td', { class: 'name' }, el('input', { value: doc.name, onchange: upd(doc, (e) => { doc.name = e.target.value.trim(); }) })),
     el('td', {}, el('input', { type: 'checkbox', checked: doc.active, onchange: upd(doc, (e) => { doc.active = e.target.checked; renderDoctors(); }) })),
     P.map((p) => el('td', {}, el('input', {
@@ -721,7 +739,7 @@ function renderSettings() {
   );
   const labels = {
     unfilled: 'Neobsazená služba', target: 'JIP: odchylka od pevného počtu', even: '24h: odchylka od obvyklého počtu', evenRange: '24h: mimo rozmezí',
-    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby (pool 1A/plast, 2A/tečky)', oupExtraJip: 'OUP: navíc bez volby (lékaři s JIP)', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)',
+    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby (pool 1A/plast, 2A/tečky)', oupExtraJip: 'OUP: navíc bez volby (lékaři s JIP)', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)', junior: 'Tečky / 2A u zkušenějších (přednost méně zkušeným)', holSame: 'Stejný svátek jako loni',
     oupMin: 'OUP: pod minimem', weFair: 'Víkendy: spravedlnost za 12 měsíců', holFair: 'Svátky: spravedlnost za 12 měsíců', weMin: 'Měsíc bez víkendu',
     weMulti: 'Víc víkendů než ostatní', gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle',
     posMinMissing: 'Minimum na pozici (2A) nesplněno', fixedMissing: 'JIP: chybí služby do pevného počtu', afterNight: 'Výjimka: služba den po noční/24h',

@@ -43,5 +43,23 @@ check(r.wants.find((w) => w.doctorId === kriz.id && w.day === 9)?.ok === false, 
 r = solve({ days, positions: P, doctors: docs, requests: { [kriz.id]: { off: [], oupMax: 2, want: [3, 10, 17, 24].map((day) => ({ day, pos: ['OUPn'] })) } }, seed: 1, fairHistory });
 const oupOk = r.wants.filter((w) => w.doctorId === kriz.id && w.ok).length;
 check(oupOk === 2, `${kriz.name}: chce 4× OUP noc, zvolil max 2 → splněno ${oupOk}`);
+// Senirita: dva lékaři chtějí stejnou jedinou službu → dostane ji zkušenější (výš v seznamu)
+{
+  const { solve } = await import('../js/solver.js');
+  const { buildMonth } = await import('../js/calendar.js');
+  const { DEFAULT_POSITIONS: P } = await import('../js/config.js');
+  const { DEFAULT_DOCTORS } = await import('../js/default-doctors.js');
+  const docs = DEFAULT_DOCTORS.filter((d) => d.active);
+  const only = docs.filter((d) => d.positions.length === 1 && d.positions[0] === 'l1'); // Štětka
+  const plast = docs.filter((d) => d.positions.join() === 'plast'); // jen plastika, seřazení podle zkušenosti
+  const [a, b] = [plast[0], plast[plast.length - 1]];
+  const req = { [a.id]: { off: [], want: [{ day: 10, pos: ['plast'] }] }, [b.id]: { off: [], want: [{ day: 10, pos: ['plast'] }] } };
+  const r = solve({ days: buildMonth(2027, 2), positions: P, doctors: docs, requests: req, seed: 1 });
+  const got = r.grid[9][P.findIndex((p) => p.id === 'plast')];
+  const ok = got === a.id;
+  console.log(ok ? '✔' : '✘', `stejné přání (10. plast): ${a.name} (zkušenější) i ${b.name} → dostal ${docs.find((d) => d.id === got)?.name}`);
+  if (!ok) fails++;
+}
+
 console.log(fails ? `\n${fails} CHYB` : '\nVše v pořádku');
 process.exit(fails ? 1 : 0);

@@ -145,6 +145,9 @@ Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze 
 **Tečky** se dělí rovnoměrně mezi všechny lékaře s tečkou: počítá se 24h služby + tečky dohromady, takže kdo má víc 24h služeb,
 má méně teček (a naopak). Za 12 měsíců se to vyrovnává – kdo měl dosud víc, dostane méně (počítá se od prvního rozpisu z programu).
 
+**Zkušenost:** pořadí lékařů v seznamu (karta Lékaři / list Lékaři, převezme se z pořadí v Excelu požadavků) je podle zkušenosti – nahoře nejzkušenější.
+Když chce víc lékařů stejnou službu, má přednost zkušenější; tečky a 2A navíc (při nedostatku) dostanou přednostně méně zkušení.
+
 **Svátky se střídají rok od roku:** kdo měl loni 24h službu na stejný svátek (Vánoce, Nový rok, Velikonoce…), dostane ho letos jen když chce nebo není jiná možnost.
 
 **Střídání:** kdo může obě pozice dvojice, dostane je pokud možno napůl – JIP 1 / JIP 2, tečka 1 / tečka 2, OUP den / OUP noc

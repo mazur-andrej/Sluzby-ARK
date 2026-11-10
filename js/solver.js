@@ -15,7 +15,7 @@
 //     - víkendy a sviatky (len 24 h, piatok = ½ víkendu): aspoň 1 víkend mesačne, vyrovnanie za 12 mesiacov
 //     - služby rozložené v čase; deň po službe cez noc len výnimočne (afterNight = 'soft')
 
-import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, MIX_PAIRS, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS, weekendWeight } from './config.js';
+import { shiftTimes, DEFAULT_MIN_REST_HOURS, afterNightMode, MIX_PAIRS, JUNIOR_FIRST, OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, FAIRNESS, FAIR_BASE_MONTHS, weekendWeight } from './config.js';
 
 export const DEFAULT_WEIGHTS = {
   unfilled: 1000,  // neobsadená služba
@@ -28,6 +28,7 @@ export const DEFAULT_WEIGHTS = {
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili (pool 1A/plast a 2A/tečky)
   oupExtraJip: 200, // to isté u ostatných (lekári s JIP) – OUP navyše dostanú len výnimočne
   mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
+  junior: 6,       // za každú tečku / 2A u zkúsenejšieho lekára (× senirita 0–1) – pri nedostatku ich dostanú menej skúsení
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
@@ -116,6 +117,8 @@ export function solve(input) {
     (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos == null ? null : [].concat(w.pos) }));
     (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
+  // přání sa plnia v poradí zoznamu lekárov = podľa skúsenosti (skúsenejší má prednosť), v rámci lekára podľa dňa
+  wants.sort((a, b) => a.doc - b.doc || a.day - b.day);
   // Lekári len na JIP: presný počet služieb (max tvrdo, cieľ = počet)
   const fg = input.fixedGroup === undefined ? FIXED_GROUP : input.fixedGroup;
   const fixedOf = docs.map((d) => fixedCountOf(d, fg));
@@ -141,6 +144,9 @@ export function solve(input) {
   // Dvojice pozícií (JIP1/2, tečka 1/2, OUP deň/noc): kto môže obe, má ich mať čo najrovnomernejšie
   const mixPairs = MIX_PAIRS.map((pair) => pair.map((id) => posIndex.get(id))).filter(([a, b]) => a !== undefined && b !== undefined);
   const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => eligible[i].has(a) && eligible[i].has(b)));
+  // senirita podľa poradia v zozname (prvý = najskúsenejší): 1 … 0
+  const senior = docs.map((_, i) => (N > 1 ? 1 - i / (N - 1) : 0));
+  const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
   const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, fairHistory: input.fairHistory });
@@ -267,6 +273,7 @@ export function solve(input) {
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += oupExtraW[i] * (o - minO) * (o - minO);
     }
+    if (W.junior && senior[i] > 0) { let k = 0; for (const p of docDay[i].values()) if (juniorSet.has(p)) k++; c += W.junior * senior[i] * k; }
     for (const [a, b] of mixOf[i]) {
       let na = 0, nb = 0;
       for (const p of docDay[i].values()) { if (p === a) na++; else if (p === b) nb++; }

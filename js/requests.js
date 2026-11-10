@@ -232,6 +232,7 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
   const dayCols = header.map((_, i) => { const m = String(header[i - shift] ?? '').match(DATE_RE); return m && +m[2] === month ? +m[1] : null; });
   for (let i = header.length; i < header.length + 2; i++) { const m = String(header[i - shift] ?? '').match(DATE_RE); dayCols[i] = m && +m[2] === month ? +m[1] : null; }
   const requests = {}, unknown = [], unclear = [], inactive = [];
+  const order = []; // ID lékařů v pořadí řádků = podle zkušenosti
   for (const r of rows.slice(hi + 1)) {
     if (!r || !r.some((c) => String(c).trim())) continue;
     const nc = nameCol(r);
@@ -239,6 +240,7 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
     if (!nameCell) continue; // riadok bez mena (napr. pomocné značky)
     const doc = findDoctor(nameCell, doctors);
     if (!doc) { unknown.push(nameCell); continue; }
+    if (!order.includes(doc.id)) order.push(doc.id);
     if (!doc.active) { inactive.push(doc.name); continue; }
     const req = { off: [], want: [], ban: [], notes: {}, note: '' };
     r.forEach((c, i) => {
@@ -256,5 +258,5 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
     });
     requests[doc.id] = req;
   }
-  return { requests, unknown, unclear, inactive, shift };
+  return { requests, unknown, unclear, inactive, shift, order };
 }

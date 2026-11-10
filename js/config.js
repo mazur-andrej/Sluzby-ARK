@@ -56,6 +56,11 @@ export const CATEGORIES = {
 // Dvojice pozic, které má lékař (pokud může obě) dostávat rovnoměrně: 2 služby = 1× + 1×, 3 = 2 + 1.
 export const MIX_PAIRS = [['l1', 'l2'], ['t1', 't2'], ['OUPd', 'OUPn']];
 
+// SENIORITA: pořadí lékařů v seznamu = podle zkušenosti (nahoře nejzkušenější, jako v Excelu požadavků).
+//  - přání sloužit se plní přednostně zkušenějším (když chtějí stejnou službu),
+//  - pozice JUNIOR_FIRST (tečky, 2A) dostávají při nouzi / navíc přednostně méně zkušení.
+export const JUNIOR_FIRST = ['2A', 't1', 't2'];
+
 // OUP: každý lekár s OUP pozíciou má aspoň `min` OUP služieb; kto chce viac, zvolí si počet v požiadavkách (= maximum).
 // OUP nad minimum (u těch, kdo si počet nezvolili) přednostně lékařům z poolů 1A/plast a 2A/tečky:
 // mají některou z pozic `extraFrom` a žádnou z `extraNot` (JIP).
