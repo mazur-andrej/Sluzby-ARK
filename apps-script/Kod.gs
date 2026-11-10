@@ -476,6 +476,7 @@ const DEFAULT_DOCTORS = [
  {
   "id": "lekar-10",
   "name": "Bartošík",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l1",
@@ -713,6 +714,7 @@ const DEFAULT_DOCTORS = [
  {
   "id": "lekar-06",
   "name": "Jelínek",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l1",
@@ -915,6 +917,7 @@ const DEFAULT_DOCTORS = [
  {
   "id": "lekar-21",
   "name": "Helán",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l2"
@@ -1178,6 +1181,7 @@ const DEFAULT_DOCTORS = [
  {
   "id": "lekar-31",
   "name": "Dadák",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "plast"
@@ -3744,6 +3748,7 @@ const DEFAULT_WEIGHTS = {
   oupExtraJip: 200, // to isté u ostatných (lekári s JIP) – OUP navyše dostanú len výnimočne
   mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
   junior: 6,       // za každú tečku / 2A u zkúsenejšieho lekára (× senirita 0–1) – pri nedostatku ich dostanú menej skúsení
+  emergency: 600,  // služba na pozícii „len v núdzi“ (napr. 1A u Bartošíka) – menej ako neobsadená služba
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
@@ -3821,7 +3826,10 @@ function solve(input) {
   // Sloty: day 1..D, pozícia aktívna v daný deň
   const slotActive = days.map((d) => P.map((p) => !(p.workdaysOnly && !d.workday)));
 
-  const eligible = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
+  // běžné pozice + pozice „jen v nouzi“ (doc.emergency, např. 1A) – ty jen když by služba jinak zůstala neobsazená
+  const regular = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
+  const emerg = docs.map((doc, i) => new Set((doc.emergency || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined && !regular[i].has(x))));
+  const eligible = docs.map((_, i) => new Set([...regular[i], ...emerg[i]]));
   const off = docs.map(() => new Set());
   const ban = docs.map(() => new Set()); // "den|posIdx"
   const wants = [];
@@ -3858,7 +3866,7 @@ function solve(input) {
   const oupExtraW = docs.map((d) => (has(d, OUP_LIMIT.extraFrom) && !has(d, OUP_LIMIT.extraNot) ? W.oupExtra : W.oupExtraJip));
   // Dvojice pozícií (JIP1/2, tečka 1/2, OUP deň/noc): kto môže obe, má ich mať čo najrovnomernejšie
   const mixPairs = MIX_PAIRS.map((pair) => pair.map((id) => posIndex.get(id))).filter(([a, b]) => a !== undefined && b !== undefined);
-  const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => eligible[i].has(a) && eligible[i].has(b)));
+  const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => regular[i].has(a) && regular[i].has(b)));
   // senirita podľa poradia v zozname (prvý = najskúsenejší): 1 … 0
   const senior = docs.map((_, i) => (N > 1 ? 1 - i / (N - 1) : 0));
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
@@ -3988,6 +3996,7 @@ function solve(input) {
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += oupExtraW[i] * (o - minO) * (o - minO);
     }
+    if (emerg[i].size) for (const p of docDay[i].values()) if (emerg[i].has(p)) c += W.emergency;
     if (W.junior && senior[i] > 0) { let k = 0; for (const p of docDay[i].values()) if (juniorSet.has(p)) k++; c += W.junior * senior[i] * k; }
     for (const [a, b] of mixOf[i]) {
       let na = 0, nb = 0;
@@ -4042,7 +4051,7 @@ function solve(input) {
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
     if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); continue; }
-    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...eligible[w.doc]];
+    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]];
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
     const beforeCap = cands.slice();
     cands = cands.filter((p) => { const cat = catOfPos(p); return !cat || catCount(w.doc, cat) < capOf(w.doc, cat); });
@@ -4176,6 +4185,7 @@ function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
+  for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) if (d > 0 && emerg[i].has(p)) warnings.push(`V nouzi: ${docs[i].name} má ${d}. ${P[p].label} (normálně tuto pozici neslouží)`);
   if (anMode !== 'hard') {
     for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) {
       const b = serviceAt(i, d - 1);
@@ -4341,7 +4351,10 @@ function validate(input, grid) {
     if (!id) return;
     const day = t + 1, doc = byId.get(id), pos = P[p];
     const name = doc ? doc.name : id;
-    if (doc && !(doc.positions || []).includes(pos.id)) issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
+    if (doc && !(doc.positions || []).includes(pos.id)) {
+      if ((doc.emergency || []).includes(pos.id)) issues.push({ day, pos: pos.id, level: 'warn', msg: `${name} má ${pos.label} jen v nouzi` });
+      else issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
+    }
     if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });
@@ -4653,6 +4666,7 @@ function readDoctors() {
       typical24: num(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
       email: String(r[8] || '').trim(),
       oupHome: r[9] === true || /^(ano|áno|true|x)$/i.test(String(r[9] || '').trim()),
+      emergency: String(r[10] || '').split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean),
     });
   }
   if (dirty) {
@@ -4716,11 +4730,11 @@ function writeRequest(key, doc, req) {
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
   // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
-  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)', 'OUP = domovské pracoviště (ANO: „OUP“ v požadavcích = službu nechce)'];
+  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)', 'OUP = domovské pracoviště (ANO: „OUP“ v požadavcích = službu nechce)', 'Pozice jen v nouzi (zkratky, např. 1A)'];
   const docS = ensureSheet(SH.DOC, DOC_HEADER);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '', d.oupHome ? 'ANO' : '']);
-    docS.getRange(2, 1, rows.length, 10).setValues(rows);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '', d.oupHome ? 'ANO' : '', (d.emergency || []).join(', ')]);
+    docS.getRange(2, 1, rows.length, 11).setValues(rows);
   }
   if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue(DOC_HEADER[8]);
   if (String(docS.getRange(1, 10).getValue()).indexOf('OUP') < 0) {
@@ -4728,6 +4742,11 @@ function nastavit() {
     docS.getRange(1, 10).setValue(DOC_HEADER[9]);
     const n = docS.getLastRow() - 1;
     if (n > 0) docS.getRange(2, 10, n, 1).setValues(docS.getRange(2, 1, n, 1).getValues().map(([id]) => [DEFAULT_DOCTORS.some((d) => d.id === id && d.oupHome) ? 'ANO' : '']));
+  }
+  if (String(docS.getRange(1, 11).getValue()).indexOf('nouzi') < 0) {
+    docS.getRange(1, 11).setValue(DOC_HEADER[10]);
+    const n = docS.getLastRow() - 1;
+    if (n > 0) docS.getRange(2, 11, n, 1).setValues(docS.getRange(2, 1, n, 1).getValues().map(([id]) => [((DEFAULT_DOCTORS.find((d) => d.id === id) || {}).emergency || []).join(', ')]));
   }
   docS.getRange(2, 3, Math.max(docS.getLastRow() - 1, 200), 1).insertCheckboxes();
   docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420); docS.setColumnWidth(9, 220);

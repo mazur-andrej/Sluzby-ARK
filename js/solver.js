@@ -29,6 +29,7 @@ export const DEFAULT_WEIGHTS = {
   oupExtraJip: 200, // to isté u ostatných (lekári s JIP) – OUP navyše dostanú len výnimočne
   mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
   junior: 6,       // za každú tečku / 2A u zkúsenejšieho lekára (× senirita 0–1) – pri nedostatku ich dostanú menej skúsení
+  emergency: 600,  // služba na pozícii „len v núdzi“ (napr. 1A u Bartošíka) – menej ako neobsadená služba
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
@@ -106,7 +107,10 @@ export function solve(input) {
   // Sloty: day 1..D, pozícia aktívna v daný deň
   const slotActive = days.map((d) => P.map((p) => !(p.workdaysOnly && !d.workday)));
 
-  const eligible = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
+  // běžné pozice + pozice „jen v nouzi“ (doc.emergency, např. 1A) – ty jen když by služba jinak zůstala neobsazená
+  const regular = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
+  const emerg = docs.map((doc, i) => new Set((doc.emergency || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined && !regular[i].has(x))));
+  const eligible = docs.map((_, i) => new Set([...regular[i], ...emerg[i]]));
   const off = docs.map(() => new Set());
   const ban = docs.map(() => new Set()); // "den|posIdx"
   const wants = [];
@@ -143,7 +147,7 @@ export function solve(input) {
   const oupExtraW = docs.map((d) => (has(d, OUP_LIMIT.extraFrom) && !has(d, OUP_LIMIT.extraNot) ? W.oupExtra : W.oupExtraJip));
   // Dvojice pozícií (JIP1/2, tečka 1/2, OUP deň/noc): kto môže obe, má ich mať čo najrovnomernejšie
   const mixPairs = MIX_PAIRS.map((pair) => pair.map((id) => posIndex.get(id))).filter(([a, b]) => a !== undefined && b !== undefined);
-  const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => eligible[i].has(a) && eligible[i].has(b)));
+  const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => regular[i].has(a) && regular[i].has(b)));
   // senirita podľa poradia v zozname (prvý = najskúsenejší): 1 … 0
   const senior = docs.map((_, i) => (N > 1 ? 1 - i / (N - 1) : 0));
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
@@ -273,6 +277,7 @@ export function solve(input) {
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += oupExtraW[i] * (o - minO) * (o - minO);
     }
+    if (emerg[i].size) for (const p of docDay[i].values()) if (emerg[i].has(p)) c += W.emergency;
     if (W.junior && senior[i] > 0) { let k = 0; for (const p of docDay[i].values()) if (juniorSet.has(p)) k++; c += W.junior * senior[i] * k; }
     for (const [a, b] of mixOf[i]) {
       let na = 0, nb = 0;
@@ -327,7 +332,7 @@ export function solve(input) {
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
     if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); continue; }
-    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...eligible[w.doc]];
+    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]];
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
     const beforeCap = cands.slice();
     cands = cands.filter((p) => { const cat = catOfPos(p); return !cat || catCount(w.doc, cat) < capOf(w.doc, cat); });
@@ -461,6 +466,7 @@ export function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
+  for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) if (d > 0 && emerg[i].has(p)) warnings.push(`V nouzi: ${docs[i].name} má ${d}. ${P[p].label} (normálně tuto pozici neslouží)`);
   if (anMode !== 'hard') {
     for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) {
       const b = serviceAt(i, d - 1);
@@ -626,7 +632,10 @@ export function validate(input, grid) {
     if (!id) return;
     const day = t + 1, doc = byId.get(id), pos = P[p];
     const name = doc ? doc.name : id;
-    if (doc && !(doc.positions || []).includes(pos.id)) issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
+    if (doc && !(doc.positions || []).includes(pos.id)) {
+      if ((doc.emergency || []).includes(pos.id)) issues.push({ day, pos: pos.id, level: 'warn', msg: `${name} má ${pos.label} jen v nouzi` });
+      else issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
+    }
     if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });

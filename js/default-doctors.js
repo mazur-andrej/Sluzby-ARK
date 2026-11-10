@@ -311,6 +311,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-10",
   "name": "Bartošík",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l1",
@@ -548,6 +549,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-06",
   "name": "Jelínek",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l1",
@@ -750,6 +752,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-21",
   "name": "Helán",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "l2"
@@ -1013,6 +1016,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-31",
   "name": "Dadák",
+  "emergency": ["1A"],
   "active": true,
   "positions": [
    "plast"

@@ -96,6 +96,11 @@ if (state.schema < 9) {
   for (const d of state.doctors) if (DEFAULT_DOCTORS.find((x) => x.id === d.id)?.active === false) d.active = false; // Chobola
   state.schema = 9;
 }
+// v10: pozice „jen v nouzi“ (Bartošík, Dadák, Helán, Jelínek → 1A)
+if (state.schema < 10) {
+  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.emergency && !d.emergency) d.emergency = [...def.emergency]; }
+  state.schema = 10;
+}
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -566,13 +571,14 @@ function renderDoctors() {
     el('th', { title: 'Tečky se dělí rovnoměrně mezi lékaře s tečkou: kdo má víc 24h služeb, má méně teček, za 12 měsíců vyrovnaně.' }, 'Teček tento měsíc'),
     el('th', {}, 'Max'),
     el('th', { title: 'OUP je domovské pracoviště: „OUP“ v tabulce požadavků znamená, že je ten den na OUP a službu nechce.' }, 'OUP = pracoviště'),
+    el('th', { title: 'Pozice, které lékař normálně neslouží, ale v nouzi může (zkratky oddělené čárkou, např. 1A). Program je použije, jen když by služba jinak zůstala neobsazená.' }, 'Jen v nouzi'),
     el('th', {}, 'Poznámka'), el('th', {}, ''));
   const counts = P.map((p) => activeDoctors().filter((d) => d.positions.includes(p.id)).length);
   const plan = currentPlan();
   const sumOf = (f) => Math.round(activeDoctors().reduce((a, d) => a + (Number(d[f]) || 0), 0));
   const foot = el('tr', {}, el('td'), el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
-    el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td'), el('td'), el('td'), el('td'), el('td'));
+    el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td'), el('td'), el('td'), el('td'), el('td'), el('td'));
   const upd = (doc, fn) => (e) => { fn(e); save(); };
   const body = sorted.map((doc, i) => el('tr', { class: doc.active ? '' : 'inactive' },
     el('td', { class: 'muted', style: 'white-space:nowrap' }, `${i + 1}. `,
@@ -593,6 +599,7 @@ function renderDoctors() {
       : ''),
     el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
     el('td', {}, el('input', { type: 'checkbox', checked: !!doc.oupHome, onchange: upd(doc, (e) => { doc.oupHome = e.target.checked; }) })),
+    el('td', {}, el('input', { value: (doc.emergency || []).join(', '), placeholder: '—', style: 'width:70px', onchange: upd(doc, (e) => { doc.emergency = e.target.value.split(/[,\s]+/).filter((x) => state.positions.some((p) => p.id === x)); e.target.value = doc.emergency.join(', '); }) })),
     el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
     el('td', {}, el('button', { class: 'danger', title: 'Odstranit lékaře', onclick: () => {
       if (!confirm(`Odstranit lékaře ${doc.name}? (Pokud má jen přestávku, raději odškrtněte „Aktivní".)`)) return;
@@ -632,7 +639,7 @@ $('#importDocs').onchange = async (e) => {
     if (hi < 0) throw new Error('V souboru chybí sloupec „Jméno".');
     const h = rows[hi].map((c) => norm(c));
     const col = (re) => h.findIndex((c) => re.test(c));
-    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), c24 = col(/^obvykle 24/), cMax = col(/^max/), cHome = col(/^oup = prac|^oup.*domov|pracovist/);
+    const cId = col(/^id$/), cName = col(/^(jmeno|meno|name)$/), cAct = col(/^aktiv/), cPos = col(/^pozic/), c24 = col(/^obvykle 24/), cMax = col(/^max/), cHome = col(/^oup = prac|^oup.*domov|pracovist/), cEm = col(/nouz/);
     const yes = (v) => /^(true|ano|áno|1|x|yes|pravda)$/i.test(String(v).trim());
     let updated = 0, added = 0;
     for (const r of rows.slice(hi + 1)) {
@@ -654,6 +661,7 @@ $('#importDocs').onchange = async (e) => {
       if (c24 >= 0) doc.typical24 = num(r[c24]);
       if (cMax >= 0) doc.max = String(r[cMax] ?? '').trim() === '' ? null : +r[cMax];
       if (cHome >= 0) doc.oupHome = yes(r[cHome]);
+      if (cEm >= 0) doc.emergency = String(r[cEm] || '').split(/[,\s]+/).filter((x) => state.positions.some((p) => p.id === x));
     }
     save(); renderAll();
     message('#docMessages', 'ok', `Seznam načten: ${updated} lékařů aktualizováno, ${added} přidáno.`);
@@ -661,8 +669,8 @@ $('#importDocs').onchange = async (e) => {
 };
 $('#exportDocs').onclick = () => {
   const q = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Obvykle 24h', 'Max', 'OUP = pracoviště'].join(';')]
-    .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.typical24 ?? '', d.max ?? '', d.oupHome ? 'ANO' : ''].map(q).join(';')));
+  const lines = [['ID', 'Jméno', 'Aktivní', 'Pozice', 'Obvykle 24h', 'Max', 'OUP = pracoviště', 'Jen v nouzi'].join(';')]
+    .concat(state.doctors.map((d) => [d.id, d.name, d.active ? 'ANO' : 'NE', d.positions.join(', '), d.typical24 ?? '', d.max ?? '', d.oupHome ? 'ANO' : '', (d.emergency || []).join(', ')].map(q).join(';')));
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = el('a', { href: URL.createObjectURL(blob), download: 'lekari-SOUKROME.csv' });
   document.body.append(a); a.click(); a.remove();
@@ -739,7 +747,7 @@ function renderSettings() {
   );
   const labels = {
     unfilled: 'Neobsazená služba', target: 'JIP: odchylka od pevného počtu', even: '24h: odchylka od obvyklého počtu', evenRange: '24h: mimo rozmezí',
-    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby (pool 1A/plast, 2A/tečky)', oupExtraJip: 'OUP: navíc bez volby (lékaři s JIP)', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)', junior: 'Tečky / 2A u zkušenějších (přednost méně zkušeným)', holSame: 'Stejný svátek jako loni',
+    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby (pool 1A/plast, 2A/tečky)', oupExtraJip: 'OUP: navíc bez volby (lékaři s JIP)', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)', junior: 'Tečky / 2A u zkušenějších (přednost méně zkušeným)', emergency: 'Služba na pozici „jen v nouzi“', holSame: 'Stejný svátek jako loni',
     oupMin: 'OUP: pod minimem', weFair: 'Víkendy: spravedlnost za 12 měsíců', holFair: 'Svátky: spravedlnost za 12 měsíců', weMin: 'Měsíc bez víkendu',
     weMulti: 'Víc víkendů než ostatní', gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle',
     posMinMissing: 'Minimum na pozici (2A) nesplněno', fixedMissing: 'JIP: chybí služby do pevného počtu', afterNight: 'Výjimka: služba den po noční/24h',

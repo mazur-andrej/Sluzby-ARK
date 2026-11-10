@@ -159,6 +159,7 @@ function readDoctors() {
       typical24: num(r[4]), max: r[5] === '' ? null : Number(r[5]), token,
       email: String(r[8] || '').trim(),
       oupHome: r[9] === true || /^(ano|áno|true|x)$/i.test(String(r[9] || '').trim()),
+      emergency: String(r[10] || '').split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean),
     });
   }
   if (dirty) {
@@ -222,11 +223,11 @@ function writeRequest(key, doc, req) {
 // ---------------------------------------------------------------- počáteční nastavení
 function nastavit() {
   // Pokud list Lékaři už existuje (např. importovaný soukromý seznam se jmény), zůstane beze změny.
-  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)', 'OUP = domovské pracoviště (ANO: „OUP“ v požadavcích = službu nechce)'];
+  const DOC_HEADER = ['ID', 'Jméno', 'Aktivní', 'Pozice (zkratky oddělené čárkou)', 'Obvykle 24h služeb/měs (prázdné = průměr)', 'Max', 'Token (neměnit)', 'Osobní odkaz pro lékaře', 'E-mail (pro rozeslání rozpisu)', 'OUP = domovské pracoviště (ANO: „OUP“ v požadavcích = službu nechce)', 'Pozice jen v nouzi (zkratky, např. 1A)'];
   const docS = ensureSheet(SH.DOC, DOC_HEADER);
   if (docS.getLastRow() < 2) {
-    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '', d.oupHome ? 'ANO' : '']);
-    docS.getRange(2, 1, rows.length, 10).setValues(rows);
+    const rows = DEFAULT_DOCTORS.map((d) => [d.id, d.name, !!d.active, d.positions.join(', '), d.typical24 ?? '', d.max == null ? '' : d.max, newToken(), '', '', d.oupHome ? 'ANO' : '', (d.emergency || []).join(', ')]);
+    docS.getRange(2, 1, rows.length, 11).setValues(rows);
   }
   if (!docS.getRange(1, 9).getValue()) docS.getRange(1, 9).setValue(DOC_HEADER[8]);
   if (String(docS.getRange(1, 10).getValue()).indexOf('OUP') < 0) {
@@ -234,6 +235,11 @@ function nastavit() {
     docS.getRange(1, 10).setValue(DOC_HEADER[9]);
     const n = docS.getLastRow() - 1;
     if (n > 0) docS.getRange(2, 10, n, 1).setValues(docS.getRange(2, 1, n, 1).getValues().map(([id]) => [DEFAULT_DOCTORS.some((d) => d.id === id && d.oupHome) ? 'ANO' : '']));
+  }
+  if (String(docS.getRange(1, 11).getValue()).indexOf('nouzi') < 0) {
+    docS.getRange(1, 11).setValue(DOC_HEADER[10]);
+    const n = docS.getLastRow() - 1;
+    if (n > 0) docS.getRange(2, 11, n, 1).setValues(docS.getRange(2, 1, n, 1).getValues().map(([id]) => [((DEFAULT_DOCTORS.find((d) => d.id === id) || {}).emergency || []).join(', ')]));
   }
   docS.getRange(2, 3, Math.max(docS.getLastRow() - 1, 200), 1).insertCheckboxes();
   docS.setColumnWidth(2, 140); docS.setColumnWidth(4, 220); docS.setColumnWidth(8, 420); docS.setColumnWidth(9, 220);
