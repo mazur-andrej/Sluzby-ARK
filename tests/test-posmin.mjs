@@ -25,6 +25,18 @@ for (const [y, m] of [[2026, 12], [2027, 2], [2027, 7]]) {
   check(validate({ days, positions: P, doctors, requests: {} }, r.grid).filter((i) => i.level !== 'warn').length === 0, `${m}/${y}: žádné porušení`);
 }
 
+// lékař2 aspoň 1× u lékařů s lékař2 bez lékař1 (plastika / 1A + JIP 2)
+{
+  const il2 = P.findIndex((p) => p.id === 'l2');
+  const g2 = doctors.filter((d) => d.positions.includes('l2') && !d.positions.includes('l1'));
+  for (const [y, m] of [[2026, 12], [2027, 3]]) {
+    const days = buildMonth(y, m);
+    const r = solve({ days, positions: P, doctors, requests: {}, seed: 2 });
+    const c = g2.map((d) => r.grid.filter((row) => row[il2] === d.id).length);
+    check(c.every((x) => x >= 1), `${m}/${y}: lékař2 aspoň 1× (${g2.length} lékařů: ${c.join(',')})`);
+  }
+}
+
 // lékař, který může jen 1 den → 1× a upozornění
 const days = buildMonth(2026, 12);
 const who = group[0];

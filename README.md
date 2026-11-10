@@ -147,7 +147,8 @@ má méně teček (a naopak). Za 12 měsíců se to vyrovnává – kdo měl dos
 
 **Střídání:** kdo může obě pozice dvojice, dostane je pokud možno napůl – JIP 1 / JIP 2, tečka 1 / tečka 2, OUP den / OUP noc
 (2 služby = 1 + 1, 3 = 2 + 1). Program také střídá složení: titíž dva lékaři nemají být na 24h službách v jeden den opakovaně.
-Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, lékaři s 2A bez 1A aspoň 2× 2A.
+Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, lékaři s 2A bez 1A aspoň 2× 2A,
+lékaři s lékař2 bez lékař1 (JIP 2 vedle plastiky / 1A) aspoň 1× lékař2.
 **Víkendy a svátky (příplatky)** – počítají se jen 24h služby (ne OUP ani tečky):
 - každý lékař má měsíčně aspoň 1 víkendovou 24h službu, pokud to počty dovolí. Víkendových 24h služeb je měsíčně 40–50 a lékařů 51,
   takže v některých měsících 3–11 lékařů víkend mít nemůže – program je vypíše a příští měsíc mají přednost (střídání);

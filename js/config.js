@@ -35,10 +35,14 @@ export const afterNightMode = (input) => (input.afterNight || (input.nextDayOff 
 // count = null → pravidlo vypnuté.
 export const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
 
-// Minimum služieb na pozícii: každý lekár s pozíciou `position`, ktorý NEMÁ žiadnu z `except`,
-// má mesačne aspoň `min` služieb na tejto pozícii (napr. 2A aspoň 2×, okrem tých, čo slúžia aj 1A).
-// min = 0 / null → pravidlo vypnuté.
-export const POSITION_MIN = { position: '2A', min: 2, except: ['1A'] };
+// Minimum služieb na pozícii (zoznam pravidiel): každý lekár s pozíciou `position`, ktorý NEMÁ žiadnu z `except`,
+// má mesačne aspoň `min` služieb na tejto pozícii. min = 0 → pravidlo vypnuté.
+//  - 2A aspoň 2×, okrem tých, čo slúžia aj 1A
+//  - lékař2 (JIP 2) aspoň 1× u tých, čo slúžia JIP 2 popri plastike / 1A (nie lekári s lékař1)
+export const POSITION_MIN = [
+  { position: '2A', min: 2, except: ['1A'] },
+  { position: 'l2', min: 1, except: ['l1'] },
+];
 
 // ROZDELENIE PODĽA ZVYKLOSTÍ: 24 h služby a tečky sa rozdeľujú každé zvlášť podľa toho,
 // koľko ich lekár obvykle mal (typical24 pri lekárovi, prepočítané na počet služieb v mesiaci); tečky rovnomerne (balance).

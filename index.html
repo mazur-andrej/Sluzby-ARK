@@ -103,10 +103,8 @@ Dvořáková – nemůže 24.12., 25.12.</pre>
       <div class="card">
         <h3>Minimum služeb na pozici</h3>
         <p class="muted">Každý lékař s touto pozicí (kromě těch, kteří mají i vybranou výjimku) dostane měsíčně aspoň tolik služeb právě na ní. Když to kvůli vyškrtnutým dnům nejde, program to nahlásí. 0 = vypnuto.</p>
-        <p><label>Pozice: <select id="pmPos"></select></label>
-           <label style="margin-left:12px">aspoň <input id="pmMin" type="number" min="0" max="31" style="width:56px">×</label>
-           <label style="margin-left:12px">neplatí pro lékaře s pozicí: <select id="pmExcept"></select></label></p>
-        <p id="pmWho" class="muted"></p>
+        <div id="pmRules"></div>
+        <p><button id="pmAdd">+ Přidat pravidlo</button></p>
       </div>
       <div class="card">
         <h3>Lékaři jen na JIP – pevný počet služeb</h3>

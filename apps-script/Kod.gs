@@ -97,10 +97,14 @@ const afterNightMode = (input) => (input.afterNight || (input.nextDayOff === fal
 // count = null → pravidlo vypnuté.
 const FIXED_GROUP = { label: 'JIP', positions: ['l1', 'l2'], count: 4 };
 
-// Minimum služieb na pozícii: každý lekár s pozíciou `position`, ktorý NEMÁ žiadnu z `except`,
-// má mesačne aspoň `min` služieb na tejto pozícii (napr. 2A aspoň 2×, okrem tých, čo slúžia aj 1A).
-// min = 0 / null → pravidlo vypnuté.
-const POSITION_MIN = { position: '2A', min: 2, except: ['1A'] };
+// Minimum služieb na pozícii (zoznam pravidiel): každý lekár s pozíciou `position`, ktorý NEMÁ žiadnu z `except`,
+// má mesačne aspoň `min` služieb na tejto pozícii. min = 0 → pravidlo vypnuté.
+//  - 2A aspoň 2×, okrem tých, čo slúžia aj 1A
+//  - lékař2 (JIP 2) aspoň 1× u tých, čo slúžia JIP 2 popri plastike / 1A (nie lekári s lékař1)
+const POSITION_MIN = [
+  { position: '2A', min: 2, except: ['1A'] },
+  { position: 'l2', min: 1, except: ['l1'] },
+];
 
 // ROZDELENIE PODĽA ZVYKLOSTÍ: 24 h služby a tečky sa rozdeľujú každé zvlášť podľa toho,
 // koľko ich lekár obvykle mal (typical24 pri lekárovi, prepočítané na počet služieb v mesiaci); tečky rovnomerne (balance).
@@ -1299,7 +1303,12 @@ function fixedCountOf(doc, fixedGroup = FIXED_GROUP) {
   return doc.max != null && doc.max !== '' ? Math.min(+fixedGroup.count, +doc.max) : +fixedGroup.count;
 }
 /** Platí pre lekára pravidlo „minimum na pozícii"? Vráti minimum alebo null. */
-function positionMinOf(doc, positionMin = POSITION_MIN) {
+/** Pravidlá „minimum na pozícii“ ako zoznam (prijme jedno pravidlo, zoznam alebo null), len zapnuté. */
+function positionMinRules(x = POSITION_MIN) {
+  return [].concat(x || []).filter((r) => r && r.position && +r.min > 0);
+}
+/** Minimum pre lekára podľa jedného pravidla, alebo null. */
+function positionMinOf(doc, positionMin) {
   const ps = doc.positions || [];
   if (!positionMin || !(positionMin.min > 0) || !ps.includes(positionMin.position)) return null;
   return (positionMin.except || []).some((x) => ps.includes(x)) ? null : +positionMin.min;
@@ -1323,7 +1332,7 @@ function mulberry32(seed) {
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
- *   positionMin: { position, min, except:[id] } – minimum služieb na pozícii (null = vypnuté),
+ *   positionMin: [{ position, min, except:[id] }] – minimá služieb na pozíciách (jedno pravidlo alebo zoznam; null = vypnuté),
  *   fixedGroup: { positions:[id], count } – lekári len na týchto pozíciách majú presne count služieb (null = vypnuté),
  *   doctors: [{id, name, positions:[posId], target, max}],
  *   requests: { [doctorId]: { off:[day], want:[{day, pos?: id|[id]}], ban:[{day, pos:[id]}], oupMax?: number } },
@@ -1363,9 +1372,10 @@ function solve(input) {
   const fixedOf = docs.map((d) => fixedCountOf(d, fg));
   // Minimum na pozícii (napr. 2A aspoň 2× pre lekárov, ktorí nemajú 1A)
   const pm = input.positionMin === undefined ? POSITION_MIN : input.positionMin;
-  const pmIdx = pm && pm.min > 0 ? posIndex.get(pm.position) : undefined;
-  const pmOf = docs.map((d) => (pmIdx === undefined ? null : positionMinOf(d, pm)));
-  const pmCount = (i) => { let c = 0; for (const p of docDay[i].values()) if (p === pmIdx) c++; return c; };
+  const pmRules = positionMinRules(pm).map((r) => ({ ...r, idx: posIndex.get(r.position) })).filter((r) => r.idx !== undefined);
+  // pre každého lekára zoznam { idx, min }
+  const pmOf = docs.map((d) => pmRules.map((r) => ({ idx: r.idx, min: positionMinOf(d, r) })).filter((x) => x.min != null));
+  const posCount = (i, idx) => { let c = 0; for (const p of docDay[i].values()) if (p === idx) c++; return c; };
   const maxOf = docs.map((d, i) => Math.min(d.max != null && d.max !== '' ? +d.max : Infinity, fixedOf[i] ?? Infinity));
   // OUP: počet zvolený lekárom = maximum, minimum OUP_LIMIT.min
   const oupSet = new Set(OUP_LIMIT.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
@@ -1495,7 +1505,7 @@ function solve(input) {
       const goal = t.load != null ? Math.max(0, t.load - m) : t.avg;
       c += W.tEven * (k - goal) * (k - goal) + W.tRange * (Math.max(0, t.lo - k) + Math.max(0, k - t.hi));
     }
-    if (pmOf[i] != null) { const k = pmCount(i); if (k < pmOf[i]) c += W.posMinMissing * (pmOf[i] - k); }
+    for (const r of pmOf[i]) { const k = posCount(i, r.idx); if (k < r.min) c += W.posMinMissing * (r.min - k); }
     // OUP: minimum pre každého, kto OUP slúži; zvolený počet = maximum (tvrdo) a prednosť pri ďalších OUP
     if (oupEligible[i]) {
       const o = oupCount(i);
@@ -1565,8 +1575,9 @@ function solve(input) {
       wantResults.push({ ...w, ok: false, reason: `už má plný počet služeb (${capLabel(w.doc, cat)}) – přání nad počet se nesplní` });
       continue;
     }
-    // uprednostni pozíciu s najmenej kandidátmi
-    cands.sort((a, b) => countCands(w.day, a) - countCands(w.day, b));
+    // uprednostni pozíciu, na ktorej lekárovi chýba minimum (napr. lékař2 aspoň 1×), potom tú s najmenej kandidátmi
+    const needs = (p) => (pmOf[w.doc].some((r) => r.idx === p && posCount(w.doc, p) < r.min) ? 0 : 1);
+    cands.sort((a, b) => needs(a) - needs(b) || countCands(w.day, a) - countCands(w.day, b));
     if (cands.length) {
       place(w.doc, w.day, cands[0]); locked[w.day - 1][cands[0]] = true;
       wantResults.push({ ...w, ok: true, pos: [P[cands[0]].id] });
@@ -1696,7 +1707,7 @@ function solve(input) {
     }
   }
   for (let i = 0; i < N; i++) {
-    if (pmOf[i] != null && pmCount(i) < pmOf[i]) warnings.push(`${docs[i].name} má jen ${pmCount(i)}× ${P[pmIdx].label} (minimum ${pmOf[i]}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    for (const r of pmOf[i]) if (posCount(i, r.idx) < r.min) warnings.push(`${docs[i].name} má jen ${posCount(i, r.idx)}× ${P[r.idx].label} (minimum ${r.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (fixedOf[i] != null && docDay[i].size < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${docDay[i].size} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (oupEligible[i] && oupCount(i) < OUP_LIMIT.min) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (minimum ${OUP_LIMIT.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (tgt24[i] && catCount(i, 'h24') < tgt24[i].lo) warnings.push(`${docs[i].name} má jen ${catCount(i, 'h24')}× 24h (obvykle ${tgt24[i].label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
@@ -1757,7 +1768,8 @@ function planTargets({ days, positions, doctors, fixedGroup, positionMin, fairHi
       let lo = Math.floor(avg + 0.2), hi = Math.ceil(avg - 0.2);
       if (hi < lo) hi = lo;
       // výslovné pravidlo „minimum na pozícii“ má prednosť pred zvyklosťou
-      const pmin = key === 'h24' && pmx && cat.positions.includes(pmx.position) ? positionMinOf(m.doc, pmx) : null;
+      const pmin = key !== 'h24' ? null : positionMinRules(pmx).filter((r) => cat.positions.includes(r.position))
+        .reduce((a, r) => { const v = positionMinOf(m.doc, r); return v == null ? a : (a ?? 0) + v; }, null);
       if (pmin != null && hi < pmin) { lo = Math.max(lo, pmin); hi = pmin; avg = Math.max(avg, pmin); }
       (out[m.id] ||= {})[key] = { avg, lo, hi, label: lo === hi ? String(lo) : `${lo}–${hi}` };
     }
@@ -1898,10 +1910,11 @@ function validate(input, grid) {
   }
   // minimum na pozícii
   const pmv = input.positionMin === undefined ? POSITION_MIN : input.positionMin;
-  const pmi = pmv ? P.findIndex((x) => x.id === pmv.position) : -1;
-  if (pmi >= 0) {
+  for (const rule of positionMinRules(pmv)) {
+    const pmi = P.findIndex((x) => x.id === rule.position);
+    if (pmi < 0) continue;
     for (const d of input.doctors) {
-      const min = positionMinOf(d, pmv);
+      const min = positionMinOf(d, rule);
       const k = (perDoc.get(d.id) || []).filter((x) => !x.prev && x.p === pmi).length;
       if (min != null && k < min) issues.push({ day: null, pos: null, kind: 'posMin', level: 'warn', msg: `${d.name} má ${k}× ${P[pmi].label}, minimum je ${min}` });
     }
@@ -2017,6 +2030,9 @@ const SETTINGS_DEFAULT = [
   ['Minimum služeb na pozici – pozice (zkratka)', '2A'],
   ['Minimum služeb na pozici – kolikrát aspoň (0 = vypnuto)', 2],
   ['Minimum služeb na pozici – neplatí pro lékaře, kteří mají i pozici (zkratky)', '1A'],
+  ['Druhé minimum na pozici – pozice (zkratka)', 'l2'],
+  ['Druhé minimum na pozici – kolikrát aspoň (0 = vypnuto)', 1],
+  ['Druhé minimum na pozici – neplatí pro lékaře, kteří mají i pozici (zkratky)', 'l1'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -2111,11 +2127,12 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
-/** Pravidlo „minimum na pozici“ z Nastavení (null = vypnuto). */
+/** Pravidla „minimum na pozici“ z Nastavení (řádky 10–12 a 13–15; 0 = vypnuto). */
 function positionMinSetting() {
-  const min = Number(getSetting(10));
-  if (!(min > 0)) return null;
-  return { position: String(getSetting(9)).trim(), min, except: String(getSetting(11)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean) };
+  return [9, 12].map((r) => ({
+    position: String(getSetting(r)).trim(), min: Number(getSetting(r + 1)),
+    except: String(getSetting(r + 2)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean),
+  })).filter((x) => x.position && x.min > 0);
 }
 /** Pravidlo „jen JIP = přesně N služeb“ z Nastavení (null = vypnuto). */
 function fixedGroupSetting() {

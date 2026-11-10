@@ -20,6 +20,9 @@ const SETTINGS_DEFAULT = [
   ['Minimum služeb na pozici – pozice (zkratka)', '2A'],
   ['Minimum služeb na pozici – kolikrát aspoň (0 = vypnuto)', 2],
   ['Minimum služeb na pozici – neplatí pro lékaře, kteří mají i pozici (zkratky)', '1A'],
+  ['Druhé minimum na pozici – pozice (zkratka)', 'l2'],
+  ['Druhé minimum na pozici – kolikrát aspoň (0 = vypnuto)', 1],
+  ['Druhé minimum na pozici – neplatí pro lékaře, kteří mají i pozici (zkratky)', 'l1'],
 ];
 const RED = '#ea9999', YELLOW = '#fce8b2';
 
@@ -114,11 +117,12 @@ function readPositions() {
   }));
 }
 const minRestHours = () => { const v = Number(getSetting(3)); return v >= 0 ? v : 11; };
-/** Pravidlo „minimum na pozici“ z Nastavení (null = vypnuto). */
+/** Pravidla „minimum na pozici“ z Nastavení (řádky 10–12 a 13–15; 0 = vypnuto). */
 function positionMinSetting() {
-  const min = Number(getSetting(10));
-  if (!(min > 0)) return null;
-  return { position: String(getSetting(9)).trim(), min, except: String(getSetting(11)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean) };
+  return [9, 12].map((r) => ({
+    position: String(getSetting(r)).trim(), min: Number(getSetting(r + 1)),
+    except: String(getSetting(r + 2)).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean),
+  })).filter((x) => x.position && x.min > 0);
 }
 /** Pravidlo „jen JIP = přesně N služeb“ z Nastavení (null = vypnuto). */
 function fixedGroupSetting() {
