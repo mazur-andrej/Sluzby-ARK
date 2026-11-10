@@ -161,7 +161,7 @@ export function mentionedPositions(text, positions, groupAliases = {}) {
 }
 
 const EXTERNAL = /(kurz|konferen|dov|dovol|svatb|cktch|nvs|cplb|nah|rehabil|skoleni|školen|po sluzbe|nemoc|ocr)/;
-const WANT = /(chci|chce|chcem|^chi\b|ano|prosim|prosím|slouzit|sloužit|sluzb|služb|pls|^\+$|^ok$)/;
+const WANT = /(chci|chce|chcem|^chi\b|ano|prosim|prosím|slouzit|sloužit|sluzb|služb|pls|^\+$|^ok$|^sl\.?$)/;
 
 /**
  * Rozpozná význam bunky z tabuľky požiadaviek.

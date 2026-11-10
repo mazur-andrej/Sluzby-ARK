@@ -124,7 +124,13 @@ const MIX_PAIRS = [['l1', 'l2'], ['t1', 't2'], ['OUPd', 'OUPn']];
 const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2, extraFrom: ['1A', '2A'], extraNot: ['l1', 'l2'] };
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
-const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
+const H24 = ['l1', 'l2', '1A', '2A', 'plast'];
+const GROUP_ALIASES = {
+  OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'],
+  JIP: ['l1', 'l2'], anestezie: ['1A', '2A'], anestezii: ['1A', '2A'], anesteziu: ['1A', '2A'],
+  // „prosím službu (24h)“, „službu ARK“ = 24h služba (ne OUP, ne tečka)
+  '24h': H24, '24 h': H24, ARK: H24,
+};
 
 /**
  * Časy služby v minútach od polnoci dňa, kedy služba začína: { start, end, hours, night }.
