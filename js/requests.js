@@ -165,7 +165,7 @@ const WANT = /(chci|chce|chcem|^chi\b|ano|prosim|prosím|slouzit|sloužit|sluzb|
 
 /**
  * Rozpozná význam bunky z tabuľky požiadaviek.
- * Vráti {type:'off'} | {type:'want', pos:[]|null} | {type:'ban', pos:[]} | {type:'only', pos:[]} | {type:'unknown'} | null
+ * Vráti {type:'off'} | {type:'want', pos:[]|null} | {type:'ban', pos:[]} | {type:'unknown'} | null
  */
 export function classifyCell(raw, positions, groupAliases = {}) {
   const t = norm(raw).replace(/\s+/g, ' ');
@@ -174,11 +174,8 @@ export function classifyCell(raw, positions, groupAliases = {}) {
   const startsX = /^x+\b|^x[,.\-\s]|^x$/.test(t);
   const neg = /(^|\s)(ne|nie|nechci|nechce|bez)\s/.test(` ${t} `) || /^ne\b/.test(t);
   if (/ne odd/.test(t)) return { type: 'off' };
-  if (startsX) {
-    if (pos.length && /(nebo|alebo|prosim|ale)/.test(t)) return { type: 'only', pos };
-    if (pos.length) return { type: 'ban', pos };
-    return { type: 'off' };
-  }
+  // „x“ s jakoukoli poznámkou („X OUP“, „x kurz“, „x cktch noc“…) = ten den žádná služba
+  if (startsX) return { type: 'off' };
   if (neg && pos.length) return { type: 'ban', pos };
   if (neg) return { type: 'off' };
   if (EXTERNAL.test(t)) return { type: 'off' };
@@ -255,7 +252,6 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
       if (k.type === 'off') req.off.push(day);
       else if (k.type === 'want') req.want.push({ day, pos: k.pos });
       else if (k.type === 'ban') req.ban.push({ day, pos: k.pos });
-      else if (k.type === 'only') req.ban.push({ day, pos: positions.map((p) => p.id).filter((id) => !k.pos.includes(id)) });
       else unclear.push(`${doc.name} ${day}.: „${raw}"`);
     });
     requests[doc.id] = req;
