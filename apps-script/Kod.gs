@@ -1326,6 +1326,7 @@ const DEFAULT_WEIGHTS = {
   tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
   oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
+  oupMix: 20,      // OUP deň vs. noc nerovnomerne (napr. 2× deň namiesto deň + noc), * (rozdiel/2)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
   weMin: 300,      // lekár bez víkendovej 24h služby v mesiaci
@@ -1425,6 +1426,9 @@ function solve(input) {
   const catSet = Object.fromEntries(Object.entries(CATEGORIES).map(([k, c]) => [k, new Set(c.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined))]));
   const catCount = (i, k) => { let c = 0; for (const p of docDay[i].values()) if (catSet[k].has(p)) c++; return c; };
   const oupEligible = docs.map((d) => (d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)));
+  // OUP deň/noc: kto môže obe, má ich mať čo najrovnomernejšie (2 OUP = deň + noc)
+  const [oupD, oupN] = OUP_LIMIT.positions.map((id) => posIndex.get(id));
+  const oupBoth = docs.map((d) => oupD !== undefined && oupN !== undefined && OUP_LIMIT.positions.every((id) => (d.positions || []).includes(id)));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
   const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm });
@@ -1529,6 +1533,11 @@ function solve(input) {
       if (o < minO) c += W.oupMin * (minO - o);
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
       else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
+      if (oupBoth[i] && o > 1) {
+        let dd = 0; for (const p of docDay[i].values()) if (p === oupD) dd++;
+        const ex = Math.abs(2 * dd - o) - (o % 2); // 0 = vyrovnané (deň + noc)
+        if (ex > 0) c += W.oupMix * (ex / 2) * (ex / 2);
+      }
     }
     // víkendy a sviatky (24 h) – za 12 mesiacov pomerne k počtu 24 h služieb
     if (in24[i]) {
@@ -1602,6 +1611,10 @@ function solve(input) {
   const slots = [];
   for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) if (slotActive[t - 1][p] && !locked[t - 1][p]) slots.push([t, p]);
 
+  // víkendové a všední 24h sloty – cílená výměna mezi nimi pomáhá rozdělit víkendy
+  const weSlots = slots.filter(([t, p]) => catSet.h24.has(p) && days[t - 1].weekend);
+  const wdSlots = slots.filter(([t, p]) => catSet.h24.has(p) && !days[t - 1].weekend);
+
   function resetToBase() {
     for (let i = 0; i < N; i++) docDay[i].clear();
     for (let t = 1; t <= D; t++) for (let p = 0; p < P.length; p++) {
@@ -1649,9 +1662,10 @@ function solve(input) {
     let T = 30;
     const cool = Math.pow(0.05 / T, 1 / iters);
     for (let it = 0; it < iters; it++, T *= cool) {
-      const [t, p] = slots[(rand() * slots.length) | 0];
+      const directed = weSlots.length && wdSlots.length && rand() < 0.15;
+      const [t, p] = directed ? weSlots[(rand() * weSlots.length) | 0] : slots[(rand() * slots.length) | 0];
       const cur = assign[t - 1][p];
-      if (rand() < 0.5) {
+      if (!directed && rand() < 0.5) {
         // presun: slot dostane iného lekára
         const i = (rand() * N) | 0;
         if (i === cur) continue;
@@ -1664,7 +1678,7 @@ function solve(input) {
         else { unplace(t, p); if (cur >= 0) place(cur, t, p); }
       } else {
         // výmena dvoch slotov
-        const [t2, p2] = slots[(rand() * slots.length) | 0];
+        const [t2, p2] = directed ? wdSlots[(rand() * wdSlots.length) | 0] : slots[(rand() * slots.length) | 0];
         const other = assign[t2 - 1][p2];
         if (cur < 0 || other < 0 || cur === other) continue;
         unplace(t, p); unplace(t2, p2);
@@ -1682,7 +1696,7 @@ function solve(input) {
   }
 
   const restarts = input.restarts ?? 4;
-  const iterations = input.iterations ?? 150000;
+  const iterations = input.iterations ?? 400000;
   let best = null, bestCost = Infinity;
   for (let r = 0; r < restarts; r++) {
     resetToBase();

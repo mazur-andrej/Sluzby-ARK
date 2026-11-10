@@ -51,7 +51,7 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 
 ### Běžná správa v tabulce
 
-- **Nový lékař:** nový řádek – Jméno, zaškrtnout *Aktivní*, Pozice (zkratky: `l1, l2, 1A, 2A, plast, t1, t2, OUPd, OUPn`), Cíl → menu *Doplnit odkazy nově přidaným lékařům*.
+- **Nový lékař:** nový řádek – Jméno, zaškrtnout *Aktivní*, Pozice (zkratky: `l1, l2, 1A, 2A, plast, t1, t2, OUPd, OUPn`), Obvykle 24h → menu *Doplnit odkazy nově přidaným lékařům*.
 - **Odchod / dlouhodobá nepřítomnost:** odškrtnout *Aktivní*.
 - **Ukradený/přeposlaný odkaz:** smazat buňku *Token* a dát *Doplnit odkazy* – vznikne nový odkaz, starý přestane fungovat.
 - *Přehled požadavků na příští měsíc* – tabulka lékaři × dny (jako dosavadní Excel), včetně toho, kdo ještě nezadal.
@@ -151,6 +151,7 @@ Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, léka
 - přehled ukazuje u každého víkendy tento měsíc a víkendy i svátky za 12 měsíců.
 
 **OUP** (12 h) se počítá zvlášť: každý, kdo OUP slouží, má aspoň 2; kdo chce víc, zvolí si počet v požadavcích.
+Kdo může OUP den i OUP noc, dostane je pokud možno rovnoměrně (2 OUP = 1× den + 1× noc, 3 OUP = 2 + 1).
 
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
 Počet a pozice JIP se mění v Nastavení (offline nástroj) nebo v listu *Nastavení* (Google, 0 = vypnuto). Ručně zadané nižší *Max* u lékaře má přednost.
