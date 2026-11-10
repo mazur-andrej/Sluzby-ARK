@@ -61,5 +61,18 @@ check(oupOk === 2, `${kriz.name}: chce 4× OUP noc, zvolil max 2 → splněno ${
   if (!ok) fails++;
 }
 
+// „jen jeden z“: přání 10. a 11. ve stejné skupině → slouží právě jeden z těch dnů
+{
+  const { solve } = await import('../js/solver.js');
+  const { buildMonth } = await import('../js/calendar.js');
+  const { DEFAULT_POSITIONS: P } = await import('../js/config.js');
+  const { DEFAULT_DOCTORS } = await import('../js/default-doctors.js');
+  const docs = DEFAULT_DOCTORS.filter((d) => d.active);
+  const g = docs.find((d) => d.name === 'Grác');
+  const r = solve({ days: buildMonth(2027, 2), positions: P, doctors: docs, requests: { [g.id]: { off: [], want: [{ day: 10, pos: null, group: 'jeden' }, { day: 11, pos: null, group: 'jeden' }] } }, seed: 1 });
+  const n = [9, 10].filter((t) => r.grid[t].includes(g.id)).length;
+  console.log(n === 1 ? '✔' : '✘', `jen jeden z 10./11.: Grác slouží ${n}× z těch dnů`);
+  if (n !== 1) fails++;
+}
 console.log(fails ? `\n${fails} CHYB` : '\nVše v pořádku');
 process.exit(fails ? 1 : 0);

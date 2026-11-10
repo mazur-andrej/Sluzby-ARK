@@ -252,7 +252,8 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
       if (!/^x+$/i.test(raw)) req.notes[day] = raw;
       if (!k) return;
       if (k.type === 'off') req.off.push(day);
-      else if (k.type === 'want') req.want.push({ day, pos: k.pos });
+      // „jen jeden z …“ / „jednu z …“ = z těchto dnů chce lékař jen jeden
+      else if (k.type === 'want') req.want.push({ day, pos: k.pos, ...(/(jeden|jedna|jednu|jen 1|1 z)/.test(norm(raw)) ? { group: 'jeden' } : {}) });
       else if (k.type === 'ban') req.ban.push({ day, pos: k.pos });
       else unclear.push(`${doc.name} ${day}.: „${raw}"`);
     });

@@ -118,7 +118,7 @@ export function solve(input) {
     const i = docIndex.get(id);
     if (i === undefined) continue;
     (req.off || []).forEach((d) => off[i].add(+d));
-    (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos == null ? null : [].concat(w.pos) }));
+    (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos == null ? null : [].concat(w.pos), ...(w.group ? { group: w.group } : {}) }));
     (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
   // přání sa plnia v poradí zoznamu lekárov = podľa skúsenosti (skúsenejší má prednosť), v rámci lekára podľa dňa
@@ -331,9 +331,13 @@ export function solve(input) {
   const capOf = (i, cat) => (cat === 'h24' ? (fixedOf[i] ?? tgt24[i]?.hi ?? Infinity) : (tgtT[i]?.hi ?? Infinity));
   const capLabel = (i, cat) => (cat === 'h24' ? `${capOf(i, cat)}× 24h` : `${capOf(i, cat)}× tečka`);
   const wantResults = [];
+  // „jeden z“: přání se stejnou skupinou (group) = lékař chce jen jeden z těch dnů; po splnění ostatní dny volno
+  const groupDone = new Set();
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
-    if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); continue; }
+    const gk = w.group ? `${w.doc}|${w.group}` : null;
+    if (gk && groupDone.has(gk)) { off[w.doc].add(w.day); wantResults.push({ ...w, ok: true, other: true }); continue; }
+    if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); if (gk) groupDone.add(gk); continue; }
     let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]];
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
     const beforeCap = cands.slice();
@@ -349,6 +353,7 @@ export function solve(input) {
     if (cands.length) {
       place(w.doc, w.day, cands[0]); locked[w.day - 1][cands[0]] = true;
       wantResults.push({ ...w, ok: true, pos: [P[cands[0]].id] });
+      if (gk) groupDone.add(gk);
     } else {
       const notEligible = w.pos && w.pos.every((id) => !eligible[w.doc].has(posIndex.get(id)));
       wantResults.push({ ...w, ok: false, reason: notEligible ? 'tuto pozici nemá v seznamu povolených' : 'ten den to nejde (obsazeno / odpočinek po službě)' });
