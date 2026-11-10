@@ -157,6 +157,7 @@ Výslovná pravidla mají přednost: lékaři jen na JIP mají přesně 4, léka
 - přehled ukazuje u každého víkendy tento měsíc a víkendy i svátky za 12 měsíců.
 
 **OUP** (12 h) se počítá zvlášť: každý, kdo OUP slouží, má aspoň 2; kdo chce víc, zvolí si počet v požadavcích.
+OUP navíc nad 2 (u těch, kdo si počet nezvolili) dostanou přednostně lékaři z poolu 1A/plast a 2A/tečky; lékaři s JIP (lékař1/lékař2) jen výjimečně.
 
 **Lékaři jen na JIP** (mají povolené pouze lékař1/lékař2) mají **přesně 4 služby** měsíčně – víc nikdy, méně jen když to kvůli vyškrtnutým dnům nejde (program to nahlásí).
 Počet a pozice JIP se mění v Nastavení (offline nástroj) nebo v listu *Nastavení* (Google, 0 = vypnuto). Ručně zadané nižší *Max* u lékaře má přednost.

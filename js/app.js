@@ -700,7 +700,7 @@ function renderSettings() {
   );
   const labels = {
     unfilled: 'Neobsazená služba', target: 'JIP: odchylka od pevného počtu', even: '24h: odchylka od obvyklého počtu', evenRange: '24h: mimo rozmezí',
-    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)',
+    tEven: 'Tečky: odchylka od obvyklého počtu', tRange: 'Tečky: mimo rozmezí', oupWant: 'OUP: pod zvoleným počtem', oupExtra: 'OUP: navíc bez volby (pool 1A/plast, 2A/tečky)', oupExtraJip: 'OUP: navíc bez volby (lékaři s JIP)', mix: 'JIP1/JIP2, tečka 1/2, OUP den/noc nevyváženě', together: 'Stále stejní lékaři spolu (24h v jeden den)',
     oupMin: 'OUP: pod minimem', weFair: 'Víkendy: spravedlnost za 12 měsíců', holFair: 'Svátky: spravedlnost za 12 měsíců', weMin: 'Měsíc bez víkendu',
     weMulti: 'Víc víkendů než ostatní', gap1: 'Dvě služby po sobě (po denní)', gap2: 'Služby ob den', gap3: 'Rozestup 3 dny', sameWeekend: 'Sobota i neděle',
     posMinMissing: 'Minimum na pozici (2A) nesplněno', fixedMissing: 'JIP: chybí služby do pevného počtu', afterNight: 'Výjimka: služba den po noční/24h',

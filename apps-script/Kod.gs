@@ -115,7 +115,9 @@ const CATEGORIES = {
 const MIX_PAIRS = [['l1', 'l2'], ['t1', 't2'], ['OUPd', 'OUPn']];
 
 // OUP: každý lekár s OUP pozíciou má aspoň `min` OUP služieb; kto chce viac, zvolí si počet v požiadavkách (= maximum).
-const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
+// OUP nad minimum (u těch, kdo si počet nezvolili) přednostně lékařům z poolů 1A/plast a 2A/tečky:
+// mají některou z pozic `extraFrom` a žádnou z `extraNot` (JIP).
+const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2, extraFrom: ['1A', '2A'], extraNot: ['l1', 'l2'] };
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
@@ -1272,7 +1274,8 @@ const DEFAULT_WEIGHTS = {
   tEven: 30,       // * (tečky - cieľ)^2; cieľ = rovnaká záťaž (24h + tečky) v poole, mínus 24h služby lekára
   tRange: 100,     // za každú tečku mimo rozsahu ⌊cieľ⌋–⌈cieľ⌉
   oupWant: 25,     // za každú OUP chýbajúcu do počtu, ktorý si lekár zvolil
-  oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili
+  oupExtra: 30,    // * (OUP nad minimum)^2 u lekárov, ktorí si viac nezvolili (pool 1A/plast a 2A/tečky)
+  oupExtraJip: 200, // to isté u ostatných (lekári s JIP) – OUP navyše dostanú len výnimočne
   mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
@@ -1374,6 +1377,8 @@ function solve(input) {
   const catSet = Object.fromEntries(Object.entries(CATEGORIES).map(([k, c]) => [k, new Set(c.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined))]));
   const catCount = (i, k) => { let c = 0; for (const p of docDay[i].values()) if (catSet[k].has(p)) c++; return c; };
   const oupEligible = docs.map((d) => (d.positions || []).some((id) => OUP_LIMIT.positions.includes(id)));
+  const has = (d, ids) => (d.positions || []).some((id) => (ids || []).includes(id));
+  const oupExtraW = docs.map((d) => (has(d, OUP_LIMIT.extraFrom) && !has(d, OUP_LIMIT.extraNot) ? W.oupExtra : W.oupExtraJip));
   // Dvojice pozícií (JIP1/2, tečka 1/2, OUP deň/noc): kto môže obe, má ich mať čo najrovnomernejšie
   const mixPairs = MIX_PAIRS.map((pair) => pair.map((id) => posIndex.get(id))).filter(([a, b]) => a !== undefined && b !== undefined);
   const mixOf = docs.map((d, i) => mixPairs.filter(([a, b]) => eligible[i].has(a) && eligible[i].has(b)));
@@ -1497,7 +1502,7 @@ function solve(input) {
       const minO = oupMax[i] != null ? Math.min(OUP_LIMIT.min, oupMax[i]) : OUP_LIMIT.min;
       if (o < minO) c += W.oupMin * (minO - o);
       if (oupMax[i] != null) { if (o < oupMax[i]) c += W.oupWant * (oupMax[i] - o); }
-      else if (o > minO) c += W.oupExtra * (o - minO) * (o - minO);
+      else if (o > minO) c += oupExtraW[i] * (o - minO) * (o - minO);
     }
     for (const [a, b] of mixOf[i]) {
       let na = 0, nb = 0;

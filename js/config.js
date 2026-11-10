@@ -53,7 +53,9 @@ export const CATEGORIES = {
 export const MIX_PAIRS = [['l1', 'l2'], ['t1', 't2'], ['OUPd', 'OUPn']];
 
 // OUP: každý lekár s OUP pozíciou má aspoň `min` OUP služieb; kto chce viac, zvolí si počet v požiadavkách (= maximum).
-export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2 };
+// OUP nad minimum (u těch, kdo si počet nezvolili) přednostně lékařům z poolů 1A/plast a 2A/tečky:
+// mají některou z pozic `extraFrom` a žádnou z `extraNot` (JIP).
+export const OUP_LIMIT = { label: 'OUP', positions: ['OUPd', 'OUPn'], min: 2, extraFrom: ['1A', '2A'], extraNot: ['l1', 'l2'] };
 
 // Skupinové označenia: "OUP" samotné = obe OUP pozície.
 export const GROUP_ALIASES = { OUP: ['OUPd', 'OUPn'], 'tečka': ['t1', 't2'], tecka: ['t1', 't2'] };
