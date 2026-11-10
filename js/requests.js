@@ -248,7 +248,8 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
       const day = dayCols[i];
       if (day == null || !String(c).trim()) return;
       const raw = String(c).trim();
-      const k = classifyCell(raw, positions, groupAliases);
+      // OUP je domovské pracoviště lékaře: „OUP“ v buňce = ten den je na OUP, službu nechce
+      const k = doc.oupHome && /(^|[^a-z])oup/.test(norm(raw)) ? { type: 'off' } : classifyCell(raw, positions, groupAliases);
       if (!/^x+$/i.test(raw)) req.notes[day] = raw;
       if (!k) return;
       if (k.type === 'off') req.off.push(day);

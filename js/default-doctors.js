@@ -774,6 +774,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-41",
   "name": "Benčat",
+  "oupHome": true,
   "active": true,
   "positions": [
    "2A",
@@ -964,6 +965,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-51",
   "name": "Zubíková",
+  "oupHome": true,
   "active": true,
   "positions": [
    "2A",

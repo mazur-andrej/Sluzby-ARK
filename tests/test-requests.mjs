@@ -11,3 +11,17 @@ neznámy text bez dní
 Petr Malý: 5`;
 const r = parseRequestsText(txt, doctors, DEFAULT_POSITIONS, 31);
 console.log(JSON.stringify(r, null, 0));
+
+// OUP jako domovské pracoviště: „OUP“ = ten den nechce službu
+{
+  const { parseRequestsSheet } = await import('../js/requests.js');
+  const { DEFAULT_POSITIONS, GROUP_ALIASES } = await import('../js/config.js');
+  const docs = [{ id: 'a', name: 'Zubíková', active: true, positions: ['2A'], oupHome: true }, { id: 'b', name: 'Kříž', active: true, positions: ['l2', 'OUPd', 'OUPn'] }];
+  const hd = ['prosinec', ...Array.from({ length: 31 }, (_, i) => `${i + 1}.12.`)];
+  const row = (n, a, b) => [n, a, b, ...Array(29).fill('')];
+  const rows = [hd, row('Zubíková', 'OUP', 'chci'), row('Kříž', 'OUP', '')];
+  const r = parseRequestsSheet(rows, docs, DEFAULT_POSITIONS, 12, GROUP_ALIASES).requests;
+  const ok = r.a.off.includes(1) && r.a.want.some((w) => w.day === 2) && r.b.want.some((w) => w.day === 1 && w.pos.includes('OUPd'));
+  console.log(ok ? '✔' : '✘', 'OUP = pracoviště: Zubíková „OUP“ → nechce službu; u Kříže „OUP“ → chce OUP');
+  if (!ok) process.exit(1);
+}
