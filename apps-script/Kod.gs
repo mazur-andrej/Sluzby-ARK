@@ -217,7 +217,7 @@ const DEFAULT_DOCTORS = [
  {
   "id": "lekar-04",
   "name": "Chobola",
-  "active": true,
+  "active": false,
   "positions": [
    "l1",
    "l2",

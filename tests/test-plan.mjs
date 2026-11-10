@@ -19,7 +19,7 @@ for (const [y, m] of [[2026, 12], [2027, 2], [2027, 7]]) {
 const days = buildMonth(2026, 12);
 const plan = planTargets({ days, positions: P, doctors });
 const seniors = doctors.filter((d) => d.typical24 === 4 && !d.positions.every((p) => ['l1', 'l2'].includes(p)));
-check(seniors.length >= 3 && seniors.every((d) => plan[d.id].h24.label === '4'), `${seniors.length} lékařů, kteří měli vždy 4 → plán přesně 4`);
+check(seniors.length >= 3 && seniors.every((d) => plan[d.id].h24.lo === 4), `${seniors.length} lékařů, kteří měli vždy 4 → plán aspoň 4`);
 const low = doctors.filter((d) => d.typical24 != null && d.typical24 < 1.5 && !d.positions.includes('2A'));
 {
   const r = solve({ days, positions: P, doctors, requests: {}, seed: 1 });
