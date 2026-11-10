@@ -5,6 +5,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-02",
   "name": "Štětka",
+  "emergency": ["OUPd", "OUPn"],
   "active": true,
   "positions": [
    "l1"
@@ -182,6 +183,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-01",
   "name": "Hruda",
+  "emergency": ["OUPd", "OUPn"],
   "active": true,
   "positions": [
    "l1",
@@ -677,6 +679,7 @@ export const DEFAULT_DOCTORS = [
  {
   "id": "lekar-03",
   "name": "Volčík",
+  "emergency": ["OUPd", "OUPn"],
   "active": true,
   "positions": [
    "l1",

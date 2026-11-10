@@ -96,10 +96,10 @@ if (state.schema < 9) {
   for (const d of state.doctors) if (DEFAULT_DOCTORS.find((x) => x.id === d.id)?.active === false) d.active = false; // Chobola
   state.schema = 9;
 }
-// v10: pozice „jen v nouzi“ (Bartošík, Dadák, Helán, Jelínek → 1A)
-if (state.schema < 10) {
-  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.emergency && !d.emergency) d.emergency = [...def.emergency]; }
-  state.schema = 10;
+// v10/v11: pozice „jen v nouzi“ (Bartošík, Dadák, Helán, Jelínek → 1A; Štětka, Volčík, Hruda → OUP)
+if (state.schema < 11) {
+  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.emergency) d.emergency = [...new Set([...(d.emergency || []), ...def.emergency])]; }
+  state.schema = 11;
 }
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 

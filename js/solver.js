@@ -132,7 +132,8 @@ export function solve(input) {
   // pre každého lekára zoznam { idx, min }
   const pmOf = docs.map((d) => pmRules.map((r) => ({ idx: r.idx, min: positionMinOf(d, r) })).filter((x) => x.min != null));
   const posCount = (i, idx) => { let c = 0; for (const p of docDay[i].values()) if (p === idx) c++; return c; };
-  const maxOf = docs.map((d, i) => Math.min(d.max != null && d.max !== '' ? +d.max : Infinity, fixedOf[i] ?? Infinity));
+  // Max = všetky služby; lekár len na JIP: pevný počet 24h služieb (OUP v núdzi / na žiadosť sa počíta zvlášť)
+  const maxOf = docs.map((d) => (d.max != null && d.max !== '' ? +d.max : Infinity));
   // OUP: počet zvolený lekárom = maximum, minimum OUP_LIMIT.min
   const oupSet = new Set(OUP_LIMIT.positions.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
   const oupMax = docs.map((d) => {
@@ -227,6 +228,7 @@ export function solve(input) {
     if (docDay[i].has(day)) return false;
     if (!restOk(i, day, p)) return false;
     if (docDay[i].size >= maxOf[i]) return false;
+    if (fixedOf[i] != null && catSet.h24.has(p) && catCount(i, 'h24') >= fixedOf[i]) return false;
     if (oupMax[i] != null && oupSet.has(p) && oupCount(i) >= oupMax[i]) return false;
     return true;
   }
@@ -255,8 +257,8 @@ export function solve(input) {
     // 24h služby
     const m = catCount(i, 'h24');
     if (fixedOf[i] != null) {
-      c += W.target * (n - fixedOf[i]) * (n - fixedOf[i]);
-      if (n < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - n);
+      c += W.target * (m - fixedOf[i]) * (m - fixedOf[i]);
+      if (m < fixedOf[i]) c += W.fixedMissing * (fixedOf[i] - m);
     } else if (tgt24[i]) {
       const t = tgt24[i];
       c += W.even * (m - t.avg) * (m - t.avg) + W.evenRange * (Math.max(0, t.lo - m) + Math.max(0, m - t.hi));
@@ -466,7 +468,7 @@ export function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
-  for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) if (d > 0 && emerg[i].has(p)) warnings.push(`V nouzi: ${docs[i].name} má ${d}. ${P[p].label} (normálně tuto pozici neslouží)`);
+  for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) if (d > 0 && emerg[i].has(p) && !locked[d - 1][p]) warnings.push(`V nouzi: ${docs[i].name} má ${d}. ${P[p].label} (normálně tuto pozici neslouží)`);
   if (anMode !== 'hard') {
     for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) {
       const b = serviceAt(i, d - 1);
@@ -475,7 +477,7 @@ export function solve(input) {
   }
   for (let i = 0; i < N; i++) {
     for (const r of pmOf[i]) if (posCount(i, r.idx) < r.min) warnings.push(`${docs[i].name} má jen ${posCount(i, r.idx)}× ${P[r.idx].label} (minimum ${r.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
-    if (fixedOf[i] != null && docDay[i].size < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${docDay[i].size} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (fixedOf[i] != null && catCount(i, 'h24') < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${catCount(i, 'h24')} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (oupEligible[i] && oupCount(i) < OUP_LIMIT.min) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (minimum ${OUP_LIMIT.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (tgt24[i] && catCount(i, 'h24') < tgt24[i].lo) warnings.push(`${docs[i].name} má jen ${catCount(i, 'h24')}× 24h (obvykle ${tgt24[i].label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (tgt24[i] && catCount(i, 'h24') > tgt24[i].hi) warnings.push(`${docs[i].name} má ${catCount(i, 'h24')}× 24h, víc než obvykle (${tgt24[i].label}) – jinak by zůstala služba neobsazená`);
@@ -718,7 +720,7 @@ export function validate(input, grid) {
   for (const d of input.doctors) {
     const want = fixedCountOf(d, fg);
     if (want == null) continue;
-    const n = (perDoc.get(d.id) || []).filter((x) => !x.prev).length;
+    const n = (perDoc.get(d.id) || []).filter((x) => !x.prev && CATEGORIES.h24.positions.includes(P[x.p].id)).length; // 24h (OUP zvlášť)
     if (n !== want) issues.push({ day: null, pos: null, kind: 'fixed', level: n > want ? 'error' : 'warn', msg: `${d.name} (jen ${fg.label || 'JIP'}) má ${n} služeb, má mít ${want}` });
   }
   return issues;
