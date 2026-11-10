@@ -353,7 +353,7 @@ function generovat(key, notify) {
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
     const fairHistory = fairHistoryFor(key, positions);
-    const res = solve({ days, positions, doctors, requests, prev, fairHistory, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
+    const res = solve({ days, positions, doctors, requests, prev, fairHistory, month, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
     writeSchedule(key, days, positions, doctors, res, prev);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',

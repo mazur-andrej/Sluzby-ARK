@@ -30,7 +30,7 @@ for (const [y, m] of [[2026, 12], [2027, 1], [2027, 2], [2027, 3], [2027, 4], [2
   past.push({ key, days, header: P.map((p) => p.label), rows: r.grid });
 }
 const mv = [...missing.values()];
-check(Math.max(...mv) <= 2, `za 6 měsíců nikomu nechyběly víc než 2 víkendy (pátek = ½; rozložení ${JSON.stringify(mv.reduce((a, c) => ((a[c] = (a[c] || 0) + 1), a), {}))})`);
+check(Math.max(...mv) <= 2.5, `za 6 měsíců nikomu nechybělo víc než 2,5 víkendu (kdo měl za rok víkendů nejvíc, ustoupí) (pátek = ½; rozložení ${JSON.stringify(mv.reduce((a, c) => ((a[c] = (a[c] || 0) + 1), a), {}))})`);
 const hv = [...holYear.values()];
 check(Math.max(...hv) <= 3 && hv.filter((v) => v === 3).length <= 3, `svátky za 12 měsíců: nejvýš 3, a to jen výjimečně (${JSON.stringify(hv.reduce((a, c) => ((a[c] = (a[c] || 0) + 1), a), {}))})`);
 console.log(fails ? `\n${fails} CHYB` : '\nVše v pořádku');

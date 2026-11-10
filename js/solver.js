@@ -31,7 +31,8 @@ export const DEFAULT_WEIGHTS = {
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
   holFair: 120,    // * (sviatky 24h za 12 mes. - férový podiel)^2
-  weMin: 300,      // lekár bez víkendovej 24h služby v mesiaci
+  holSame: 150,    // 24h na ten istý sviatok ako vlani (Vianoce, Nový rok …) – striedanie
+  weMin: 800,       // lekár bez víkendovej 24h služby v mesiaci
   weMulti: 60,     // * (víkendy v mesiaci - 1)^2 – rozložiť víkendy na čo najviac ľudí
   gap1: 30,        // služba deň po dennej službe
   gap2: 6,         // služby ob deň
@@ -79,6 +80,7 @@ function mulberry32(seed) {
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
+ *   month: číslo měsíce (1–12) – pro střídání svátků rok od roku (volitelné; den může mít vlastní `month`),
  *   positionMin: [{ position, min, except:[id] }] – minimá služieb na pozíciách (jedno pravidlo alebo zoznam; null = vypnuté),
  *   fixedGroup: { positions:[id], count } – lekári len na týchto pozíciách majú presne count služieb (null = vypnuté),
  *   doctors: [{id, name, positions:[posId], target, max}],
@@ -148,6 +150,10 @@ export function solve(input) {
   // Spravodlivosť víkendov a sviatkov (24 h): história + tento mesiac
   const fh = input.fairHistory || {};
   const hist = docs.map((d) => ({ n24: +(fh[d.id]?.n24 || 0), we: +(fh[d.id]?.we || 0), hol: +(fh[d.id]?.hol || 0), noWe: +(fh[d.id]?.noWe || 0) }));
+  // sviatky, na ktoré mal lekár 24h vlani: tento mesiac ich má radšej niekto iný (podľa dňa v mesiaci)
+  const holMonth = input.month ?? null;
+  const holSameDays = docs.map((d) => new Set(fh[d.id]?.hd || []));
+  const holKey = days.map((d) => (d.holiday && (d.month ?? holMonth) != null ? `${d.month ?? holMonth}-${d.day}` : null));
   let slots24 = 0, we24 = 0, hol24 = 0;
   for (let t = 0; t < D; t++) for (const p of catSet.h24) if (slotActive[t][p]) { slots24++; we24 += weekendWeight(days[t]); if (days[t].holiday) hol24++; }
   const sumH = hist.reduce((a, h) => ({ n24: a.n24 + h.n24, we: a.we + h.we, hol: a.hol + h.hol }), { n24: 0, we: 0, hol: 0 });
@@ -277,6 +283,7 @@ export function solve(input) {
       // (piatok = 0,5 → kto nemá sobotu/nedeľu, aspoň piatok zmierni chýbajúci víkend)
       if (expects24[i] && f.we < FAIRNESS.weekendMin) c += W.weMin * (1 + 2 * h.noWe) * (FAIRNESS.weekendMin - f.we);
       if (f.we > 1) c += W.weMulti * (f.we - 1) * (f.we - 1);
+      if (holSameDays[i].size) for (const [day, p] of docDay[i]) if (day > 0 && holKey[day - 1] && catSet.h24.has(p) && holSameDays[i].has(holKey[day - 1])) c += W.holSame;
     }
     const ds = [...prevByDoc[i].map((x) => x.day), ...docDay[i].keys()].sort((a, b) => a - b);
     if (anMode === 'soft') {
@@ -534,9 +541,10 @@ function balancePlan(key, members, slots, out, fh) {
   const e24 = (m) => out[m.id]?.h24?.avg ?? fixedCountOf(m.doc) ?? 0;
   // ročné vyrovnanie: priemerná mesačná záťaž lekára oproti poolu
   const rate = (m) => { const h = fh[m.id]; return h && h.tm > 0 ? h.tl / h.tm : null; };
-  const known = members.filter((m) => rate(m) != null);
+  const known = members.filter((m) => rate(m) != null && !m.doc.oupHome);
   const mean = known.length ? known.reduce((a, m) => a + rate(m), 0) / known.length : 0;
-  const corr = (m) => (rate(m) == null ? 0 : Math.max(-2, Math.min(2, 0.5 * (rate(m) - mean) * fh[m.id].tm)));
+  // lékaři s domovským pracovištěm na OUP (menší úvazek na ARK) se ročně nevyrovnávají
+  const corr = (m) => (rate(m) == null || m.doc.oupHome ? 0 : Math.max(-2, Math.min(2, 0.5 * (rate(m) - mean) * fh[m.id].tm)));
   const base = members.map((m) => e24(m) + corr(m));
   // úroveň L tak, aby súčet max(0, L - base) = počet tečiek
   let lo = 0, hi = Math.max(...base) + slots + 1;
@@ -559,17 +567,24 @@ function prevKey(key, n = 1) {
 /**
  * História víkendov/sviatkov (24 h) za posledných FAIRNESS.windowMonths mesiacov pred targetKey.
  * past: [{ key, days, header: [label…], rows: [[id|null…]] }] – uložené rozpisy (stĺpce = pozície podľa header);
- * mesiace z FAIR_BASE_MONTHS sa neberú z `past`, ale z poľa `fair` pri lekárovi (počiatočný stav).
+ * mesiace z FAIR_BASE_MONTHS sa neberú z `past`, ale z poľa `fair` pri lekárovi (počiatočný stav po mesiacoch).
+ * hd = sviatky ('M-D'), na ktoré mal lekár 24h službu – aby sa napr. Vianoce striedali rok čo rok.
  */
 export function buildFairHistory({ targetKey, past, doctors, positions }) {
   const win = new Set(Array.from({ length: FAIRNESS.windowMonths }, (_, i) => prevKey(targetKey, i + 1)));
   const out = {};
-  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0, tl: 0, tm: 0 })[k] += v; };
-  if (FAIR_BASE_MONTHS.some((k) => win.has(k))) {
-    for (const d of doctors) if (d.fair) for (const k of ['n24', 'we', 'hol', 'noWe']) add(d.id, k, +d.fair[k] || 0);
+  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0, tl: 0, tm: 0, hd: [] })[k] += v; };
+  const addHd = (id, v) => { add(id, 'n24', 0); out[id].hd.push(v); };
+  const isPool = (d) => (d.positions || []).some((id) => CATEGORIES.tecky.positions.includes(id));
+  for (const d of doctors) for (const [key, f] of Object.entries(d.fair || {})) {
+    if (!win.has(key) || !FAIR_BASE_MONTHS.includes(key) || !f) continue;
+    for (const k of ['n24', 'we', 'hol', 'noWe']) add(d.id, k, +f[k] || 0);
+    for (const h of f.hd || []) addHd(d.id, h);
+    const load = (+f.n24 || 0) + (+f.t || 0);
+    if (isPool(d) && load > 0) { add(d.id, 'tl', load); add(d.id, 'tm', 1); }
   }
   const h24labels = new Set(positions.filter((p) => CATEGORIES.h24.positions.includes(p.id)).map((p) => p.label));
-  const pool = new Set(doctors.filter((d) => (d.positions || []).some((id) => CATEGORIES.tecky.positions.includes(id))).map((d) => d.id));
+  const pool = new Set(doctors.filter(isPool).map((d) => d.id));
   const tLabels = new Set(positions.filter((p) => CATEGORIES.tecky.positions.includes(p.id)).map((p) => p.label));
   for (const pm of past || []) {
     if (!win.has(pm.key) || FAIR_BASE_MONTHS.includes(pm.key)) continue;
@@ -581,7 +596,7 @@ export function buildFairHistory({ targetKey, past, doctors, positions }) {
         if (id && tLabels.has(pm.header[c])) { (month[id] ||= { n: 0, we: 0, t: 0 }).t++; return; }
         if (!id || !h24labels.has(pm.header[c])) return;
         const w = weekendWeight(day);
-        add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) add(id, 'hol', 1);
+        add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) { add(id, 'hol', 1); addHd(id, `${+pm.key.slice(5)}-${t + 1}`); }
         (month[id] ||= { n: 0, we: 0, t: 0 }).n++; month[id].we += w;
       });
     });

@@ -84,6 +84,11 @@ if (state.schema < 7) {
 }
 // v6: tečky se dělí rovnoměrně v poolu – obvyklý počet teček se už nepoužívá
 if (state.schema < 6) { for (const d of state.doctors) delete d.typicalT; state.schema = 6; }
+// v8: historie za celý rok (prosinec 2025 – listopad 2026) po měsících + obvyklé počty z ní
+if (state.schema < 8) {
+  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def) { d.fair = structuredClone(def.fair); d.typical24 = def.typical24; } }
+  state.schema = 8;
+}
 const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
@@ -338,7 +343,7 @@ function fairHistory() {
 function solverInput() {
   const md = monthData();
   return {
-    fairHistory: fairHistory(),
+    fairHistory: fairHistory(), month: state.current.month,
     days: days(), positions: state.positions, doctors: activeDoctors(),
     requests: md.requests, prev: prevServices(), locked: md.locked,
     weights: state.weights, seed: md.seed, minRestHours: state.minRestHours, afterNight: state.afterNight, fixedGroup: state.fixedGroup, positionMin: state.positionMin,

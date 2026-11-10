@@ -21,12 +21,15 @@ const load = pool.map((d) => res.grid.reduce((a, r) => a + r.filter((id, i) => i
 check(Math.max(...load) - Math.min(...load) <= 2, `pool teček: 24h + tečky ${Math.min(...load)}–${Math.max(...load)}`);
 // ten, kdo má víc 24h, má méně teček
 const plan = planTargets({ days, positions: P, doctors: docs });
-const a = pool.find((d) => d.positions.includes('1A')), b = pool.find((d) => !d.positions.includes('1A'));
+const e24 = (d) => plan[d.id].h24?.avg ?? 0;
+const byE = [...pool].sort((x, y) => e24(y) - e24(x));
+const a = byE[0], b = byE[byE.length - 1];
 check(plan[a.id].tecky.avg < plan[b.id].tecky.avg, `cíl teček: ${a.name} (víc 24h) ${plan[a.id].tecky.label} < ${b.name} ${plan[b.id].tecky.label}`);
 // roční vyrovnání: kdo měl dosud víc, má teď méně
-const fh = { [b.id]: { tl: 30, tm: 5 } }; for (const d of pool) if (d.id !== b.id) fh[d.id] = { tl: 25, tm: 5 };
+const bb = pool.find((d) => !d.oupHome && plan[d.id].tecky.avg >= 2) || b;
+const fh = { [bb.id]: { tl: 30, tm: 5 } }; for (const d of pool) if (d.id !== bb.id) fh[d.id] = { tl: 25, tm: 5 };
 const plan2 = planTargets({ days, positions: P, doctors: docs, fairHistory: fh });
-check(plan2[b.id].tecky.avg < plan[b.id].tecky.avg - 0.5, `roční vyrovnání: ${b.name} dosud nad průměrem → cíl ${plan2[b.id].tecky.label} (bez historie ${plan[b.id].tecky.label})`);
+check(plan2[bb.id].tecky.avg < plan[bb.id].tecky.avg - 0.5, `roční vyrovnání: ${bb.name} dosud nad průměrem → cíl ${plan2[bb.id].tecky.label} (bez historie ${plan[bb.id].tecky.label})`);
 // dvojice: titíž dva lékaři spolu na 24h nejvýš 2× za měsíc
 const m = new Map();
 res.grid.forEach((r) => { const ids = [...h24].map((i) => r[i]).filter(Boolean); for (let x = 0; x < ids.length; x++) for (let y = x + 1; y < ids.length; y++) { const k = [ids[x], ids[y]].sort().join(); m.set(k, (m.get(k) || 0) + 1); } });

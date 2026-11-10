@@ -139,11 +139,13 @@ Vždy dodržena:
 - tečky jen v pracovní dny (české svátky se počítají automaticky, další v Nastavení).
 
 **Rozdělení podle zvyklostí:** 24h služby (JIP, anestezie, KPECH) a tečky se dělí každé zvlášť podle toho, kolik jich lékař **obvykle** má
-(sloupec *Obvykle 24h*, předvyplněno z rozpisů květen–listopad 2026), přepočteno na počet služeb v daném měsíci.
+(sloupec *Obvykle 24h*, předvyplněno z rozpisů prosinec 2025 – listopad 2026), přepočteno na počet služeb v daném měsíci.
 Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze svého rozsahu, je v přehledu vyznačen.
 
 **Tečky** se dělí rovnoměrně mezi všechny lékaře s tečkou: počítá se 24h služby + tečky dohromady, takže kdo má víc 24h služeb,
 má méně teček (a naopak). Za 12 měsíců se to vyrovnává – kdo měl dosud víc, dostane méně (počítá se od prvního rozpisu z programu).
+
+**Svátky se střídají rok od roku:** kdo měl loni 24h službu na stejný svátek (Vánoce, Nový rok, Velikonoce…), dostane ho letos jen když chce nebo není jiná možnost.
 
 **Střídání:** kdo může obě pozice dvojice, dostane je pokud možno napůl – JIP 1 / JIP 2, tečka 1 / tečka 2, OUP den / OUP noc
 (2 služby = 1 + 1, 3 = 2 + 1). Program také střídá složení: titíž dva lékaři nemají být na 24h službách v jeden den opakovaně.
