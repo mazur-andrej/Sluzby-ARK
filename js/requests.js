@@ -8,10 +8,12 @@ export function findDoctor(text, doctors) {
   if (!t) return null;
   let best = null, bestLen = 0;
   for (const d of doctors) {
-    const n = norm(d.name);
-    const surname = n.split(/\s+/).pop();
-    const re = new RegExp(`(^|[^a-z])${surname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`);
-    if (re.test(t) && surname.length > bestLen) { best = d; bestLen = surname.length; }
+    // aktuální jméno i dřívější jména (aliases, např. za svobodna)
+    for (const name of [d.name, ...(d.aliases || [])]) {
+      const surname = norm(name).split(/\s+/).pop();
+      const re = new RegExp(`(^|[^a-z])${surname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`);
+      if (re.test(t) && surname.length > bestLen) { best = d; bestLen = surname.length; }
+    }
   }
   return best;
 }

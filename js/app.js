@@ -107,6 +107,20 @@ if (state.schema < 12) {
   for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def) d.fair = structuredClone(def.fair); }
   state.schema = 12;
 }
+// v13: Halmová = Pavlunová (vdala se) – sloučit; dřívější jména (aliases) z výchozího seznamu
+if (state.schema < 13) {
+  const from = 'lekar-52', to = 'lekar-13';
+  if (state.doctors.some((d) => d.id === from) && state.doctors.some((d) => d.id === to)) {
+    state.doctors = state.doctors.filter((d) => d.id !== from);
+    for (const m of Object.values(state.months)) {
+      if (m.grid) m.grid = m.grid.map((row) => row.map((id) => (id === from ? to : id)));
+      if (m.requests?.[from] && !m.requests[to]) m.requests[to] = m.requests[from];
+      if (m.requests) delete m.requests[from];
+    }
+  }
+  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.aliases) d.aliases = [...def.aliases]; if (def && d.id === to) { d.fair = structuredClone(def.fair); d.typical24 = def.typical24; } }
+  state.schema = 13;
+}
 const save = () => {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) { console.warn(e); alert('Změny se nepodařilo uložit (prohlížeč nepovolil úložiště – např. anonymní okno nebo plné úložiště).'); }
