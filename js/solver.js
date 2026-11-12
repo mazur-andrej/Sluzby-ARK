@@ -79,6 +79,7 @@ function mulberry32(seed) {
  * input = {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, start, hours, workdaysOnly}],
+ *   closed: [{ day, pos }] – pozice ten den neslouží (např. plastika o svátcích), volitelné,
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
@@ -105,7 +106,8 @@ export function solve(input) {
   const warnings = [];
 
   // Sloty: day 1..D, pozícia aktívna v daný deň
-  const slotActive = days.map((d) => P.map((p) => !(p.workdaysOnly && !d.workday)));
+  const isClosed = closedSet(input.closed);
+  const slotActive = days.map((d, t) => P.map((p) => !(p.workdaysOnly && !d.workday) && !isClosed(t + 1, p.id)));
 
   // běžné pozice + pozice „jen v nouzi“ (doc.emergency, např. 1A) – ty jen když by služba jinak zůstala neobsazená
   const regular = docs.map((doc) => new Set((doc.positions || []).map((id) => posIndex.get(id)).filter((x) => x !== undefined)));
@@ -154,7 +156,7 @@ export function solve(input) {
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
-  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, fairHistory: input.fairHistory });
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, fairHistory: input.fairHistory, closed: input.closed });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
@@ -513,17 +515,24 @@ export function solve(input) {
  * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
  * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
+/** Uzavřené pozice v jednotlivé dny: [{ day, pos }] → funkce (day, posId) → true/false. */
+function closedSet(closed) {
+  const s = new Set((closed || []).map((c) => `${+c.day}|${c.pos}`));
+  return (day, pos) => s.has(`${day}|${pos}`);
+}
+
 /** Strop 24h služieb za mesiac pri prepočte navyše (kto mal obvykle viac, ten svoj počet). */
 const CAP_24 = 4;
 
-export function planTargets({ days, positions, doctors, fixedGroup, positionMin, fairHistory }) {
+export function planTargets({ days, positions, doctors, fixedGroup, positionMin, fairHistory, closed }) {
+  const isClosed = closedSet(closed);
   const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
   const pmx = positionMin === undefined ? POSITION_MIN : positionMin;
   const out = {};
   for (const [key, cat] of Object.entries(CATEGORIES)) {
     const inCat = (id) => cat.positions.includes(id);
     let slots = 0;
-    for (const d of days) for (const p of positions) if (inCat(p.id) && !(p.workdaysOnly && !d.workday)) slots++;
+    days.forEach((d, t) => { for (const p of positions) if (inCat(p.id) && !(p.workdaysOnly && !d.workday) && !isClosed(t + 1, p.id)) slots++; });
     let reserved = 0;
     const members = [];
     for (const d of doctors) {
@@ -659,7 +668,7 @@ export function validate(input, grid) {
       if ((doc.emergency || []).includes(pos.id)) issues.push({ day, pos: pos.id, level: 'warn', msg: `${name} má ${pos.label} jen v nouzi` });
       else issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
     }
-    if (pos.workdaysOnly && !days[t].workday) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
+    if ((pos.workdaysOnly && !days[t].workday) || closedSet(input.closed)(day, pos.id)) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });
     if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. sloužit na ${pos.label}` });
@@ -698,7 +707,7 @@ export function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin, fairHistory: input.fairHistory });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin, fairHistory: input.fairHistory, closed: input.closed });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
