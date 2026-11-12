@@ -155,7 +155,7 @@ Vždy dodržena:
 (sloupec *Obvykle 24h*, předvyplněno z rozpisů prosinec 2025 – listopad 2026), přepočteno na počet služeb v daném měsíci.
 Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze svého rozsahu, je v přehledu vyznačen.
 
-**„Chci / prosím službu“** bez pozice znamená službu (24h nebo OUP) – tečka se za splnění přání nepočítá.
+**„Chci / prosím službu“** bez pozice znamená službu: přednostně 24h, když to nejde, OUP noc, až potom OUP den – tečka se za splnění přání nepočítá.
 
 **Tečky** se dělí tak, aby lékaři s tečkou měli v měsíci podobný počet služeb (24h + tečky, OUP se nepočítá):
 kdo má víc 24h služeb, má méně teček. Každý má aspoň 2 tečky. Přednostně je dostávají méně zkušení (níž v seznamu lékařů).

@@ -361,7 +361,10 @@ export function solve(input) {
     }
     // uprednostni pozíciu, na ktorej lekárovi chýba minimum (napr. lékař2 aspoň 1×), potom tú s najmenej kandidátmi
     const needs = (p) => (pmOf[w.doc].some((r) => r.idx === p && posCount(w.doc, p) < r.min) ? 0 : 1);
-    cands.sort((a, b) => needs(a) - needs(b) || countCands(w.day, a) - countCands(w.day, b));
+    // „prosím službu“ bez pozice: přednostně 24h, když to nejde, OUP noc, až potom OUP den
+    const oupN = posIndex.get(OUP_LIMIT.positions[1]);
+    const kind = (p) => (w.pos ? 0 : catSet.h24.has(p) ? 0 : p === oupN ? 1 : 2);
+    cands.sort((a, b) => kind(a) - kind(b) || needs(a) - needs(b) || countCands(w.day, a) - countCands(w.day, b));
     // když je volné místo obsazené dřívějším přáním někoho jiného, který může jinam, přesunout ho
     if (!cands.length) {
       const mine = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]].filter((p) => !catSet.tecky.has(p));
@@ -371,7 +374,8 @@ export function solve(input) {
         unplace(w.day, p); locked[w.day - 1][p] = false;
         if (!canAssign(w.doc, w.day, p)) { place(o.doc, w.day, p); locked[w.day - 1][p] = true; continue; }
         place(w.doc, w.day, p);
-        const alt = o.cands.find((q) => q !== p && assign[w.day - 1][q] === -1 && canAssign(o.doc, w.day, q));
+        const pref = (q) => (catSet.h24.has(q) ? 0 : q === posIndex.get(OUP_LIMIT.positions[1]) ? 1 : 2);
+        const alt = [...o.cands].sort((x, y) => pref(x) - pref(y)).find((q) => q !== p && assign[w.day - 1][q] === -1 && canAssign(o.doc, w.day, q));
         if (alt === undefined) { unplace(w.day, p); place(o.doc, w.day, p); locked[w.day - 1][p] = true; continue; }
         place(o.doc, w.day, alt); locked[w.day - 1][alt] = true; locked[w.day - 1][p] = true;
         wishAt.delete(`${w.day}|${p}`); wishAt.set(`${w.day}|${alt}`, o);

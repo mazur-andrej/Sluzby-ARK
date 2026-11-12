@@ -88,5 +88,21 @@ check(oupOk === 2, `${kriz.name}: chce 4× OUP noc, zvolil max 2 → splněno ${
   console.log(ok ? '✔' : '✘', `měsíc: Fencl ${cnt(f.id)} služby (max 3), Jelínek ${cnt(j.id)} (max 4), z toho plast ${cnt(j.id, 'plast')}× (přesně 1)`);
   if (!ok) fails++;
 }
+// „prosím službu“: když 24h nejde, přednostně OUP noc
+{
+  const { solve } = await import('../js/solver.js');
+  const { buildMonth } = await import('../js/calendar.js');
+  const { DEFAULT_POSITIONS: P } = await import('../js/config.js');
+  const { DEFAULT_DOCTORS } = await import('../js/default-doctors.js');
+  const docs = DEFAULT_DOCTORS.filter((d) => d.active);
+  const d = docs.find((x) => x.positions.includes('1A') && x.positions.includes('OUPn') && x.positions.includes('OUPd') && x.positions.every((p) => ['1A', 'plast', 'OUPd', 'OUPn'].includes(p)));
+  const others = docs.filter((x) => x.positions.includes('1A') && x.id !== d.id);
+  const locked = { '10|1A': others[0].id, '10|plast': docs.find((x) => x.positions.includes('plast') && x.id !== d.id).id };
+  const r = solve({ days: buildMonth(2027, 2), positions: P, doctors: docs, requests: { [d.id]: { off: [], want: [{ day: 10, pos: null }] } }, locked, seed: 1 });
+  const got = P[r.grid[9].indexOf(d.id)]?.id;
+  const ok = got === 'OUPn';
+  console.log(ok ? '✔' : '✘', `prosím službu 10. (1A obsazená): ${d.name} dostal ${got}`);
+  if (!ok) fails++;
+}
 console.log(fails ? `\n${fails} CHYB` : '\nVše v pořádku');
 process.exit(fails ? 1 : 0);
