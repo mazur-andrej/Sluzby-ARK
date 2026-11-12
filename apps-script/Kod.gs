@@ -631,12 +631,14 @@ function solve(input) {
   const wantResults = [];
   // „jeden z“: přání se stejnou skupinou (group) = lékař chce jen jeden z těch dnů; po splnění ostatní dny volno
   const groupDone = new Set();
+  const wishAt = new Map(); // 'den|pozice' → { doc, cands } – místa obsazená přáním (pro případný přesun)
   for (const w of wants) {
     if (w.day < 1 || w.day > D) continue;
     const gk = w.group ? `${w.doc}|${w.group}` : null;
     if (gk && groupDone.has(gk)) { off[w.doc].add(w.day); wantResults.push({ ...w, ok: true, other: true }); continue; }
     if (docDay[w.doc].has(w.day)) { wantResults.push({ ...w, ok: true }); if (gk) groupDone.add(gk); continue; }
-    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]];
+    // „chci / prosím službu“ bez pozice = služba (24h nebo OUP), ne tečka
+    let cands = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]].filter((p) => !catSet.tecky.has(p));
     cands = cands.filter((p) => assign[w.day - 1][p] === -1 && canAssign(w.doc, w.day, p));
     const beforeCap = cands.slice();
     cands = cands.filter((p) => { const cat = catOfPos(p); return !cat || catCount(w.doc, cat) < capOf(w.doc, cat); });
@@ -648,9 +650,28 @@ function solve(input) {
     // uprednostni pozíciu, na ktorej lekárovi chýba minimum (napr. lékař2 aspoň 1×), potom tú s najmenej kandidátmi
     const needs = (p) => (pmOf[w.doc].some((r) => r.idx === p && posCount(w.doc, p) < r.min) ? 0 : 1);
     cands.sort((a, b) => needs(a) - needs(b) || countCands(w.day, a) - countCands(w.day, b));
+    // když je volné místo obsazené dřívějším přáním někoho jiného, který může jinam, přesunout ho
+    if (!cands.length) {
+      const mine = w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]].filter((p) => !catSet.tecky.has(p));
+      for (const p of mine) {
+        const o = wishAt.get(`${w.day}|${p}`);
+        if (o == null) continue;
+        unplace(w.day, p); locked[w.day - 1][p] = false;
+        if (!canAssign(w.doc, w.day, p)) { place(o.doc, w.day, p); locked[w.day - 1][p] = true; continue; }
+        place(w.doc, w.day, p);
+        const alt = o.cands.find((q) => q !== p && assign[w.day - 1][q] === -1 && canAssign(o.doc, w.day, q));
+        if (alt === undefined) { unplace(w.day, p); place(o.doc, w.day, p); locked[w.day - 1][p] = true; continue; }
+        place(o.doc, w.day, alt); locked[w.day - 1][alt] = true; locked[w.day - 1][p] = true;
+        wishAt.delete(`${w.day}|${p}`); wishAt.set(`${w.day}|${alt}`, o);
+        const r = wantResults.find((x) => x.doc === o.doc && x.day === w.day); if (r) r.pos = [P[alt].id];
+        cands = [p]; unplace(w.day, p); // znovu umístí kód níže
+        break;
+      }
+    }
     if (cands.length) {
       place(w.doc, w.day, cands[0]); locked[w.day - 1][cands[0]] = true;
       wantResults.push({ ...w, ok: true, pos: [P[cands[0]].id] });
+      wishAt.set(`${w.day}|${cands[0]}`, { doc: w.doc, cands: w.pos ? w.pos.map((id) => posIndex.get(id)).filter((x) => x !== undefined) : [...regular[w.doc]].filter((q) => !catSet.tecky.has(q)) });
       if (gk) groupDone.add(gk);
     } else {
       const notEligible = w.pos && w.pos.every((id) => !eligible[w.doc].has(posIndex.get(id)));
