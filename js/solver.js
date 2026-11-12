@@ -83,7 +83,8 @@ function mulberry32(seed) {
  *   closed: [{ day, pos }] – pozice ten den neslouží (např. plastika o svátcích), volitelné,
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
- *   fairHistory: { [doctorId]: { n24, we, hol, noWe } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu za predchádzajúcich 12 mesiacov,
+ *   fairHistory: { [doctorId]: { n24, we, hol, noWe, dev } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu /
+ *     odchylka 24h od obvyklého počtu za predchádzajúcich 12 mesiacov (mesiac bez jedinej služby sa nepočíta),
  *   month: číslo měsíce (1–12) – pro střídání svátků rok od roku (volitelné; den může mít vlastní `month`),
  *   positionMin: [{ position, min, except:[id] }] – minimá služieb na pozíciách (jedno pravidlo alebo zoznam; null = vypnuté),
  *   fixedGroup: { positions:[id], count } – lekári len na týchto pozíciách majú presne count služieb (null = vypnuté),
@@ -161,7 +162,7 @@ export function solve(input) {
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
-  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: input.closed });
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: input.closed, fairHistory: input.fairHistory });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
@@ -631,7 +632,7 @@ function closedSet(closed) {
 /** Strop 24h služieb za mesiac pri prepočte navyše (kto mal obvykle viac, ten svoj počet). */
 const CAP_24 = 4;
 
-export function planTargets({ days, positions, doctors, fixedGroup, positionMin, closed }) {
+export function planTargets({ days, positions, doctors, fixedGroup, positionMin, closed, fairHistory }) {
   const isClosed = closedSet(closed);
   const fgx = fixedGroup === undefined ? FIXED_GROUP : fixedGroup;
   const pmx = positionMin === undefined ? POSITION_MIN : positionMin;
@@ -647,7 +648,10 @@ export function planTargets({ days, positions, doctors, fixedGroup, positionMin,
       const fixed = fixedCountOf(d, fgx);
       if (fixed != null && key === 'h24') { reserved += fixed; continue; }
       const v = cat.field ? Number(d[cat.field]) : NaN;
-      members.push({ id: d.id, doc: d, w: v > 0 ? v : null, zero: cat.field ? d[cat.field] === 0 : false });
+      // spravedlivost za rok: kdo měl dosud víc 24h, než obvykle mívá, má teď cíl nižší (a naopak), nejvýš o 1
+      const dev = key === 'h24' ? +(fairHistory?.[d.id]?.dev || 0) : 0;
+      const w = v > 0 ? Math.max(0.1, v - Math.max(-1, Math.min(1, 0.5 * dev))) : null;
+      members.push({ id: d.id, doc: d, w, zero: cat.field ? d[cat.field] === 0 : false });
     }
     if (cat.balance) { balancePlan(key, members, slots, out, cat.min || 0); continue; }
     const known = members.filter((m) => m.w != null);
@@ -724,7 +728,7 @@ function prevKey(key, n = 1) {
 export function buildFairHistory({ targetKey, past, doctors, positions }) {
   const win = new Set(Array.from({ length: FAIRNESS.windowMonths }, (_, i) => prevKey(targetKey, i + 1)));
   const out = {};
-  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0, hd: [] })[k] += v; };
+  const add = (id, k, v) => { (out[id] ||= { n24: 0, we: 0, hol: 0, noWe: 0, dev: 0, hd: [] })[k] += v; };
   const addHd = (id, v) => { add(id, 'n24', 0); out[id].hd.push(v); };
   for (const d of doctors) for (const [key, f] of Object.entries(d.fair || {})) {
     if (!win.has(key) || !FAIR_BASE_MONTHS.includes(key) || !f) continue;
@@ -735,10 +739,12 @@ export function buildFairHistory({ targetKey, past, doctors, positions }) {
   for (const pm of past || []) {
     if (!win.has(pm.key) || FAIR_BASE_MONTHS.includes(pm.key)) continue;
     const month = {};
+    const present = new Set(); // kdo měl v měsíci aspoň jednu službu (jinak byl celý měsíc pryč / neaktivní)
     pm.rows.forEach((row, t) => {
       const day = pm.days[t];
       if (!day) return;
       row.forEach((id, c) => {
+        if (id) present.add(id);
         if (!id || !h24labels.has(pm.header[c])) return;
         const w = weekendWeight(day);
         add(id, 'n24', 1); add(id, 'we', w); if (day.holiday) { add(id, 'hol', 1); addHd(id, `${+pm.key.slice(5)}-${t + 1}`); }
@@ -746,6 +752,13 @@ export function buildFairHistory({ targetKey, past, doctors, positions }) {
       });
     });
     for (const [id, x] of Object.entries(month)) if (x.n > 0 && x.we < FAIRNESS.weekendMin) add(id, 'noWe', FAIRNESS.weekendMin - x.we);
+    // odchylka 24h od obvyklého počtu (kdo měl míň, dostane později víc a naopak);
+    // celý měsíc pryč / neaktivní = jako by měl průměr → žádná náhrada
+    for (const d of doctors || []) {
+      const want = fixedCountOf(d) ?? (+d.typical24 > 0 ? +d.typical24 : null);
+      if (want == null || !present.has(d.id)) continue;
+      add(d.id, 'dev', (month[d.id]?.n || 0) - want);
+    }
   }
   return out;
 }
@@ -803,7 +816,7 @@ export function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: input.closed });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: input.closed, fairHistory: input.fairHistory });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);

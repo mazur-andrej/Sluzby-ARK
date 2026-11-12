@@ -645,7 +645,7 @@ function pmWho(pm) {
 
 // ---------------- Lekári ----------------
 /** Plán pro aktuální měsíc: kolik 24h služeb a teček má kdo mít (podle obvyklých počtů). */
-const currentPlan = () => planTargets({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup, positionMin: state.positionMin });
+const currentPlan = () => planTargets({ days: days(), positions: state.positions, doctors: activeDoctors(), fixedGroup: state.fixedGroup, positionMin: state.positionMin, fairHistory: fairHistory() });
 /** Lékař jen na JIP → pevný počet služeb z Nastavení, jinak null. */
 const fixedFor = (doc) => fixedCountOf(doc, state.fixedGroup);
 function renderDoctors() {

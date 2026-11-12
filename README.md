@@ -168,6 +168,10 @@ kdo má víc 24h služeb, má méně teček. Každý má aspoň 2 tečky. Předn
 **Zkušenost:** pořadí lékařů v seznamu (karta Lékaři / list Lékaři, převezme se z pořadí v Excelu požadavků) je podle zkušenosti – nahoře nejzkušenější.
 Když chce víc lékařů stejnou službu, má přednost zkušenější; tečky a 2A navíc (při nedostatku) dostanou přednostně méně zkušení.
 
+**Spravedlnost za rok:** kdo měl v posledních 12 měsících míň 24h služeb, než obvykle mívá, dostane další měsíce víc (a naopak, nejvýš o 1 za měsíc).
+Víkendy a svátky se porovnávají vůči počtu vlastních 24h služeb. Měsíc, kdy lékař neměl ani jednu službu (vyškrtl celý měsíc / byl neaktivní),
+se počítá jako průměrný – žádná náhrada se za něj nedohání.
+
 **Svátky se střídají rok od roku:** kdo měl loni 24h službu na stejný svátek (Vánoce, Nový rok, Velikonoce…), dostane ho letos jen když chce nebo není jiná možnost.
 
 **Střídání:** kdo může obě pozice dvojice, dostane je pokud možno napůl – JIP 1 / JIP 2, tečka 1 / tečka 2, OUP den / OUP noc
