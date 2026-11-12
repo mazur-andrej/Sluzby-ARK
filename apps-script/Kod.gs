@@ -114,8 +114,8 @@ const POSITION_MIN = [
 // Lekár bez zadaného obvyklého počtu dostane priemer. OUP sa rieši zvlášť (OUP_LIMIT).
 const CATEGORIES = {
   h24: { label: '24h', positions: ['l1', 'l2', '1A', '2A', 'plast'], field: 'typical24' },
-  // tečky: rovnoměrně v celém poolu lékařů s tečkou; kdo má víc 24h služeb, má méně teček (a naopak), za 12 měsíců vyrovnaně
-  tecky: { label: 'tečky', positions: ['t1', 't2'], balance: true },
+  // tečky: v poolu lékařů s tečkou podobně služeb (24h + tečky), kdo má víc 24h, má méně teček; každý aspoň `min`
+  tecky: { label: 'tečky', positions: ['t1', 't2'], balance: true, min: 2 },
 };
 
 // Dvojice pozic, které má lékař (pokud může obě) dostávat rovnoměrně: 2 služby = 1× + 1×, 3 = 2 + 1.
@@ -251,7 +251,7 @@ const DEFAULT_DOCTORS = [
     "fair": {"2025-12":{"n24":3,"hol":1,"hd":["12-25"],"t":3,"noWe":1},"2026-01":{"n24":3,"we":1,"t":3,"sat":1},"2026-02":{"n24":3,"we":1.5,"t":2,"sun":1,"fri":1},"2026-03":{"n24":3,"we":1,"t":4,"sat":1},"2026-05":{"n24":3,"we":1,"hol":1,"hd":["5-8"],"t":3,"fri":1},"2026-06":{"n24":2,"we":1,"t":3,"o":3,"sun":1},"2026-07":{"n24":3,"we":1,"t":4,"o":3,"sat":1},"2026-08":{"n24":2,"we":1.5,"t":3,"o":4,"sat":1,"fri":1},"2026-09":{"n24":2,"we":1,"t":3,"o":4,"sun":1},"2026-10":{"n24":3,"we":1.5,"t":2,"o":3,"sat":1,"fri":1},"2026-11":{"n24":3,"hol":1,"hd":["11-17"],"t":2,"o":3,"noWe":1}} },
   {"id":"lekar-40","name":"Žabková","active":true,"positions":["2A","t1","OUPd","OUPn"],"max":null,"note":"","typical24":2.6,
     "fair": {"2025-12":{"n24":2,"we":1,"t":2,"sat":1},"2026-01":{"n24":3,"we":1,"t":3,"sat":1},"2026-02":{"n24":3,"we":1.5,"t":2,"sat":1,"fri":1},"2026-03":{"n24":3,"we":1,"t":3,"sun":1},"2026-05":{"n24":3,"we":1,"t":2,"sat":1},"2026-06":{"n24":3,"we":1,"t":2,"o":1,"sat":1},"2026-07":{"n24":3,"we":1,"t":1,"o":4,"sun":1},"2026-08":{"n24":3,"we":1,"t":2,"o":2,"sun":1},"2026-09":{"n24":2,"we":1,"t":2,"o":2,"sun":1},"2026-10":{"n24":2,"hol":1,"hd":["10-28"],"t":1,"o":4,"noWe":1},"2026-11":{"n24":2,"t":2,"o":5,"noWe":1}} },
-  {"id":"lekar-35","name":"Paulovičová","active":true,"positions":["1A","2A","t1","OUPd","OUPn"],"max":null,"note":"","typical24":2.8,
+  {"id":"lekar-35","name":"Paulovičová","active":true,"positions":["1A","2A","OUPd","OUPn"],"max":null,"note":"","typical24":2.8,
     "fair": {"2025-12":{"n24":3,"we":1,"t":1,"o":3,"sun":1},"2026-01":{"n24":2,"we":1,"t":1,"o":5,"sun":1},"2026-02":{"n24":3,"we":1,"t":2,"o":1,"sat":1},"2026-03":{"n24":3,"we":1.5,"o":2,"sun":1,"fri":1},"2026-05":{"n24":2,"we":1,"t":2,"o":4,"sun":1},"2026-06":{"n24":2,"t":2,"o":3,"noWe":1},"2026-07":{"n24":3,"we":1,"t":4,"o":4,"sat":1},"2026-08":{"n24":4,"we":1.5,"t":3,"o":1,"sat":1,"fri":1},"2026-09":{"n24":3,"we":1,"o":2,"sun":1},"2026-10":{"n24":3,"we":1,"o":2,"sat":1}} },
   {"id":"lekar-23","name":"Fabián","active":true,"positions":["1A","plast","OUPd","OUPn"],"max":null,"note":"","typical24":2.5,
     "fair": {"2025-12":{"n24":2,"we":1,"t":3,"o":3,"sat":1},"2026-01":{"n24":2,"hol":1,"hd":["1-1"],"t":1,"o":4,"noWe":1},"2026-02":{"n24":2,"we":1,"t":1,"o":2,"sun":1},"2026-03":{"n24":2,"we":1,"t":2,"o":5,"sun":1},"2026-05":{"n24":2,"we":1,"t":1,"o":3,"sat":1},"2026-06":{"n24":2,"we":1,"t":3,"o":3,"sat":1},"2026-07":{"n24":3,"we":1,"o":2,"sat":1},"2026-08":{"n24":3,"we":1,"o":2,"sat":1},"2026-09":{"n24":3,"we":1,"o":3,"sun":1},"2026-10":{"n24":3,"we":1,"o":3,"sat":1},"2026-11":{"n24":3,"we":1,"o":2,"sun":1}} },
@@ -273,7 +273,7 @@ const DEFAULT_DOCTORS = [
     "fair": {"2026-07":{"n24":0,"t":2},"2026-08":{"n24":0,"t":4},"2026-09":{"n24":1,"t":5,"o":1,"noWe":1},"2026-10":{"n24":1,"we":0.5,"t":3,"o":2,"fri":1,"noWe":0.5},"2026-11":{"n24":2,"t":4,"noWe":1}} },
   {"id":"lekar-51","name":"Zubíková","oupHome":true,"active":true,"positions":["2A","t2"],"max":null,"note":"","typical24":1,
     "fair": {"2026-07":{"n24":0,"t":2},"2026-08":{"n24":0,"t":3},"2026-09":{"n24":1,"t":5,"o":1,"noWe":1},"2026-10":{"n24":2,"we":1,"t":3,"fri":2},"2026-11":{"n24":2,"we":1,"t":3,"sat":1}} },
-  {"id":"lekar-36","name":"Šimová","active":true,"positions":["1A","2A","t1"],"max":null,"note":"","typical24":2.7,
+  {"id":"lekar-36","name":"Šimová","active":true,"positions":["1A","2A"],"max":null,"note":"","typical24":2.7,
     "fair": {"2026-09":{"n24":2,"t":3,"noWe":1},"2026-10":{"n24":3,"we":1,"t":1,"sun":1},"2026-11":{"n24":3,"we":1,"t":1,"sun":1}} },
   {"id":"lekar-45","name":"Mrázek","active":true,"positions":["2A","t2"],"max":null,"note":"","typical24":2,
     "fair": {"2026-11":{"n24":2,"we":1,"t":4,"fri":2}} },
@@ -562,8 +562,9 @@ function solve(input) {
     // tečky
     if (tgtT[i]) {
       const k = catCount(i, 'tecky'), t = tgtT[i];
-      // cieľ tečiek podľa skutočných služieb v mesiaci: kto má o 24h / OUP viac, má o tečku menej
-      const goal = t.load != null ? Math.max(0, t.load - m - oupCount(i)) : t.avg;
+      // cieľ tečiek podľa skutočných 24h služieb v mesiaci: kto má o 24h viac, má o tečku menej (nie pod minimum)
+      const goal = t.load != null ? Math.max(t.min || 0, t.load - m) : t.avg;
+      if (t.min && k < t.min) c += W.posMinMissing * (t.min - k);
       c += W.tEven * (k - goal) * (k - goal) + W.tRange * (Math.max(0, t.lo - k) + Math.max(0, k - t.hi));
     }
     for (const r of pmOf[i]) { const k = posCount(i, r.idx); if (k < r.min) c += W.posMinMissing * (r.min - k); }
@@ -854,6 +855,7 @@ function solve(input) {
     for (const r of pmOf[i]) if (posCount(i, r.idx) < r.min) warnings.push(`${docs[i].name} má jen ${posCount(i, r.idx)}× ${P[r.idx].label} (minimum ${r.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (fixedOf[i] != null && catCount(i, 'h24') < fixedOf[i]) warnings.push(`${docs[i].name} (jen ${fg.label || 'JIP'}) má jen ${catCount(i, 'h24')} služeb místo ${fixedOf[i]} – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (oupEligible[i] && oupCount(i) < OUP_LIMIT.min) warnings.push(`${docs[i].name} má jen ${oupCount(i)} ${OUP_LIMIT.label} (minimum ${OUP_LIMIT.min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
+    if (tgtT[i]?.min && catCount(i, 'tecky') < tgtT[i].min) warnings.push(`${docs[i].name} má jen ${catCount(i, 'tecky')} tečky (aspoň ${tgtT[i].min}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (tgt24[i] && catCount(i, 'h24') < tgt24[i].lo) warnings.push(`${docs[i].name} má jen ${catCount(i, 'h24')}× 24h (obvykle ${tgt24[i].label}) – víc to nešlo kvůli vyškrtnutým dnům a odpočinku`);
     if (tgt24[i] && catCount(i, 'h24') > tgt24[i].hi) warnings.push(`${docs[i].name} má ${catCount(i, 'h24')}× 24h, víc než obvykle (${tgt24[i].label}) – jinak by zůstala služba neobsazená`);
   }
@@ -910,7 +912,7 @@ function planTargets({ days, positions, doctors, fixedGroup, positionMin, closed
       const v = cat.field ? Number(d[cat.field]) : NaN;
       members.push({ id: d.id, doc: d, w: v > 0 ? v : null, zero: cat.field ? d[cat.field] === 0 : false });
     }
-    if (cat.balance) { balancePlan(key, members, slots, out); continue; }
+    if (cat.balance) { balancePlan(key, members, slots, out, cat.min || 0); continue; }
     const known = members.filter((m) => m.w != null);
     const avgW = known.length ? known.reduce((a, m) => a + m.w, 0) / known.length : 1;
     for (const m of members) if (m.w == null) m.w = m.zero ? 0 : avgW;
@@ -945,27 +947,28 @@ function planTargets({ days, positions, doctors, fixedGroup, positionMin, closed
 }
 
 /**
- * Tečky v poole: všetci majú mať v mesiaci podobný počet služieb (24h + tečky + OUP spolu) –
- * kto má viac 24h služieb alebo OUP, má menej tečiek. Navyše ich dostávajú skôr menej skúsení
+ * Tečky v poole: všetci majú mať v mesiaci podobný počet služieb (24h + tečky; OUP sa nepočíta) –
+ * kto má viac 24h služieb, má menej tečiek; každý aspoň `min` tečiek. Navyše ich dostávajú skôr menej skúsení
  * (poradie v zozname = skúsenosť; najskúsenejší má cieľ o SENIOR_TECKY služby nižší).
- * Vráti pri každom lekárovi aj `load` – cieľ 24h + tečky + OUP (solver podľa neho dopočíta tečky zo skutočných služieb).
+ * Vráti pri každom lekárovi aj `load` – cieľ 24h + tečky (solver podľa neho dopočíta tečky zo skutočných 24h).
  */
 const SENIOR_TECKY = 1;
-function balancePlan(key, members, slots, out) {
+function balancePlan(key, members, slots, out, min = 0) {
   if (!members.length) return;
   const e24 = (m) => out[m.id]?.h24?.avg ?? fixedCountOf(m.doc) ?? 0;
-  const eOup = (m) => ((m.doc.positions || []).some((id) => OUP_LIMIT.positions.includes(id)) ? OUP_LIMIT.min : 0);
   const shift = members.map((_, j) => (members.length > 1 ? SENIOR_TECKY * (1 - j / (members.length - 1)) : 0));
-  const base = members.map((m, j) => e24(m) + eOup(m) + shift[j]);
-  // úroveň L tak, aby súčet max(0, L - base) = počet tečiek
+  const base = members.map((m, j) => e24(m) + shift[j]);
+  const mn = Math.min(min, slots / members.length); // když je teček málo, minimum se úměrně sníží
+  // úroveň L tak, aby súčet max(min, L - base) = počet tečiek
+  const sum = (L) => base.reduce((a, b) => a + Math.max(mn, L - b), 0);
   let lo = 0, hi = Math.max(...base) + slots + 1;
-  for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (base.reduce((a, b) => a + Math.max(0, mid - b), 0) < slots) lo = mid; else hi = mid; }
+  for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (sum(mid) < slots) lo = mid; else hi = mid; }
   const L = (lo + hi) / 2;
   members.forEach((m, j) => {
-    const avg = Math.max(0, L - base[j]);
+    const avg = Math.max(mn, L - base[j]);
     let a = Math.floor(avg + 0.2), b = Math.ceil(avg - 0.2);
     if (b < a) b = a;
-    (out[m.id] ||= {})[key] = { avg, lo: a, hi: b, label: a === b ? String(a) : `${a}–${b}`, load: L - shift[j] };
+    (out[m.id] ||= {})[key] = { avg, lo: a, hi: b, label: a === b ? String(a) : `${a}–${b}`, load: L - shift[j], min: Math.floor(mn) };
   });
 }
 

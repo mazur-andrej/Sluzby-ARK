@@ -109,6 +109,11 @@ if (state.schema < 13) {
   for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.aliases) d.aliases = [...def.aliases]; if (def && d.id === to) { d.fair = structuredClone(def.fair); d.typical24 = def.typical24; } }
   state.schema = 13;
 }
+// v14: Paulovičová a Šimová už neslouží tečky
+if (state.schema < 14) {
+  for (const d of state.doctors) if (['lekar-35', 'lekar-36'].includes(d.id)) d.positions = d.positions.filter((p) => p !== 't1' && p !== 't2');
+  state.schema = 14;
+}
 const save = () => {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) { console.warn(e); alert('Změny se nepodařilo uložit (prohlížeč nepovolil úložiště – např. anonymní okno nebo plné úložiště).'); }

@@ -49,8 +49,8 @@ export const POSITION_MIN = [
 // Lekár bez zadaného obvyklého počtu dostane priemer. OUP sa rieši zvlášť (OUP_LIMIT).
 export const CATEGORIES = {
   h24: { label: '24h', positions: ['l1', 'l2', '1A', '2A', 'plast'], field: 'typical24' },
-  // tečky: rovnoměrně v celém poolu lékařů s tečkou; kdo má víc 24h služeb, má méně teček (a naopak), za 12 měsíců vyrovnaně
-  tecky: { label: 'tečky', positions: ['t1', 't2'], balance: true },
+  // tečky: v poolu lékařů s tečkou podobně služeb (24h + tečky), kdo má víc 24h, má méně teček; každý aspoň `min`
+  tecky: { label: 'tečky', positions: ['t1', 't2'], balance: true, min: 2 },
 };
 
 // Dvojice pozic, které má lékař (pokud může obě) dostávat rovnoměrně: 2 služby = 1× + 1×, 3 = 2 + 1.

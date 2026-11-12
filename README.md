@@ -155,8 +155,8 @@ Vždy dodržena:
 (sloupec *Obvykle 24h*, předvyplněno z rozpisů prosinec 2025 – listopad 2026), přepočteno na počet služeb v daném měsíci.
 Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze svého rozsahu, je v přehledu vyznačen.
 
-**Tečky** se dělí tak, aby lékaři s tečkou měli v měsíci podobný počet služeb (24h + tečky + OUP dohromady):
-kdo má víc 24h služeb nebo OUP, má méně teček. Přednostně je dostávají méně zkušení (níž v seznamu lékařů).
+**Tečky** se dělí tak, aby lékaři s tečkou měli v měsíci podobný počet služeb (24h + tečky, OUP se nepočítá):
+kdo má víc 24h služeb, má méně teček. Každý má aspoň 2 tečky. Přednostně je dostávají méně zkušení (níž v seznamu lékařů).
 
 **Úpravy na měsíc** (karta Požadavky, sloupce vpravo): *Max měsíc* = nejvýš služeb jen tento měsíc (např. Fencl 3),
 *Přesně* = tento měsíc přesně tolik služeb na pozici (např. Jelínek „plast 1“).

@@ -17,9 +17,10 @@ check(unbalanced('t1', 't2').length <= 1, `tečka 1/2 nevyrovnaní: ${unbalanced
 // tečky: záťaž 24h + tečky v poolu nejvýš o 2 od sebe
 const h24 = new Set(CATEGORIES.h24.positions.map(idx)), tt = new Set(CATEGORIES.tecky.positions.map(idx));
 const pool = docs.filter((d) => d.positions.some((x) => CATEGORIES.tecky.positions.includes(x)));
-const oo = new Set(OUP_LIMIT.positions.map(idx));
-const load = pool.map((d) => res.grid.reduce((a, r) => a + r.filter((id, i) => id === d.id && (h24.has(i) || tt.has(i) || oo.has(i))).length, 0));
-check(Math.max(...load) - Math.min(...load) <= 3, `pool teček: 24h + tečky + OUP ${Math.min(...load)}–${Math.max(...load)}`);
+const load = pool.map((d) => res.grid.reduce((a, r) => a + r.filter((id, i) => id === d.id && (h24.has(i) || tt.has(i))).length, 0));
+check(Math.max(...load) - Math.min(...load) <= 2, `pool teček: 24h + tečky ${Math.min(...load)}–${Math.max(...load)}`);
+const nT = pool.map((d) => res.grid.reduce((a, r) => a + r.filter((id, i) => id === d.id && tt.has(i)).length, 0));
+check(Math.min(...nT) >= 2, `každý v poolu aspoň 2 tečky (nejméně ${Math.min(...nT)})`);
 // ten, kdo má víc 24h, má méně teček
 const plan = planTargets({ days, positions: P, doctors: docs });
 const e24 = (d) => plan[d.id].h24?.avg ?? 0;
