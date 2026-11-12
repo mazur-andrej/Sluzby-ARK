@@ -74,5 +74,19 @@ check(oupOk === 2, `${kriz.name}: chce 4× OUP noc, zvolil max 2 → splněno ${
   console.log(n === 1 ? '✔' : '✘', `jen jeden z 10./11.: Grác slouží ${n}× z těch dnů`);
   if (n !== 1) fails++;
 }
+// úpravy na měsíc: max (Fencl 3) a přesně (Jelínek: plast 1, celkem 4)
+{
+  const { solve } = await import('../js/solver.js');
+  const { buildMonth } = await import('../js/calendar.js');
+  const { DEFAULT_POSITIONS: P } = await import('../js/config.js');
+  const { DEFAULT_DOCTORS } = await import('../js/default-doctors.js');
+  const docs = DEFAULT_DOCTORS.filter((d) => d.active);
+  const f = docs.find((d) => d.name === 'Fencl'), j = docs.find((d) => d.name === 'Jelínek');
+  const r = solve({ days: buildMonth(2027, 3), positions: P, doctors: docs, requests: { [f.id]: { off: [], want: [], max: 3 }, [j.id]: { off: [], want: [], max: 4, exact: { plast: 1 } } }, seed: 1 });
+  const cnt = (id, pid) => r.grid.reduce((a, row) => a + row.filter((x, i) => x === id && (!pid || P[i].id === pid)).length, 0);
+  const ok = cnt(f.id) === 3 && cnt(j.id) === 4 && cnt(j.id, 'plast') === 1;
+  console.log(ok ? '✔' : '✘', `měsíc: Fencl ${cnt(f.id)} služby (max 3), Jelínek ${cnt(j.id)} (max 4), z toho plast ${cnt(j.id, 'plast')}× (přesně 1)`);
+  if (!ok) fails++;
+}
 console.log(fails ? `\n${fails} CHYB` : '\nVše v pořádku');
 process.exit(fails ? 1 : 0);

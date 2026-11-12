@@ -131,8 +131,7 @@ export function mergeRequests(base, add) {
   const out = { ...base };
   for (const [id, r] of Object.entries(add)) {
     out[id] = { off: [...r.off], want: [...r.want], ban: [...(r.ban || [])], notes: { ...(r.notes || {}) }, note: r.note || '' };
-    const oupMax = r.oupMax ?? base[id]?.oupMax;
-    if (oupMax) out[id].oupMax = oupMax;
+    for (const k of ['oupMax', 'max', 'exact']) { const v = r[k] ?? base[id]?.[k]; if (v) out[id][k] = v; } // volby na měsíc zůstanou
   }
   return out;
 }

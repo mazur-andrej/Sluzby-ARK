@@ -29,6 +29,7 @@ export const DEFAULT_WEIGHTS = {
   oupExtraJip: 200, // to isté u ostatných (lekári s JIP) – OUP navyše dostanú len výnimočne
   mix: 20,         // JIP1/JIP2, tečka 1/2, OUP deň/noc nerovnomerne (napr. 2× JIP1 namiesto 1+1), * (rozdiel/2)^2
   junior: 6,       // za každú tečku / 2A u zkúsenejšieho lekára (× senirita 0–1) – pri nedostatku ich dostanú menej skúsení
+  exactMissing: 500, // tento měsíc chybí služba na pozici, kterou má lékař mít přesně (req.exact)
   emergency: 600,  // služba na pozícii „len v núdzi“ (napr. 1A u Bartošíka) – menej ako neobsadená služba
   together: 8,     // tí istí dvaja lekári spolu na 24h službách v jeden deň opakovane: * (počet spoločných dní - 1)^2
   weFair: 40,      // * (víkendy 24h za 12 mes. - férový podiel)^2
@@ -98,7 +99,8 @@ export function solve(input) {
   const days = input.days;
   const D = days.length;
   const P = input.positions;
-  const docs = input.doctors;
+  // úpravy na tento měsíc z požadavků: req.max = nejvýš služeb tento měsíc (přepíše Max lékaře)
+  const docs = input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; });
   const N = docs.length;
   const docIndex = new Map(docs.map((d, i) => [d.id, i]));
   const posIndex = new Map(P.map((p, i) => [p.id, i]));
@@ -123,6 +125,9 @@ export function solve(input) {
     (req.want || []).forEach((w) => wants.push({ doc: i, day: +w.day, pos: w.pos == null ? null : [].concat(w.pos), ...(w.group ? { group: w.group } : {}) }));
     (req.ban || []).forEach((b) => [].concat(b.pos).forEach((id) => { const p = posIndex.get(id); if (p !== undefined) ban[i].add(`${+b.day}|${p}`); }));
   }
+  // req.exact = { plast: 1 } – tento měsíc přesně tolik služeb na pozici (nejvýš tvrdě, méně = velká penalizace)
+  const exactOf = docs.map((d) => new Map(Object.entries((input.requests || {})[d.id]?.exact || {})
+    .map(([id, n]) => [posIndex.get(id), +n]).filter(([p, n]) => p !== undefined && n >= 0)));
   // přání sa plnia v poradí zoznamu lekárov = podľa skúsenosti (skúsenejší má prednosť), v rámci lekára podľa dňa
   wants.sort((a, b) => a.doc - b.doc || a.day - b.day);
   // Lekári len na JIP: presný počet služieb (max tvrdo, cieľ = počet)
@@ -231,6 +236,7 @@ export function solve(input) {
     if (!restOk(i, day, p)) return false;
     if (docDay[i].size >= maxOf[i]) return false;
     if (fixedOf[i] != null && catSet.h24.has(p) && catCount(i, 'h24') >= fixedOf[i]) return false;
+    if (exactOf[i].has(p) && posCount(i, p) >= exactOf[i].get(p)) return false;
     if (oupMax[i] != null && oupSet.has(p) && oupCount(i) >= oupMax[i]) return false;
     return true;
   }
@@ -282,6 +288,7 @@ export function solve(input) {
       else if (o > minO) c += oupExtraW[i] * (o - minO) * (o - minO);
     }
     if (emerg[i].size) for (const p of docDay[i].values()) if (emerg[i].has(p)) c += W.emergency;
+    for (const [p, n] of exactOf[i]) { const k = posCount(i, p); if (k < n) c += W.exactMissing * (n - k); }
     if (W.junior && senior[i] > 0) { let k = 0; for (const p of docDay[i].values()) if (juniorSet.has(p)) k++; c += W.junior * senior[i] * k; }
     for (const [a, b] of mixOf[i]) {
       let na = 0, nb = 0;
@@ -359,6 +366,18 @@ export function solve(input) {
     } else {
       const notEligible = w.pos && w.pos.every((id) => !eligible[w.doc].has(posIndex.get(id)));
       wantResults.push({ ...w, ok: false, reason: notEligible ? 'tuto pozici nemá v seznamu povolených' : 'ten den to nejde (obsazeno / odpočinek po službě)' });
+    }
+  }
+  // „přesně N× pozice“ (req.exact): chybějící služby na té pozici umístit hned po přáních – do dne,
+  // kdy je na tu pozici nejvíc jiných kandidátů (tam chybět nebude)
+  for (let i = 0; i < N; i++) for (const [p, n] of exactOf[i]) {
+    while (posCount(i, p) < n) {
+      const opts = [];
+      for (let t = 1; t <= D; t++) if (assign[t - 1][p] === -1 && canAssign(i, t, p)) opts.push([t, countCands(t, p)]);
+      if (!opts.length) break;
+      opts.sort((a, b) => b[1] - a[1]);
+      const [t] = opts[0];
+      place(i, t, p); locked[t - 1][p] = true;
     }
   }
   function countCands(day, p) { let c = 0; for (let i = 0; i < N; i++) if (canAssign(i, day, p)) c++; return c; }
@@ -455,6 +474,65 @@ export function solve(input) {
     }
   }
 
+  // Oprava neobsazených služeb řetězem: lékař i vezme prázdnou službu a jednu svou jinou službu předá lékaři j
+  // (náhodné hledání tohle najde jen zřídka – např. Bartošík vezme 11. lékař1, jeho 29. převezme Růžek).
+  function repair() {
+    for (let pass = 0; pass < 3; pass++) {
+      let changed = false;
+      for (const [t, p] of slots) {
+        if (assign[t - 1][p] >= 0) continue;
+        let done = false;
+        const before = totalCost();
+        for (let i = 0; i < N && !done; i++) {
+          if (!eligible[i].has(p) || off[i].has(t)) continue;
+          for (const [t2, p2] of [...docDay[i]]) {
+            if (t2 < 1 || t2 === t || locked[t2 - 1][p2]) continue;
+            unplace(t2, p2);
+            if (!canAssign(i, t, p)) { place(i, t2, p2); continue; }
+            place(i, t, p);
+            for (let j = 0; j < N && !done; j++) {
+              if (j === i || !canAssign(j, t2, p2)) continue;
+              place(j, t2, p2);
+              if (totalCost() < before - 1e-9) done = true; else unplace(t2, p2);
+            }
+            if (done) break;
+            unplace(t, p); place(i, t2, p2);
+          }
+        }
+        if (done) changed = true;
+      }
+      if (!changed) break;
+    }
+    // „přesně N× pozice“ (req.exact): lékař i vezme tu pozici v jiný den a jednu svou službu předá dál
+    for (let i = 0; i < N; i++) for (const [p, n] of exactOf[i]) {
+      for (let tries = 0; tries < n && posCount(i, p) < n; tries++) {
+        const before = totalCost();
+        let done = false;
+        for (let t = 1; t <= D && !done; t++) {
+          if (!slotActive[t - 1][p] || locked[t - 1][p] || assign[t - 1][p] === i || off[i].has(t)) continue;
+          const j0 = assign[t - 1][p];
+          for (const [t2, p2] of [...docDay[i]]) {
+            if (t2 < 1 || p2 === p || locked[t2 - 1][p2]) continue;
+            if (j0 >= 0) unplace(t, p);
+            unplace(t2, p2);
+            if (!canAssign(i, t, p)) { place(i, t2, p2); if (j0 >= 0) place(j0, t, p); continue; }
+            place(i, t, p);
+            const order = j0 >= 0 ? [j0, ...Array.from({ length: N }, (_, k) => k).filter((k) => k !== j0)] : Array.from({ length: N }, (_, k) => k);
+            for (const j of order) {
+              if (j === i || !canAssign(j, t2, p2)) continue;
+              place(j, t2, p2);
+              if (totalCost() < before - 1e-9) { done = true; break; }
+              unplace(t2, p2);
+            }
+            if (done) break;
+            unplace(t, p); place(i, t2, p2); if (j0 >= 0) place(j0, t, p);
+          }
+        }
+        if (!done) break;
+      }
+    }
+  }
+
   const restarts = input.restarts ?? 4;
   const iterations = input.iterations ?? 150000;
   let best = null, bestCost = Infinity;
@@ -462,6 +540,7 @@ export function solve(input) {
     resetToBase();
     greedy();
     improve(iterations);
+    repair();
     const c = totalCost();
     if (c < bestCost) { bestCost = c; best = assign.map((row) => row.slice()); }
   }
@@ -475,6 +554,7 @@ export function solve(input) {
   const unfilled = [];
   for (const [t, p] of slots) if (assign[t - 1][p] < 0) unfilled.push({ day: t, pos: P[p].id });
   for (const u of unfilled) warnings.push(`Neobsazeno: ${u.day}. – ${P[posIndex.get(u.pos)].label} (nikdo volný nesplňuje pravidla)`);
+  for (let i = 0; i < N; i++) for (const [p, n] of exactOf[i]) if (posCount(i, p) !== n) warnings.push(`${docs[i].name} má ${posCount(i, p)}× ${P[p].label}, má mít přesně ${n}`);
   for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) if (d > 0 && emerg[i].has(p) && !locked[d - 1][p]) warnings.push(`V nouzi: ${docs[i].name} má ${d}. ${P[p].label} (normálně tuto pozici neslouží)`);
   if (anMode !== 'hard') {
     for (let i = 0; i < N; i++) for (const [d, p] of docDay[i]) {
@@ -707,7 +787,7 @@ export function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors, fixedGroup: input.fixedGroup, positionMin: input.positionMin, fairHistory: input.fairHistory, closed: input.closed });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, fairHistory: input.fairHistory, closed: input.closed });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
@@ -731,7 +811,9 @@ export function validate(input, grid) {
   }
   // lekári len na JIP: presný počet
   const fg = input.fixedGroup === undefined ? FIXED_GROUP : input.fixedGroup;
-  for (const d of input.doctors) {
+  for (const d0 of input.doctors) {
+    const m = Number((input.requests || {})[d0.id]?.max);
+    const d = m > 0 ? { ...d0, max: m } : d0; // Max na tento měsíc z požadavků
     const want = fixedCountOf(d, fg);
     if (want == null) continue;
     const n = (perDoc.get(d.id) || []).filter((x) => !x.prev && CATEGORIES.h24.positions.includes(P[x.p].id)).length; // 24h (OUP zvlášť)

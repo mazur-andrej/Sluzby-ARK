@@ -195,7 +195,9 @@ function renderRequests() {
   const tbl = $('#reqTable');
   const head = el('tr', {}, el('th', { class: 'name' }, 'Lékař'),
     ds.map((d) => el('th', { class: d.weekend || d.holiday ? 'we' : '', title: d.holiday ? 'svátek' : '' }, `${d.day}`, el('br'), d.label.split(' ')[0])),
-    el('th', {}, '✗'), el('th', {}, '✓'), el('th', { title: `Kolik ${OUP_LIMIT.label} služeb si lékař zvolil (nejvýš; minimum ${OUP_LIMIT.min})` }, `${OUP_LIMIT.label} max`));
+    el('th', {}, '✗'), el('th', {}, '✓'), el('th', { title: `Kolik ${OUP_LIMIT.label} služeb si lékař zvolil (nejvýš; minimum ${OUP_LIMIT.min})` }, `${OUP_LIMIT.label} max`),
+    el('th', { title: 'Nejvýš služeb tento měsíc (přepíše Max lékaře jen pro tento měsíc)' }, 'Max měsíc'),
+    el('th', { title: 'Tento měsíc přesně tolik služeb na pozici, např. „plast 1“ nebo „plast 1, l2 2“' }, 'Přesně'));
   const body = activeDoctors().map((doc) => {
     const req = md.requests[doc.id] || { off: [], want: [] };
     const offSet = new Set(req.off.map(Number));
@@ -218,7 +220,9 @@ function renderRequests() {
       }),
       el('td', { class: 'cnt' }, String(offSet.size)), el('td', { class: 'cnt' }, String(wantMap.size)),
       el('td', { class: 'cnt' }, doc.positions.some((id) => OUP_LIMIT.positions.includes(id))
-        ? el('input', { type: 'number', min: OUP_LIMIT.min, max: 31, value: req.oupMax || '', style: 'width:52px', onchange: (e) => setOupMax(doc.id, e.target.value) }) : ''));
+        ? el('input', { type: 'number', min: OUP_LIMIT.min, max: 31, value: req.oupMax || '', style: 'width:52px', onchange: (e) => setOupMax(doc.id, e.target.value) }) : ''),
+      el('td', { class: 'cnt' }, el('input', { type: 'number', min: 0, max: 31, value: req.max || '', placeholder: doc.max ?? '', style: 'width:48px', onchange: (e) => setMonthField(doc.id, 'max', e.target.value) })),
+      el('td', { class: 'cnt' }, el('input', { value: Object.entries(req.exact || {}).map(([k, v]) => `${k} ${v}`).join(', '), placeholder: '—', style: 'width:80px', onchange: (e) => setMonthField(doc.id, 'exact', e.target.value) })));
   });
   tbl.replaceChildren(el('thead', {}, head), el('tbody', {}, body));
   // součet zvolených OUP vs. potřeba
@@ -244,6 +248,23 @@ function setOupMax(docId, v) {
   const md = monthData();
   const req = md.requests[docId] || (md.requests[docId] = { off: [], want: [], note: '' });
   if (v === '' || !(+v > 0)) delete req.oupMax; else req.oupMax = Math.min(31, Math.max(OUP_LIMIT.min, Math.round(+v)));
+  save(); renderRequests();
+}
+
+/** Úpravy jen na tento měsíc: max = nejvýš služeb; exact = „plast 1, l2 2“ → přesně tolik na pozici. */
+function setMonthField(docId, key, v) {
+  const md = monthData();
+  const req = md.requests[docId] || (md.requests[docId] = { off: [], want: [], note: '' });
+  if (key === 'max') { if (v === '' || !(+v > 0)) delete req.max; else req.max = Math.round(+v); }
+  if (key === 'exact') {
+    const ex = {};
+    for (const part of String(v).split(/[,;]+/)) {
+      const m = part.trim().match(/^(\S+)\s*[:=×x]?\s*(\d+)$/i);
+      const pos = m && state.positions.find((p) => p.id.toLowerCase() === m[1].toLowerCase() || p.label.toLowerCase() === m[1].toLowerCase());
+      if (pos) ex[pos.id] = +m[2];
+    }
+    if (Object.keys(ex).length) req.exact = ex; else delete req.exact;
+  }
   save(); renderRequests();
 }
 
@@ -327,7 +348,8 @@ $('#reqFile').onchange = async (e) => {
         }
         // tabulka obsahuje všechny lékaře -> nahradí předchozí požadavky (zvolený počet OUP zůstane)
         const md = monthData();
-        md.requests = Object.fromEntries(Object.entries(md.requests).filter(([, r]) => r.oupMax).map(([id, r]) => [id, { off: [], want: [], oupMax: r.oupMax }]));
+        md.requests = Object.fromEntries(Object.entries(md.requests).filter(([, r]) => r.oupMax || r.max || r.exact)
+          .map(([id, r]) => [id, { off: [], want: [], ...(r.oupMax ? { oupMax: r.oupMax } : {}), ...(r.max ? { max: r.max } : {}), ...(r.exact ? { exact: r.exact } : {}) }]));
       } else if (/\.docx$/i.test(f.name)) {
         const doc = await readDocx(await f.arrayBuffer());
         parsed = null;

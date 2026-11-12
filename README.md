@@ -145,6 +145,9 @@ Lékař bez vyplněné hodnoty (např. nový) dostane průměr. Kdo vybočí ze 
 **Tečky** se dělí rovnoměrně mezi všechny lékaře s tečkou: počítá se 24h služby + tečky dohromady, takže kdo má víc 24h služeb,
 má méně teček (a naopak). Za 12 měsíců se to vyrovnává – kdo měl dosud víc, dostane méně (počítá se od prvního rozpisu z programu).
 
+**Úpravy na měsíc** (karta Požadavky, sloupce vpravo): *Max měsíc* = nejvýš služeb jen tento měsíc (např. Fencl 3),
+*Přesně* = tento měsíc přesně tolik služeb na pozici (např. Jelínek „plast 1“).
+
 **Jen v nouzi:** pozice, které lékař normálně neslouží, ale v nouzi může (Bartošík, Dadák, Helán, Jelínek → 1A; Štětka, Volčík, Hruda → OUP den/noc). Program je použije, jen když by služba jinak zůstala neobsazená, a v rozpisu na to upozorní. Když si lékař takovou službu sám vyžádá (např. „OUP den“), dostane ji.
 
 **Zkušenost:** pořadí lékařů v seznamu (karta Lékaři / list Lékaři, převezme se z pořadí v Excelu požadavků) je podle zkušenosti – nahoře nejzkušenější.
