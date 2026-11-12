@@ -101,7 +101,15 @@ if (state.schema < 11) {
   for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.emergency) d.emergency = [...new Set([...(d.emergency || []), ...def.emergency])]; }
   state.schema = 11;
 }
-const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { console.warn(e); } };
+const save = () => {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) { console.warn(e); alert('Změny se nepodařilo uložit (prohlížeč nepovolil úložiště – např. anonymní okno nebo plné úložiště).'); }
+};
+// Stránka otevřená ve víc oknech/záložkách: změna v jiném okně se sem hned načte (jinak by ji toto okno při dalším uložení přepsalo)
+window.addEventListener('storage', (e) => {
+  if (e.key !== STORE_KEY || !e.newValue) return;
+  try { state = JSON.parse(e.newValue); renderAll(); } catch { /* ignorovat */ }
+});
 
 const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
 function monthData(y = state.current.year, m = state.current.month) {
@@ -244,11 +252,14 @@ function banLabel(ids) {
   return ids.map(posShort).join('/');
 }
 
+/** Překreslit, jen když uživatel nepíše do jiného políčka v tabulce (jinak by rozepsaná změna zmizela). */
+const renderLater = (tblSel, fn) => setTimeout(() => { const a = document.activeElement; if (!($(tblSel).contains(a) && a.tagName === 'INPUT' && a.type !== 'checkbox')) fn(); }, 0);
+
 function setOupMax(docId, v) {
   const md = monthData();
   const req = md.requests[docId] || (md.requests[docId] = { off: [], want: [], note: '' });
   if (v === '' || !(+v > 0)) delete req.oupMax; else req.oupMax = Math.min(31, Math.max(OUP_LIMIT.min, Math.round(+v)));
-  save(); renderRequests();
+  save(); renderLater('#reqTable', renderRequests);
 }
 
 /** Úpravy jen na tento měsíc: max = nejvýš služeb; exact = „plast 1, l2 2“ → přesně tolik na pozici. */
@@ -265,7 +276,7 @@ function setMonthField(docId, key, v) {
     }
     if (Object.keys(ex).length) req.exact = ex; else delete req.exact;
   }
-  save(); renderRequests();
+  save(); renderLater('#reqTable', renderRequests);
 }
 
 function cycleReq(docId, day) {
@@ -626,28 +637,32 @@ function renderDoctors() {
   const foot = el('tr', {}, el('td'), el('td', {}, el('b', {}, 'Celkem aktivních')), el('td', {}, String(activeDoctors().length)),
     counts.map((c) => el('td', {}, String(c))),
     el('td', { title: 'Součet obvyklých 24h služeb (bez lékařů jen na JIP)' }, String(sumOf('typical24'))), el('td'), el('td'), el('td'), el('td'), el('td'), el('td'));
+  // ukládá se hned při psaní (oninput) i po opuštění políčka (onchange); tabulka se překreslí, jen když
+  // uživatel zrovna nepíše do jiného políčka v ní (jinak by se mu rozepsaná změna ztratila)
   const upd = (doc, fn) => (e) => { fn(e); save(); };
+  const rerender = () => setTimeout(() => { const a = document.activeElement; if (!(tbl.contains(a) && a.tagName === 'INPUT' && a.type !== 'checkbox')) renderDoctors(); }, 0);
+  const field = (attrs, fn) => el('input', { ...attrs, oninput: upd(null, fn), onchange: upd(null, fn) });
   const body = sorted.map((doc, i) => el('tr', { class: doc.active ? '' : 'inactive' },
     el('td', { class: 'muted', style: 'white-space:nowrap' }, `${i + 1}. `,
       el('button', { title: 'Zkušenější (výš)', onclick: () => move(doc, -1) }, '↑'), el('button', { title: 'Méně zkušený (níž)', onclick: () => move(doc, 1) }, '↓')),
-    el('td', { class: 'name' }, el('input', { value: doc.name, onchange: upd(doc, (e) => { doc.name = e.target.value.trim(); }) })),
-    el('td', {}, el('input', { type: 'checkbox', checked: doc.active, onchange: upd(doc, (e) => { doc.active = e.target.checked; renderDoctors(); }) })),
+    el('td', { class: 'name' }, field({ value: doc.name }, (e) => { if (e.target.value.trim()) doc.name = e.target.value.trim(); })),
+    el('td', {}, el('input', { type: 'checkbox', checked: doc.active, onchange: upd(doc, (e) => { doc.active = e.target.checked; rerender(); }) })),
     P.map((p) => el('td', {}, el('input', {
       type: 'checkbox', checked: doc.positions.includes(p.id),
-      onchange: upd(doc, (e) => { doc.positions = e.target.checked ? [...doc.positions, p.id] : doc.positions.filter((x) => x !== p.id); }),
+      onchange: upd(doc, (e) => { doc.positions = e.target.checked ? [...doc.positions, p.id] : doc.positions.filter((x) => x !== p.id); rerender(); }),
     }))),
     el('td', {}, fixedFor(doc) != null
       ? el('span', { title: `Slouží jen na ${(state.fixedGroup.positions || []).join(', ')} → pravidlo z Nastavení` }, `${fixedFor(doc)} (${state.fixedGroup.label || 'JIP'})`)
       : doc.positions.some((id) => CATEGORIES.h24.positions.includes(id))
-        ? el('input', { type: 'number', min: 0, step: 0.1, value: doc.typical24 ?? '', placeholder: 'průměr', title: plan[doc.id]?.h24 ? `Tento měsíc: ${plan[doc.id].h24.label}` : '', onchange: upd(doc, (e) => { doc.typical24 = e.target.value === '' ? null : +e.target.value; renderDoctors(); }) })
+        ? field({ type: 'number', min: 0, step: 0.1, value: doc.typical24 ?? '', placeholder: 'průměr', title: plan[doc.id]?.h24 ? `Tento měsíc: ${plan[doc.id].h24.label}` : '' }, (e) => { doc.typical24 = e.target.value === '' ? null : +e.target.value; if (e.type === 'change') rerender(); })
         : ''),
     el('td', {}, doc.positions.some((id) => CATEGORIES.tecky.positions.includes(id))
       ? el('span', { class: 'muted', title: 'Rovnoměrně: 24h + tečky dohromady stejně v poolu' }, plan[doc.id]?.tecky?.label ?? '')
       : ''),
-    el('td', {}, el('input', { type: 'number', min: 0, value: doc.max ?? '', onchange: upd(doc, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; }) })),
+    el('td', {}, field({ type: 'number', min: 0, value: doc.max ?? '' }, (e) => { doc.max = e.target.value === '' ? null : +e.target.value; })),
     el('td', {}, el('input', { type: 'checkbox', checked: !!doc.oupHome, onchange: upd(doc, (e) => { doc.oupHome = e.target.checked; }) })),
-    el('td', {}, el('input', { value: (doc.emergency || []).join(', '), placeholder: '—', style: 'width:70px', onchange: upd(doc, (e) => { doc.emergency = e.target.value.split(/[,\s]+/).filter((x) => state.positions.some((p) => p.id === x)); e.target.value = doc.emergency.join(', '); }) })),
-    el('td', {}, el('input', { class: 'note', value: doc.note || '', onchange: upd(doc, (e) => { doc.note = e.target.value; }) })),
+    el('td', {}, field({ value: (doc.emergency || []).join(', '), placeholder: '—', style: 'width:70px' }, (e) => { doc.emergency = e.target.value.split(/[,\s]+/).filter((x) => state.positions.some((p) => p.id === x)); if (e.type === 'change') e.target.value = doc.emergency.join(', '); })),
+    el('td', {}, field({ class: 'note', value: doc.note || '' }, (e) => { doc.note = e.target.value; })),
     el('td', {}, el('button', { class: 'danger', title: 'Odstranit lékaře', onclick: () => {
       if (!confirm(`Odstranit lékaře ${doc.name}? (Pokud má jen přestávku, raději odškrtněte „Aktivní".)`)) return;
       state.doctors = state.doctors.filter((d) => d !== doc); save(); renderDoctors();
