@@ -108,3 +108,28 @@ th.we, td.we { background: var(--we); }
 .grid.src td.src.unk { background: #fef9c3; }
 .tag.unk { background: #fef9c3; }
 #srcBox h3 { margin: 18px 0 4px; font-size: 15px; }
+
+/* ---------- Historie (grafy) ---------- */
+.h-root { position: relative; max-width: 1100px; }
+.h-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.h-tile { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.h-big { font-size: 26px; font-weight: 600; margin: 2px 0; color: #0b0b0b; }
+.h-chart h3 { margin: 0 0 2px; font-size: 16px; }
+.h-legend { display: flex; gap: 16px; font-size: 13px; color: #52514e; margin: 6px 0 10px; }
+.h-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.h-rows { display: grid; gap: 3px; }
+.h-row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 10px; padding: 1px 4px; border-radius: 4px; outline: none; }
+.h-row:hover, .h-row:focus { background: #f1f3f6; }
+.h-name { font-size: 13px; color: #0b0b0b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.h-bar { display: flex; gap: 2px; height: 14px; flex: none; }
+.h-seg { display: block; height: 100%; min-width: 3px; }
+.h-seg:last-child { border-radius: 0 4px 4px 0; }
+.h-val { font-size: 12px; color: #52514e; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.h-tip { position: absolute; display: none; z-index: 50; pointer-events: none; background: #fff; border: 1px solid rgba(11,11,11,0.10); box-shadow: 0 4px 14px rgba(0,0,0,.12); border-radius: 6px; padding: 6px 10px; font-size: 12px; max-width: 240px; }
+.h-tip-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.h-tip-row b { color: #0b0b0b; } .h-tip-row span { color: #52514e; }
+.h-key { display: inline-block; width: 10px; height: 2px; }
+.h-heat { max-height: 520px; }
+.h-heat td.h-cell { text-align: center; min-width: 34px; font-size: 12px; font-variant-numeric: tabular-nums; border: 2px solid #fff; }
+.h-heat td.h-sum, td.h-num { text-align: right; font-variant-numeric: tabular-nums; }

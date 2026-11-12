@@ -5,6 +5,7 @@ import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, m
 import { readXlsx } from './xlsx.js';
 import { OUP_LIMIT, FIXED_GROUP, POSITION_MIN, CATEGORIES, weekendWeight, DEFAULT_POSITIONS, GROUP_ALIASES, DEFAULT_MIN_REST_HOURS, DEFAULT_AFTER_NIGHT, AFTER_NIGHT_LABELS, shiftTimes } from './config.js';
 import { DEFAULT_DOCTORS } from './default-doctors.js';
+import { historyStats, renderHistory } from './history.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
 const $ = (s) => document.querySelector(s);
@@ -101,6 +102,11 @@ if (state.schema < 11) {
   for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def?.emergency) d.emergency = [...new Set([...(d.emergency || []), ...def.emergency])]; }
   state.schema = 11;
 }
+// v12: historie po měsících i se sobotami / nedělemi / OUP (pro kartu Historie)
+if (state.schema < 12) {
+  for (const d of state.doctors) { const def = DEFAULT_DOCTORS.find((x) => x.id === d.id); if (def) d.fair = structuredClone(def.fair); }
+  state.schema = 12;
+}
 const save = () => {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) { console.warn(e); alert('Změny se nepodařilo uložit (prohlížeč nepovolil úložiště – např. anonymní okno nebo plné úložiště).'); }
@@ -170,6 +176,24 @@ function renderAll() {
   renderSchedule();
   renderDoctors();
   renderSettings();
+  if ($('#tab-history').classList.contains('active')) renderHistoryTab();
+}
+
+// ---------------- Historie ----------------
+const histOpts = { group: 'all', perMonth: false, activeOnly: true };
+const HIST_GROUPS = [
+  { id: 'all', label: 'Všichni', test: () => true },
+  { id: 'jip', label: 'JIP (lékař1 / lékař2)', test: (d) => d.positions.some((p) => p === 'l1' || p === 'l2') },
+  { id: 'a1', label: '1A / plastika', test: (d) => d.positions.some((p) => p === '1A' || p === 'plast') },
+  { id: 'a2', label: '2A / tečky', test: (d) => d.positions.some((p) => p === '2A' || p === 't1' || p === 't2') },
+  { id: 'oup', label: 'OUP', test: (d) => d.positions.some((p) => OUP_LIMIT.positions.includes(p)) },
+];
+function renderHistoryTab() {
+  // 12 měsíců do zvoleného měsíce včetně (když ještě nemá rozpis, končí předchozím)
+  let { year: y, month: m } = state.current;
+  if (!monthData().grid) { m--; if (m < 1) { m = 12; y--; } }
+  const stats = historyStats({ doctors: state.doctors, positions: state.positions, months: state.months, endKey: keyOf(y, m) });
+  renderHistory($('#historyRoot'), stats, { ...histOpts, doctors: state.doctors, groups: HIST_GROUPS, onChange: (o) => { Object.assign(histOpts, o); renderHistoryTab(); } });
 }
 
 // ---------------- Požiadavky ----------------

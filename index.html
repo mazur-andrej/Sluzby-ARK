@@ -19,6 +19,7 @@
       <button data-tab="requests" class="active">1. Požadavky</button>
       <button data-tab="schedule">2. Rozpis</button>
       <button data-tab="doctors">Lékaři</button>
+      <button data-tab="history">Historie</button>
       <button data-tab="settings">Nastavení</button>
     </nav>
   </header>
@@ -92,6 +93,9 @@ Dvořáková – nemůže 24.12., 25.12.</pre>
       <p class="muted">Zaškrtněte, na kterých pozicích může lékař sloužit. 24h služby a tečky se dělí podle toho, kolik jich lékař <b>obvykle</b> má (předvyplněno z rozpisů květen–listopad, přepočteno na počet služeb v měsíci; prázdné = průměr). Lékaři jen na JIP mají pevný počet. <b>Max</b> = pevný strop. OUP: každý aspoň 2, víc si lékař zvolí v požadavcích. Neaktivní lékař se do rozpisu nedává (např. mateřská, odchod).</p>
       <div class="table-wrap"><table id="docTable" class="doctors"></table></div>
     </section>
+
+    <!-- HISTORIE -->
+    <section id="tab-history" class="tab"><div id="historyRoot" class="h-root"></div></section>
 
     <!-- NASTAVENÍ -->
     <section id="tab-settings" class="tab">
