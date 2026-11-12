@@ -647,8 +647,14 @@ function renderDoctors() {
   const P = state.positions;
   const tbl = $('#docTable');
   // pořadí = podle zkušenosti (nahoře nejzkušenější): přání sloužit mají přednost, tečky / 2A navíc dostanou méně zkušení
-  const sorted = state.doctors;
-  const move = (doc, dir) => { const a = state.doctors, i = a.indexOf(doc), j = i + dir; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; save(); renderDoctors(); };
+  // neaktivní na konec (v uloženém pořadí zůstávají – po znovuaktivaci se vrátí na své místo podle zkušenosti)
+  const sorted = [...state.doctors.filter((d) => d.active), ...state.doctors.filter((d) => !d.active)];
+  const move = (doc, dir) => {
+    const other = sorted[sorted.indexOf(doc) + dir];
+    if (!other || other.active !== doc.active) return;
+    const a = state.doctors, i = a.indexOf(doc), j = a.indexOf(other);
+    [a[i], a[j]] = [a[j], a[i]]; save(); renderDoctors();
+  };
   const head = el('tr', {}, el('th', { title: 'Pořadí podle zkušenosti (nahoře nejzkušenější). Převezme se i z pořadí v Excelu s požadavky.' }, 'Zkušenost'), el('th', {}, 'Jméno'), el('th', {}, 'Aktivní'), P.map((p) => el('th', {}, p.label)),
     el('th', { title: 'Kolik 24h služeb měsíčně lékař obvykle má (z rozpisů za poslední rok). Program podle toho dělí 24h služby, přepočteno na měsíc. Prázdné = průměr.' }, 'Obvykle 24h'),
     el('th', { title: 'Tečky se dělí rovnoměrně mezi lékaře s tečkou: kdo má víc 24h služeb, má méně teček, za 12 měsíců vyrovnaně.' }, 'Teček tento měsíc'),
@@ -668,7 +674,7 @@ function renderDoctors() {
   const rerender = () => setTimeout(() => { const a = document.activeElement; if (!(tbl.contains(a) && a.tagName === 'INPUT' && a.type !== 'checkbox')) renderDoctors(); }, 0);
   const field = (attrs, fn) => el('input', { ...attrs, oninput: upd(null, fn), onchange: upd(null, fn) });
   const body = sorted.map((doc, i) => el('tr', { class: doc.active ? '' : 'inactive' },
-    el('td', { class: 'muted', style: 'white-space:nowrap' }, `${i + 1}. `,
+    el('td', { class: 'muted', style: 'white-space:nowrap' }, doc.active ? `${i + 1}. ` : `– `,
       el('button', { title: 'Zkušenější (výš)', onclick: () => move(doc, -1) }, '↑'), el('button', { title: 'Méně zkušený (níž)', onclick: () => move(doc, 1) }, '↓')),
     el('td', { class: 'name' }, field({ value: doc.name }, (e) => { if (e.target.value.trim()) doc.name = e.target.value.trim(); })),
     el('td', {}, el('input', { type: 'checkbox', checked: doc.active, onchange: upd(doc, (e) => { doc.active = e.target.checked; rerender(); }) })),
