@@ -59,6 +59,9 @@ function prevMonthOf(year, month) {
   return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
 }
 
+/** Klíč měsíce 'RRRR-MM'. */
+const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
+
 // ----- js/config.js -----
 // Predvolené pozície (stĺpce rozpisu).
 // start  = začiatok služby (HH:MM), hours = dĺžka v hodinách

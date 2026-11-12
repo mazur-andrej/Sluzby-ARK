@@ -17,7 +17,7 @@ function easterSunday(year) {
 }
 
 /** Vráti množinu sviatkov v tvare "M-D" pre daný rok (ČR). */
-export function czechHolidays(year) {
+function czechHolidays(year) {
   const fixed = ['1-1', '5-1', '5-8', '7-5', '7-6', '9-28', '10-28', '11-17', '12-24', '12-25', '12-26'];
   const set = new Set(fixed);
   const easter = easterSunday(year);
@@ -54,3 +54,6 @@ export function buildMonth(year, month, extraHolidays = []) {
 export function prevMonthOf(year, month) {
   return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
 }
+
+/** Klíč měsíce 'RRRR-MM'. */
+export const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;

@@ -76,6 +76,19 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
    - Buňku změníte výběrem lékaře, změna se zamkne a při dalším generování zůstane.
    - Vpravo je přehled: počet služeb vs. cíl, víkendy, noční. Kliknutím na lékaře se zvýrazní jeho služby.
 4. *Stáhnout .docx* – rozpis ve stejném formátu jako dosud (červené záhlaví, víkendy a svátky žlutě).
+5. **Historie** – grafy za posledních 12 měsíců: kdo měl kolik služeb (24h / tečky / OUP), víkendy (so / ne / pá),
+   svátky (které), 24h služby po měsících a tabulka. Filtr podle skupiny, průměr na měsíc.
+
+## Známá omezení
+
+- **Data administrace jsou jen v prohlížeči** (localStorage) – jiný počítač / prohlížeč je nevidí. Přenos: *Záloha (JSON)*,
+  resp. *Uložit / Načíst seznam lékařů*. Anonymní okno neukládá.
+- **Google (online) část umí méně než administrace:** zatím tam nejsou úpravy na měsíc (*Max měsíc*, *Přesně*),
+  uzavření pozice v určité dny (např. plastika o Vánocích), přání „jen jeden z“ ani karta Historie.
+- **Uzavření pozice v určité dny** umí zatím jen výpočet – v administraci pro něj není políčko.
+- **1. den dalšího měsíce** (např. 1. 1. pod prosincem) se do rozpisu negeneruje – patří do dalšího měsíce.
+- **Výsledek je náhodný v mezích pravidel** – v těsném měsíci se varianty liší; *Jiná varianta* zkusí jinou.
+- **Historie** pro duben 2026 chybí (rozpis nebyl k dispozici).
 
 ## Excel s požadavky
 
@@ -182,11 +195,13 @@ Optimalizováno (váhy v Nastavení): počet služeb podle cíle, férové víke
 
 ## Vývoj
 
-Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-wants.mjs` (přednost přání), `node tests/test-fair.mjs` (víkendy a svátky za 6 měsíců), `node tests/test-plan.mjs` (rozdělení podle zvyklostí), `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
+Bez závislostí, čistý JavaScript (ES moduly). Testy: `node tests/test-wants.mjs` (přednost přání), `node tests/test-fair.mjs` (víkendy a svátky za 6 měsíců), `node tests/test-plan.mjs` (rozdělení podle zvyklostí), `node tests/test-posmin.mjs` (2A aspoň 2×), `node tests/test-fixed.mjs` (JIP přesně 4), `node tests/test-mix.mjs` (střídání JIP1/2, tečka 1/2, OUP den/noc, tečky v poolu), `node tests/test-ics.mjs` (kalendář), `node tests/test-oup.mjs` (zvolený počet OUP), `node tests/test-rest.mjs` (odpočinek podle časů služeb), `node tests/test-gas.mjs` (online část s napodobeným Googlem), `node tests/test-solver.mjs`, `node tests/test-requests.mjs`, `node tests/test-xlsx.mjs pozadavky.xlsx 11`.
 
 ```
 index.html, css/style.css
-js/app.js             rozhraní
+js/app.js             rozhraní (administrace)
+js/history.js         karta Historie (grafy)
+js/dom.js             pomocníci pro DOM
 js/solver.js          algoritmus (greedy + simulované žíhání)
 js/requests.js        čtení požadavků
 js/docx.js            čtení/zápis .docx

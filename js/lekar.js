@@ -3,19 +3,8 @@ import { buildMonth, MONTHS } from './calendar.js';
 import { API_URL } from './online-config.js';
 import { OUP_LIMIT } from './config.js';
 import { buildIcs } from './ics.js';
+import { $, el } from './dom.js';
 
-const $ = (s) => document.querySelector(s);
-const el = (tag, attrs = {}, ...kids) => {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v === true) e.setAttribute(k, '');
-    else if (v !== false && v != null) e.setAttribute(k, v);
-  }
-  for (const k of kids.flat()) if (k != null) e.append(k);
-  return e;
-};
 const token = new URLSearchParams(location.search).get('t') || '';
 let me = null;
 let req = { off: [], want: [], ban: [], notes: {}, note: '' };

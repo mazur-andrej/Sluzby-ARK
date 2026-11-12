@@ -1,14 +1,14 @@
 // História služieb za posledných 12 mesiacov: dáta + grafy (bez knižníc, čisté HTML).
 // Zdroj: pri mesiacoch z FAIR_BASE_MONTHS pole `fair` pri lekárovi (ručné rozpisy), inak rozpis vygenerovaný v programe.
-import { buildMonth } from './calendar.js';
+import { buildMonth, keyOf } from './calendar.js';
+import { el } from './dom.js';
 import { CATEGORIES, OUP_LIMIT, FAIR_BASE_MONTHS } from './config.js';
 
 const MONTHS_CS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
-const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
 export const monthLabel = (key) => { const [y, m] = key.split('-').map(Number); return `${MONTHS_CS[m - 1]} ${String(y).slice(2)}`; };
 
 /** Posledných `count` mesiacov končiacich mesiacom endKey (vrátane). */
-export function windowKeys(endKey, count = 12) {
+function windowKeys(endKey, count = 12) {
   let [y, m] = endKey.split('-').map(Number);
   const out = [];
   for (let i = 0; i < count; i++) { out.unshift(keyOf(y, m)); if (--m < 1) { m = 12; y--; } }
@@ -68,17 +68,6 @@ export function historyStats({ doctors, positions, months, endKey, count = 12 })
 }
 
 // ---------------- vykreslenie ----------------
-const el = (tag, attrs = {}, ...kids) => {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else if (k === 'style') e.style.cssText = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v != null && v !== false) e.setAttribute(k, v === true ? '' : v);
-  }
-  for (const k of kids.flat()) if (k != null) e.append(k);
-  return e;
-};
 const fmt = (v) => (Math.round(v * 10) / 10).toLocaleString('cs-CZ');
 const HOL_NAMES = { '1-1': 'Nový rok', '5-1': '1. máj', '5-8': '8. máj', '7-5': 'Cyril a Metod', '7-6': 'Jan Hus', '9-28': 'sv. Václav', '10-28': '28. říjen', '11-17': '17. listopad', '12-24': 'Štědrý den', '12-25': '1. svátek vánoční', '12-26': '2. svátek vánoční' };
 const holName = (h) => { const [m, d] = h.split('-'); return HOL_NAMES[h] || `${d}. ${m}. (Velikonoce)`; };

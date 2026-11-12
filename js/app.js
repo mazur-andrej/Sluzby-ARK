@@ -1,4 +1,5 @@
-import { buildMonth, prevMonthOf, MONTHS } from './calendar.js';
+import { buildMonth, prevMonthOf, keyOf, MONTHS } from './calendar.js';
+import { $, el, esc } from './dom.js';
 import { readDocx, parseScheduleTable, buildScheduleDocx } from './docx.js';
 import { solve, validate, planTargets, buildFairHistory, fixedCountOf, DEFAULT_WEIGHTS } from './solver.js';
 import { parseRequestsText, parseRequestsTable, parseRequestsSheet, pickSheet, mergeRequests, findDoctor, norm } from './requests.js';
@@ -8,19 +9,6 @@ import { DEFAULT_DOCTORS } from './default-doctors.js';
 import { historyStats, renderHistory } from './history.js';
 
 const STORE_KEY = 'rozpis-sluzieb-v1';
-const $ = (s) => document.querySelector(s);
-const el = (tag, attrs = {}, ...kids) => {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-    else if (v === true) e.setAttribute(k, '');
-    else if (v !== false && v != null) e.setAttribute(k, v);
-  }
-  for (const k of kids.flat()) if (k != null) e.append(k);
-  return e;
-};
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // ---------------- Stav ----------------
 function defaultState() {
@@ -131,7 +119,6 @@ window.addEventListener('storage', (e) => {
   try { state = JSON.parse(e.newValue); renderAll(); } catch { /* ignorovat */ }
 });
 
-const keyOf = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
 function monthData(y = state.current.year, m = state.current.month) {
   const k = keyOf(y, m);
   if (!state.months[k]) state.months[k] = { requests: {}, prev: null, grid: null, locked: {}, extraHolidays: [], seed: 1 };

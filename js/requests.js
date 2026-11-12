@@ -29,7 +29,7 @@ function findPosition(token, positions) {
 }
 
 /** Z reťazca "1, 3-5, 12." vytiahne čísla dní. */
-export function parseDays(s, maxDay = 31) {
+function parseDays(s, maxDay = 31) {
   const out = [];
   // odstráň dátumy typu 12.11. -> 12
   const clean = String(s).replace(/(\d{1,2})\.\s*\d{1,2}\.(\s*\d{4})?/g, '$1');
@@ -143,7 +143,7 @@ export function mergeRequests(base, add) {
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Nájde pozície spomenuté v texte (podľa id, názvu a aliasov). */
-export function mentionedPositions(text, positions, groupAliases = {}) {
+function mentionedPositions(text, positions, groupAliases = {}) {
   const t = ` ${norm(text)} `;
   const found = new Set();
   const matches = (alias) => {
@@ -168,7 +168,7 @@ const WANT = /(chci|chce|chcem|^chi\b|ano|prosim|prosím|slouzit|sloužit|sluzb|
  * Rozpozná význam bunky z tabuľky požiadaviek.
  * Vráti {type:'off'} | {type:'want', pos:[]|null} | {type:'ban', pos:[]} | {type:'unknown'} | null
  */
-export function classifyCell(raw, positions, groupAliases = {}) {
+function classifyCell(raw, positions, groupAliases = {}) {
   const t = norm(raw).replace(/\s+/g, ' ');
   if (!t) return null;
   const pos = mentionedPositions(t, positions, groupAliases);
