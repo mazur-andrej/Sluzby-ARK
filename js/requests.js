@@ -178,6 +178,8 @@ export function classifyCell(raw, positions, groupAliases = {}) {
   if (neg && pos.length) return { type: 'ban', pos };
   if (neg) return { type: 'off' };
   if (EXTERNAL.test(t)) return { type: 'off' };
+  // „mohu OUP noc“ = může (je k dispozici), ale nepřeje si → žádné omezení, jen poznámka
+  if (/(^|\s)(mohu|muzu|mozem|muzem|muze|moze|mozu|lze)(\s|$)/.test(t) && !WANT.test(t)) return { type: 'can', pos };
   if (WANT.test(t) || pos.length) return { type: 'want', pos: pos.length ? pos : null };
   return { type: 'unknown' };
 }
@@ -262,6 +264,7 @@ export function parseRequestsSheet(rows, doctors, positions, month, groupAliases
       // „jen jeden z …“ / „jednu z …“ = z těchto dnů chce lékař jen jeden
       else if (k.type === 'want') req.want.push({ day, pos: k.pos, ...(/(jeden|jedna|jednu|jen 1|1 z)/.test(norm(raw)) ? { group: 'jeden' } : {}) });
       else if (k.type === 'ban') req.ban.push({ day, pos: k.pos });
+      else if (k.type === 'can') { /* může – jen poznámka */ }
       else unclear.push(`${doc.name} ${day}.: „${raw}"`);
     });
     requests[doc.id] = req;
