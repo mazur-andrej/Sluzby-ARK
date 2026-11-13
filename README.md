@@ -56,6 +56,7 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
 - **Ukradený/přeposlaný odkaz:** smazat buňku *Token* a dát *Doplnit odkazy* – vznikne nový odkaz, starý přestane fungovat.
 - *Přehled požadavků na příští měsíc* – tabulka lékaři × dny (jako dosavadní Excel), včetně toho, kdo ještě nezadal.
 - *Vygenerovat rozpis příštího měsíce teď* / *Znovu otevřít požadavky* – ruční zásah mimo automatiku (vygenerovaný rozpis je vždy jen ke schválení).
+- **Ruční úpravy rozpisu:** v listu *Rozpis RRRR-MM* lze přepsat jméno nebo buňku vymazat. Při dalším *Vygenerovat* se upravené buňky zachovají (obarví se modře), program dopočítá zbytek. Menu *Zrušit ruční úpravy rozpisu příštího měsíce* vše odemkne.
 - Po změně `Kod.gs` je třeba v Apps Script dát *Nasadit → Spravovat nasazení → upravit → Nová verze*.
 
 ## Spuštění offline nástroje (správce)
@@ -74,6 +75,7 @@ Vidí a mění jen své požadavky. Data jsou v Google tabulce správce.
    - V tabulce lze klikáním doplnit nebo opravit: ✗ nechce → ✓ chce → prázdné. Pravý klik = „chce" na konkrétní pozici.
 3. **Rozpis** → *Vygenerovat rozpis*. *Jiná varianta* vytvoří jiné rozložení.
    - Buňku změníte výběrem lékaře, změna se zamkne a při dalším generování zůstane.
+     Lze vybrat i „— prázdné —“ (místo zůstane neobsazené). Volba *🔓 odemknout* vrátí buňku programu.
    - Vpravo je přehled: počet služeb vs. cíl, víkendy, noční. Kliknutím na lékaře se zvýrazní jeho služby.
 4. *Stáhnout .docx* – rozpis ve stejném formátu jako dosud (červené záhlaví, víkendy a svátky žlutě).
 5. **Historie** – grafy za posledních 12 měsíců: kdo měl kolik služeb (24h / tečky / OUP), víkendy (so / ne / pá),

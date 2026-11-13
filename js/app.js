@@ -515,11 +515,13 @@ function renderSchedule() {
         const key = `${d.day}|${p.id}`;
         const offIds = new Set(Object.entries(md.requests).filter(([, r]) => (r.off || []).map(Number).includes(d.day)
           || (r.ban || []).some((b) => +b.day === d.day && [].concat(b.pos).includes(p.id))).map(([id]) => id));
-        const sel = el('select', { onchange: (e) => setCell(t, pi, e.target.value), title: badCells.get(key) || excCells.get(key) || '' },
-          el('option', { value: '' }, ''),
+        const isLocked = key in md.locked;
+        const sel = el('select', { onchange: (e) => setCell(t, pi, e.target.value), title: badCells.get(key) || excCells.get(key) || (isLocked ? 'Zamčeno – při dalším generování zůstane' : '') },
+          el('option', { value: '' }, isLocked && !cur ? '— prázdné —' : ''),
+          isLocked ? el('option', { value: '__unlock' }, '🔓 odemknout (vybere program)') : null,
           docs.filter((x) => x.positions.includes(p.id) || x.id === cur)
             .map((x) => el('option', { value: x.id, selected: x.id === cur }, x.name + (offIds.has(x.id) ? ' ✗' : ''))));
-        const cls = [d.weekend || d.holiday ? 'we' : '', md.locked[key] ? 'locked' : '', cur && wishSet.has(`${d.day}|${cur}`) ? 'wish' : '',
+        const cls = [d.weekend || d.holiday ? 'we' : '', isLocked ? 'locked' : '', cur && wishSet.has(`${d.day}|${cur}`) ? 'wish' : '',
           badCells.has(key) ? 'bad' : excCells.has(key) ? 'exc' : '', !cur ? 'empty' : '', highlightDoc && cur === highlightDoc ? 'hl' : ''].join(' ');
         return el('td', { class: cls }, sel);
       })));
@@ -528,7 +530,11 @@ function renderSchedule() {
 
   // Správy
   const empty = [];
-  ds.forEach((d, t) => P.forEach((p, pi) => { if (!(p.workdaysOnly && !d.workday) && !md.grid[t][pi]) empty.push(`${d.label} – ${p.label}`); }));
+  const keptEmpty = [];
+  ds.forEach((d, t) => P.forEach((p, pi) => {
+    if ((p.workdaysOnly && !d.workday) || md.grid[t][pi]) return;
+    (md.locked[`${d.day}|${p.id}`] === '' ? keptEmpty : empty).push(`${d.label} – ${p.label}`);
+  }));
   const unmet = [];
   for (const [id, r] of Object.entries(md.requests)) for (const w of r.want || []) {
     const row = md.grid[w.day - 1];
@@ -540,6 +546,7 @@ function renderSchedule() {
   }
   let html = '';
   if (!empty.length && !issues.length && !unmet.length && !exceptions.length && !softWarn.length) html = '<div class="msg ok">✔ Všechny služby jsou obsazené, pravidla i přání lékařů jsou dodržena.</div>';
+  if (keptEmpty.length) html += `<p class="muted">Ručně ponecháno prázdné (zamčeno): ${esc(keptEmpty.join(', '))}</p>`;
   if (empty.length) html += `<div class="msg err"><b>Neobsazené služby (${empty.length})</b> – nikdo volný nesplňuje pravidla, doplňte ručně:${list(empty)}</div>`;
   if (softWarn.length) html += `<div class="msg warn"><b>Upozornění (${softWarn.length})</b>:${list(softWarn.map((i) => (i.day ? i.day + '. ' : '') + i.msg))}</div>`;
   if (exceptions.length) html += `<div class="msg warn"><b>Výjimky – služba den po noční/24h službě (${exceptions.length})</b>, jinak by zůstala neobsazená. Zkontrolujte, zda je to přijatelné:${list(exceptions.map((i) => i.day + '. ' + i.msg))}</div>`;
@@ -559,7 +566,7 @@ function renderSchedule() {
       + (none.length ? ` Bez víkendu i pátku: ${esc(none.map((d) => d.name).join(', '))}.` : '')
       + ' Příští měsíc mají přednost.</p>';
   }
-  html += '<p class="muted">Buňku změníte výběrem lékaře – změna se zamkne (modrá) a při dalším generování zůstane. Zelená = přání lékaře. ✗ u jména = lékař si den vyškrtl nebo tu pozici nechce.</p>';
+  html += '<p class="muted">Buňku změníte výběrem lékaře – změna se zamkne (modrá) a při dalším generování (i „Jiná varianta“) zůstane; prázdná volba = nechat prázdné. Odemknout jednu buňku: volba „🔓 odemknout“, všechny: „Odemknout ruční změny“. Zelená = přání lékaře. ✗ u jména = lékař si den vyškrtl nebo tu pozici nechce.</p>';
   $('#schedMessages').innerHTML = html;
 
   renderStats(md, ds);
@@ -568,8 +575,10 @@ function renderSchedule() {
 function setCell(t, pi, id) {
   const md = monthData();
   const key = `${t + 1}|${state.positions[pi].id}`;
+  if (id === '__unlock') { delete md.locked[key]; save(); renderSchedule(); return; }
+  // ruční změna se zamkne; vymazání = „nechat prázdné“ (také zamčeno)
   md.grid[t][pi] = id || null;
-  if (id) md.locked[key] = id; else delete md.locked[key];
+  md.locked[key] = id || '';
   save(); renderSchedule();
 }
 

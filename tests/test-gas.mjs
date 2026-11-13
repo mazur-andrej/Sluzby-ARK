@@ -129,6 +129,25 @@ check(mails.slice(m0).length === 1 && /čeká na schválení/.test(mails[m0].sub
   check(noWe <= 4, `prosinec: bez víkendu i pátku (24h) nejvýš 4 lékaři (${noWe})`);
 }
 
+// ruční úprava v listu Rozpis → při novém generování zůstane (vymazaná buňka zůstane prázdná)
+{
+  const sh = book.getSheetByName('Rozpis 2026-12');
+  const v = sh.getDataRange().getValues();
+  const r5 = v.findIndex((r) => / 5\. 12\.$/.test(String(r[0]))), r6 = v.findIndex((r) => / 6\. 12\.$/.test(String(r[0])));
+  const c1 = v[0].indexOf('lékař1'), cA = v[0].indexOf('lékař3=1A');
+  const jip = docRows.filter((r) => r[2] === true && String(r[3]).split(',').map((x) => x.trim()).includes('l1')).map((r) => r[1]);
+  const other = jip.find((n) => n !== v[r5][c1] && !v[r5].includes(n) && !v[r5 - 1].includes(n) && !v[r5 + 1].includes(n));
+  sh.getRange(r5 + 1, c1 + 1).setValue(other);
+  sh.getRange(r6 + 1, cA + 1).setValue('');
+  call('generovat', '2026-12', false);
+  const w = book.getSheetByName('Rozpis 2026-12').getDataRange().getValues();
+  check(w[r5][c1] === other && w[r6][cA] === '', `ruční úpravy po novém generování zůstaly (5. 12. lékař1 = ${other}, 6. 12. 1A prázdné)`);
+  call('odemknoutUpravy');
+  call('generovat', '2026-12', false);
+  const z = book.getSheetByName('Rozpis 2026-12').getDataRange().getValues();
+  check(z[r6][cA] !== '', 'po „Zrušit ruční úpravy“ program 6. 12. 1A zase obsadí');
+}
+
 // 4b) správce schválí → rozeslání verze 1
 const res1 = call('schvalit', '2026-12');
 const docMails = mails.filter((m) => typeof m.to === 'object');

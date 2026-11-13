@@ -81,6 +81,7 @@ function mulberry32(seed) {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   closed: [{ day, pos }] – pozice ten den neslouží (např. plastika o svátcích), volitelné,
+ *   locked: { 'den|pozice': doctorId } – ručně zamčené buňky ('' = nechat prázdné),
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   fairHistory: { [doctorId]: { n24, we, hol, noWe, dev } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu /
@@ -109,7 +110,7 @@ export function solve(input) {
   const warnings = [];
 
   // Sloty: day 1..D, pozícia aktívna v daný deň
-  const isClosed = closedSet(input.closed);
+  const isClosed = closedSet(closedOf(input));
   const slotActive = days.map((d, t) => P.map((p) => !(p.workdaysOnly && !d.workday) && !isClosed(t + 1, p.id)));
 
   // běžné pozice + pozice „jen v nouzi“ (doc.emergency, např. 1A) – ty jen když by služba jinak zůstala neobsazená
@@ -162,7 +163,7 @@ export function solve(input) {
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
-  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: input.closed, fairHistory: input.fairHistory });
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: closedOf(input), fairHistory: input.fairHistory });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
@@ -623,6 +624,12 @@ export function solve(input) {
  * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
  * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
+/** Uzavřené pozice: input.closed + buňky ručně zamčené jako prázdné (locked: { 'den|pozice': '' }). */
+function closedOf(input) {
+  const empty = Object.entries(input.locked || {}).filter(([, v]) => !v).map(([k]) => { const [day, pos] = k.split('|'); return { day: +day, pos }; });
+  return [...(input.closed || []), ...empty];
+}
+
 /** Uzavřené pozice v jednotlivé dny: [{ day, pos }] → funkce (day, posId) → true/false. */
 function closedSet(closed) {
   const s = new Set((closed || []).map((c) => `${+c.day}|${c.pos}`));
@@ -777,7 +784,7 @@ export function validate(input, grid) {
       if ((doc.emergency || []).includes(pos.id)) issues.push({ day, pos: pos.id, level: 'warn', msg: `${name} má ${pos.label} jen v nouzi` });
       else issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
     }
-    if ((pos.workdaysOnly && !days[t].workday) || closedSet(input.closed)(day, pos.id)) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
+    if ((pos.workdaysOnly && !days[t].workday) || closedSet(closedOf(input))(day, pos.id)) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });
     if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. sloužit na ${pos.label}` });
@@ -816,7 +823,7 @@ export function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: input.closed, fairHistory: input.fairHistory });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: closedOf(input), fairHistory: input.fairHistory });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);

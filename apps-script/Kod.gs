@@ -369,6 +369,7 @@ function mulberry32(seed) {
  *   days: [{day, weekend, holiday, workday}],
  *   positions: [{id, label, start, hours, workdaysOnly}],
  *   closed: [{ day, pos }] – pozice ten den neslouží (např. plastika o svátcích), volitelné,
+ *   locked: { 'den|pozice': doctorId } – ručně zamčené buňky ('' = nechat prázdné),
  *   minRestHours: minimálny odpočinok medzi službami (predvolene 11),
  *   afterNight: 'hard' | 'soft' | 'off' – deň po službe cez noc (pozri config.js),
  *   fairHistory: { [doctorId]: { n24, we, hol, noWe, dev } } – 24 h služby / víkendové / sviatočné / mesiace bez víkendu /
@@ -397,7 +398,7 @@ function solve(input) {
   const warnings = [];
 
   // Sloty: day 1..D, pozícia aktívna v daný deň
-  const isClosed = closedSet(input.closed);
+  const isClosed = closedSet(closedOf(input));
   const slotActive = days.map((d, t) => P.map((p) => !(p.workdaysOnly && !d.workday) && !isClosed(t + 1, p.id)));
 
   // běžné pozice + pozice „jen v nouzi“ (doc.emergency, např. 1A) – ty jen když by služba jinak zůstala neobsazená
@@ -450,7 +451,7 @@ function solve(input) {
   const juniorSet = new Set(JUNIOR_FIRST.map((id) => posIndex.get(id)).filter((x) => x !== undefined));
 
   // Cieľové počty 24h služieb a tečiek pre každého lekára
-  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: input.closed, fairHistory: input.fairHistory });
+  const plan = planTargets({ days, positions: P, doctors: docs, fixedGroup: fg, positionMin: pm, closed: closedOf(input), fairHistory: input.fairHistory });
   const tgt24 = docs.map((d) => plan[d.id]?.h24 || null);
   const tgtT = docs.map((d) => plan[d.id]?.tecky || null);
 
@@ -911,6 +912,12 @@ function solve(input) {
  * Lekár bez obvyklého počtu dostane priemer ostatných. Lekár len na JIP sa do 24h nepočíta (pevný počet).
  * Vráti { [doctorId]: { h24?: {avg, lo, hi, label}, tecky?: {…} } }.
  */
+/** Uzavřené pozice: input.closed + buňky ručně zamčené jako prázdné (locked: { 'den|pozice': '' }). */
+function closedOf(input) {
+  const empty = Object.entries(input.locked || {}).filter(([, v]) => !v).map(([k]) => { const [day, pos] = k.split('|'); return { day: +day, pos }; });
+  return [...(input.closed || []), ...empty];
+}
+
 /** Uzavřené pozice v jednotlivé dny: [{ day, pos }] → funkce (day, posId) → true/false. */
 function closedSet(closed) {
   const s = new Set((closed || []).map((c) => `${+c.day}|${c.pos}`));
@@ -1065,7 +1072,7 @@ function validate(input, grid) {
       if ((doc.emergency || []).includes(pos.id)) issues.push({ day, pos: pos.id, level: 'warn', msg: `${name} má ${pos.label} jen v nouzi` });
       else issues.push({ day, pos: pos.id, msg: `${name} nemá povolenou pozici ${pos.label}` });
     }
-    if ((pos.workdaysOnly && !days[t].workday) || closedSet(input.closed)(day, pos.id)) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
+    if ((pos.workdaysOnly && !days[t].workday) || closedSet(closedOf(input))(day, pos.id)) issues.push({ day, pos: pos.id, msg: `${pos.label} se v tento den neslouží` });
     const req = (input.requests || {})[id];
     if (req && (req.off || []).map(Number).includes(day)) issues.push({ day, pos: pos.id, msg: `${name} si ${day}. vyškrtl(a)` });
     if (req && (req.ban || []).some((b) => +b.day === day && [].concat(b.pos).includes(pos.id))) issues.push({ day, pos: pos.id, msg: `${name} nechce ${day}. sloužit na ${pos.label}` });
@@ -1104,7 +1111,7 @@ function validate(input, grid) {
   }
   // 24h služby podle obvyklého počtu a OUP minimum
   {
-    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: input.closed, fairHistory: input.fairHistory });
+    const plan = planTargets({ days, positions: P, doctors: input.doctors.map((d) => { const m = Number((input.requests || {})[d.id]?.max); return m > 0 ? { ...d, max: m } : d; }), fixedGroup: input.fixedGroup, positionMin: input.positionMin, closed: closedOf(input), fairHistory: input.fairHistory });
     const in24 = (p) => CATEGORIES.h24.positions.includes(P[p]?.id);
     for (const d of input.doctors) {
       const mine = (perDoc.get(d.id) || []).filter((x) => !x.prev);
@@ -1255,6 +1262,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Vygenerovat rozpis příštího měsíce teď', 'generovatTed')
     .addItem('Znovu otevřít požadavky příštího měsíce', 'odemknout')
+    .addItem('Zrušit ruční úpravy rozpisu příštího měsíce (odemknout)', 'odemknoutUpravy')
     .addSeparator()
     .addItem('✔ Schválit a rozeslat rozpis lékařům', 'schvalitTed')
     .addToUi();
@@ -1578,8 +1586,9 @@ function generovat(key, notify) {
     const requests = readRequests(key);
     const prev = prevTail(year, month, positions, doctors);
     const fairHistory = fairHistoryFor(key, positions);
-    const res = solve({ days, positions, doctors, requests, prev, fairHistory, month, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
-    writeSchedule(key, days, positions, doctors, res, prev);
+    const locked = manualLocks(key, days, positions, readDoctors());
+    const res = solve({ days, positions, doctors, requests, prev, fairHistory, locked, month, seed: 1, restarts: 3, minRestHours: minRestHours(), afterNight: afterNightSetting(), fixedGroup: fixedGroupSetting(), positionMin: positionMinSetting() });
+    writeSchedule(key, days, positions, doctors, res, prev, locked);
     const missing = doctors.filter((d) => !requests[d.id]).map((d) => d.name);
     const note = [`vygenerováno`, res.warnings.length ? `${res.warnings.length} upozornění` : 'bez upozornění',
       missing.length ? `nezadali požadavky: ${missing.join(', ')}` : ''].filter(Boolean).join('; ');
@@ -1645,7 +1654,47 @@ function prevTail(year, month, positions, doctors) {
   return out;
 }
 
-function writeSchedule(key, days, positions, doctors, res, prev) {
+// ---------------------------------------------------------------- ruční úpravy rozpisu
+// Buňky, které správce v listu „Rozpis RRRR-MM“ změní oproti poslednímu vygenerování, se zamknou:
+// při dalším generování zůstanou (vymazaná buňka = nechat prázdné). Zamčené buňky jsou modré.
+const genProp = (key) => `gen_${key}`, lockProp = (key) => `locks_${key}`;
+function manualLocks(key, days, positions, doctors) {
+  const props = PropertiesService.getScriptProperties();
+  const locks = JSON.parse(props.getProperty(lockProp(key)) || '{}');
+  const gen = JSON.parse(props.getProperty(genProp(key)) || 'null');
+  const snap = scheduleSnapshot(key);
+  if (gen && snap) {
+    const byName = new Map(doctors.map((d) => [d.name, d.id]));
+    for (const r of snap.rows) {
+      const l = dayOfLabel(r[0]);
+      if (!l || !gen[l.day - 1]) continue;
+      positions.forEach((p, pi) => {
+        const ci = snap.header.indexOf(p.label);
+        if (ci < 1) return;
+        const now = String(r[ci] || '').trim(), was = String(gen[l.day - 1][pi] || '');
+        if (now === was) return;
+        if (!now) locks[`${l.day}|${p.id}`] = '';
+        else if (byName.has(now)) locks[`${l.day}|${p.id}`] = byName.get(now);
+      });
+    }
+  }
+  props.setProperty(lockProp(key), JSON.stringify(locks));
+  return locks;
+}
+/** Menu: zrušit zámky ručních úprav – při dalším generování může program změnit cokoli. */
+function odemknoutUpravy() {
+  const key = targetMonth();
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(lockProp(key), '{}');
+  const snap = scheduleSnapshot(key);
+  if (snap) { // současný stav listu = „vygenerovaný“, aby se nebral jako nové úpravy
+    const positions = readPositions();
+    props.setProperty(genProp(key), JSON.stringify(snap.rows.map((r) => positions.map((p) => { const ci = snap.header.indexOf(p.label); return ci > 0 ? String(r[ci] || '') : ''; }))));
+  }
+  info(`Ruční úpravy rozpisu ${key} odemčeny – při dalším generování je program může změnit.`);
+}
+
+function writeSchedule(key, days, positions, doctors, res, prev, locked = {}) {
   const name = scheduleSheetName(key);
   let s = sheet(name);
   if (s) s.clear(); else s = ss().insertSheet(name, 0);
@@ -1660,10 +1709,14 @@ function writeSchedule(key, days, positions, doctors, res, prev) {
     rows.push([`${DAY_ABBR[ld.getDay()]} ${ld.getDate()}. ${pm.month}.`].concat(positions.map((p) => byId.get((pEnd.find((x) => x.posId === p.id) || {}).doctorId) || '')));
     colors.push(rows[1].map(() => RED));
   }
+  const LOCKED = '#cfe2ff';
   days.forEach((d, t) => {
     rows.push([d.label].concat(positions.map((p, pi) => byId.get(res.grid[t][pi]) || '')));
-    colors.push(rows[0].map(() => (d.weekend || d.holiday ? YELLOW : '#ffffff')));
+    const base = d.weekend || d.holiday ? YELLOW : '#ffffff';
+    colors.push([base].concat(positions.map((p) => (`${d.day}|${p.id}` in locked ? LOCKED : base))));
   });
+  // co program vygeneroval – podle toho se příště poznají ruční úpravy
+  PropertiesService.getScriptProperties().setProperty(genProp(key), JSON.stringify(days.map((d, t) => positions.map((p, pi) => byId.get(res.grid[t][pi]) || ''))));
   const rng = s.getRange(1, 1, rows.length, rows[0].length);
   rng.setNumberFormat('@').setValues(rows).setBackgrounds(colors).setFontFamily('Arial').setFontSize(9)
     .setBorder(true, true, true, true, true, true, '#cccccc', SpreadsheetApp.BorderStyle.SOLID);
